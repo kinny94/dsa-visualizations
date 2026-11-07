@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LC 427 · Construct Quad Tree · Divide &amp; Conquer (Recursion Visualized)</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-elev: #161b22;
+    --bg-code: #0a0e14;
+    --fg: #e6edf3;
+    --fg-dim: #8b949e;
+    --fg-muted: #6e7681;
+    --accent: #58a6ff;
+    --accent-2: #d2a8ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --orange: #ffa657;
+    --yellow: #d29922;
+    --purple: #bc8cff;
+    --border: #30363d;
+    --border-soft: #21262d;
+    --cell-0: #1a2130;
+    --cell-1: #3a5c9e;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    line-height: 1.4; height: 100vh; overflow: hidden;
+  }
+
+  .app {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: 1fr;
+    height: 100vh; padding: 0.55rem 0.9rem; gap: 0.45rem;
+  }
+
+  header.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  header.topbar h1 { font-size: 1.0rem; margin: 0; color: var(--accent-2); }
+  header.topbar .sub { color: var(--fg-dim); font-size: 0.75rem; }
+  header.topbar .sub code { background: var(--bg-code); padding: 1px 6px; border-radius: 3px; color: var(--orange); font-size: 0.75rem; }
+  .legend { display: flex; gap: 0.7rem; flex-wrap: wrap; font-size: 0.68rem; color: var(--fg-dim); }
+  .legend .chip { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .legend .swatch { width: 11px; height: 11px; border-radius: 2px; border: 1px solid var(--border); }
+  .legend .sw-region { background: rgba(210,153,34,0.15); border-color: var(--yellow); }
+  .legend .sw-leaf0 { background: var(--cell-0); border-color: var(--green); }
+  .legend .sw-leaf1 { background: var(--cell-1); border-color: var(--green); }
+  .legend .sw-internal { background: rgba(188,140,255,0.15); border-color: var(--purple); }
+  .legend .sw-active { background: rgba(210,153,34,0.15); border-color: var(--yellow); }
+  .legend .sw-line { background: rgba(210,153,34,0.15); border-color: var(--yellow); }
+
+  main.stage {
+    display: grid;
+    grid-template-columns: minmax(340px, 1.05fr) minmax(320px, 1.1fr) minmax(240px, 0.85fr);
+    grid-template-rows: 1fr;
+    gap: 0.55rem; min-height: 0;
+  }
+  @media (max-width: 1150px) {
+    main.stage { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; }
+    main.stage .col-code { grid-column: 1 / span 2; }
+  }
+
+  .panel {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.5rem 0.65rem; display: flex; flex-direction: column;
+    min-height: 0; min-width: 0;
+  }
+  .panel h2 {
+    margin: 0 0 0.3rem; font-size: 0.7rem; color: var(--accent-2);
+    font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .col { display: flex; flex-direction: column; gap: 0.55rem; min-height: 0; min-width: 0; }
+
+  /* ===== Code panel ===== */
+  .panel.code-panel { overflow: hidden; }
+  pre.code {
+    background: var(--bg-code); padding: 0.55rem 0.7rem; border-radius: 6px;
+    border: 1px solid var(--border-soft); font-size: 0.70rem; line-height: 1.45;
+    overflow: auto; margin: 0; flex: 1; min-height: 0;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre.code .k { color: var(--accent); }
+  pre.code .f { color: var(--purple); }
+  pre.code .c { color: var(--fg-muted); font-style: italic; }
+  pre.code .s { color: var(--orange); }
+  pre.code .line {
+    display: block; padding: 0 0.4rem; margin: 0 -0.4rem;
+    border-left: 3px solid transparent; border-radius: 3px;
+    transition: background 0.25s ease, border-color 0.25s ease;
+  }
+  pre.code .line.active {
+    background: rgba(210, 153, 34, 0.17); border-left-color: var(--yellow);
+    box-shadow: inset 0 0 0 1px rgba(210, 153, 34, 0.25);
+  }
+
+  /* ===== Grid panel ===== */
+  .panel.grid-panel { flex: 0 0 auto; }
+  .grid-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 280px;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+    border: 1px solid var(--border);
+    background: var(--bg-code);
+  }
+  .grid-cells {
+    position: absolute; inset: 0;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+  }
+  .cell {
+    display: flex; align-items: center; justify-content: center;
+    font-family: monospace; font-size: 0.65rem; color: rgba(255,255,255,0.65);
+    border: 1px solid rgba(255,255,255,0.04);
+    transition: all 0.3s ease;
+  }
+  .cell.v0 { background: var(--cell-0); }
+  .cell.v1 { background: var(--cell-1); }
+  .cell.resolved { outline: 1px solid rgba(63,185,80,0.4); outline-offset: -2px; }
+  .region-overlay {
+    position: absolute;
+    border: 2px solid var(--yellow);
+    box-shadow: 0 0 0 1px rgba(210,153,34,0.3), 0 0 14px rgba(210,153,34,0.35);
+    pointer-events: none;
+    transition: all 0.35s ease;
+    border-radius: 2px;
+  }
+
+  /* ===== Tree (SVG) ===== */
+  .panel.tree-panel { flex: 1 1 auto; }
+  .tree-wrap { flex: 1; display: flex; justify-content: center; align-items: center; min-height: 0; padding-top: 2px; }
+  svg.tree { width: 100%; height: 100%; max-height: 240px; }
+  .tn-leaf { stroke-width: 2; transition: all 0.4s ease; }
+  .tn-leaf.v0 { fill: var(--cell-0); stroke: var(--accent); }
+  .tn-leaf.v1 { fill: var(--cell-1); stroke: var(--accent); }
+  .tn-leaf.fresh { stroke: var(--green); stroke-width: 3; }
+  .tn-internal {
+    fill: rgba(188,140,255,0.15); stroke: var(--purple); stroke-width: 2;
+    transition: all 0.4s ease;
+  }
+  .tn-internal.fresh { stroke: var(--green); stroke-width: 3; fill: rgba(63,185,80,0.2); }
+  .tn-text { fill: var(--fg); font-family: monospace; font-size: 0.74rem; text-anchor: middle; dominant-baseline: central; font-weight: 600; }
+  .tn-text.small { font-size: 0.6rem; }
+  .tn-edge { stroke: var(--border); stroke-width: 1.5; fill: none; }
+
+  /* ===== Call stack ===== */
+  .stack-visual {
+    display: flex; flex-direction: column-reverse; gap: 4px;
+    padding: 0.3rem 0; flex: 1; overflow-y: auto; min-height: 0;
+    position: relative; padding-left: 0.5rem; border-left: 2px solid var(--border-soft);
+  }
+  .frame {
+    background: var(--bg-code); border: 1px solid var(--border-soft); border-left: 3px solid var(--border);
+    border-radius: 4px; padding: 0.3rem 0.5rem; font-family: monospace; font-size: 0.7rem;
+    display: flex; flex-direction: column; gap: 1px; transition: all 0.25s ease;
+  }
+  .frame.active { border-left-color: var(--yellow); background: rgba(210,153,34,0.08); box-shadow: 0 2px 6px rgba(210,153,34,0.15); }
+  .frame.returning { border-left-color: var(--green); background: rgba(63,185,80,0.08); }
+  .frame .fn-head { color: var(--accent-2); font-weight: 600; font-size: 0.7rem; }
+  .frame .locals { color: var(--fg-muted); font-size: 0.65rem; }
+  .frame .locals .var { color: var(--accent); }
+  .frame .phase { color: var(--orange); font-size: 0.63rem; margin-top: 1px; }
+
+  /* ===== Bottom bar: log + controls ===== */
+  footer.bottombar {
+    display: grid; grid-template-columns: 1fr auto; gap: 0.55rem; align-items: center;
+  }
+  .log {
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.45rem 0.7rem; font-family: monospace; font-size: 0.76rem; color: var(--fg);
+    min-height: 2.2rem; display: flex; align-items: center;
+  }
+  .log .hl { color: var(--orange); }
+  .log .gh { color: var(--green); }
+  .log .nl { color: var(--red); }
+  .log .ps { color: var(--accent); }
+  .controls { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+  .controls button {
+    background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border);
+    padding: 0.32rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.73rem;
+    font-family: inherit; transition: all 0.15s;
+  }
+  .controls button:hover:not(:disabled) { background: var(--border-soft); border-color: var(--accent); color: var(--accent); }
+  .controls .primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .controls .primary:hover:not(:disabled) { background: #7dbbff; }
+  .speed { display: flex; gap: 0.2rem; align-items: center; color: var(--fg-dim); font-size: 0.68rem; }
+  .speed select { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 0.18rem; font-size: 0.7rem; }
+  .step-count { color: var(--fg-dim); font-family: monospace; font-size: 0.7rem; margin-left: 0.4rem; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="topbar">
+  <div>
+    <h1>LC 427 · Construct Quad Tree · Divide &amp; Conquer</h1>
+    <div class="sub">
+      input <code>8×8 LC example 2</code> · code line, call stack, inspected region, and tree all sync with every step
+    </div>
+  </div>
+  <div class="legend">
+    <span class="chip"><span class="swatch sw-line"></span> current code line</span>
+    <span class="chip"><span class="swatch sw-region"></span> inspected region</span>
+    <span class="chip"><span class="swatch sw-active"></span> active frame</span>
+    <span class="chip"><span class="swatch sw-leaf1"></span> leaf(1)</span>
+    <span class="chip"><span class="swatch sw-leaf0"></span> leaf(0)</span>
+    <span class="chip"><span class="swatch sw-internal"></span> internal</span>
+  </div>
+</header>
+
+<main class="stage">
+  <section class="panel code-panel col-code">
+    <h2>Algorithm</h2>
+    <pre class="code"><span class="line" id="l-public"><span class="k">public</span> Node <span class="f">construct</span>(<span class="k">int</span>[][] grid) {</span>
+<span class="line" id="l-top">    <span class="k">return</span> <span class="f">build</span>(grid, 0, 0, grid.length);</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line" id="l-sig"><span class="k">private</span> Node <span class="f">build</span>(<span class="k">int</span>[][] g, <span class="k">int</span> row, <span class="k">int</span> col, <span class="k">int</span> size) {</span>
+<span class="line" id="l-check">    <span class="k">if</span> (<span class="f">isUniform</span>(g, row, col, size)) {</span>
+<span class="line" id="l-leaf">        <span class="k">return</span> <span class="k">new</span> Node(g[row][col] == 1, <span class="k">true</span>);</span>
+<span class="line">    }</span>
+<span class="line" id="l-half">    <span class="k">int</span> half = size / 2;</span>
+<span class="line" id="l-tl">    Node tl = <span class="f">build</span>(g, row,        col,        half);</span>
+<span class="line" id="l-tr">    Node tr = <span class="f">build</span>(g, row,        col + half, half);</span>
+<span class="line" id="l-bl">    Node bl = <span class="f">build</span>(g, row + half, col,        half);</span>
+<span class="line" id="l-br">    Node br = <span class="f">build</span>(g, row + half, col + half, half);</span>
+<span class="line" id="l-internal">    <span class="k">return</span> <span class="k">new</span> Node(<span class="k">true</span>, <span class="k">false</span>, tl, tr, bl, br);</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line"><span class="k">private</span> <span class="k">boolean</span> <span class="f">isUniform</span>(<span class="k">int</span>[][] g, <span class="k">int</span> r, <span class="k">int</span> c, <span class="k">int</span> s) {</span>
+<span class="line">    <span class="k">int</span> first = g[r][c];</span>
+<span class="line">    <span class="k">for</span> (<span class="k">int</span> i = r; i &lt; r + s; i++) {</span>
+<span class="line">        <span class="k">for</span> (<span class="k">int</span> j = c; j &lt; c + s; j++) {</span>
+<span class="line">            <span class="k">if</span> (g[i][j] != first) { <span class="k">return</span> <span class="k">false</span>; }</span>
+<span class="line">        }</span>
+<span class="line">    }</span>
+<span class="line">    <span class="k">return</span> <span class="k">true</span>;</span>
+<span class="line">}</span></pre>
+  </section>
+
+  <section class="col">
+    <div class="panel grid-panel">
+      <h2>Grid (8×8) · current region</h2>
+      <div class="grid-wrap" data-role="grid-wrap">
+        <div class="grid-cells" data-role="grid"></div>
+        <div class="region-overlay" data-role="region" style="display: none;"></div>
+      </div>
+    </div>
+    <div class="panel tree-panel">
+      <h2>Quad tree being built</h2>
+      <div class="tree-wrap">
+        <svg class="tree" viewBox="0 0 500 220" preserveAspectRatio="xMidYMid meet" data-role="tree"></svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Call stack (bottom → top)</h2>
+    <div class="stack-visual" data-role="stack"></div>
+  </section>
+</main>
+
+<footer class="bottombar">
+  <div class="log" data-role="log">Click Play or Next to begin.</div>
+  <div class="controls">
+    <button data-act="reset">↺ Reset</button>
+    <button data-act="prev">◀ Prev</button>
+    <button data-act="play" class="primary">▶ Play</button>
+    <button data-act="next">Next ▶</button>
+    <span class="speed">Speed <select data-act="speed">
+      <option value="1800">Slow</option>
+      <option value="1100" selected>Normal</option>
+      <option value="600">Fast</option>
+    </select></span>
+    <span class="step-count" data-role="counter">step 0 / —</span>
+  </div>
+</footer>
+
+</div>
+
+<script>
+'use strict';
+
+// =============================================================
+// Input: LC 427 example 2 — 8×8 grid.
+// =============================================================
+const GRID = [
+  [1,1,1,1,0,0,0,0],
+  [1,1,1,1,0,0,0,0],
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,0,0,0,0],
+  [1,1,1,1,0,0,0,0],
+  [1,1,1,1,0,0,0,0],
+  [1,1,1,1,0,0,0,0]
+];
+const N = GRID.length;
+
+// Each tree node is identified by its path in the quad tree:
+//   ''        = root (level 0)
+//   'TL'      = top-left child of root
+//   'TR-BL'   = bottom-left child of root's top-right child
+// Positions are fixed per path to keep the layout stable as the tree grows.
+const TREE_POSITIONS = {
+  '':      { x: 250, y: 28, r: 20 },
+  'TL':    { x: 60,  y: 100, r: 18 },
+  'TR':    { x: 180, y: 100, r: 18 },
+  'BL':    { x: 320, y: 100, r: 18 },
+  'BR':    { x: 440, y: 100, r: 18 },
+  'TR-TL': { x: 115, y: 180, r: 14 },
+  'TR-TR': { x: 155, y: 180, r: 14 },
+  'TR-BL': { x: 205, y: 180, r: 14 },
+  'TR-BR': { x: 245, y: 180, r: 14 },
+};
+
+const frames = [];
+let nextFrameId = 1;
+let regionHighlight = null;      // {row, col, size} or null
+const treeState = {};            // path -> {val, isLeaf, children: {TL,TR,BL,BR}, created}
+const resolvedCells = new Set(); // "r,c" strings — cells already assigned to a leaf
+const callStack = [];
+
+function snapshot(log, activeId = null, codeLine = null, extra = {}) {
+  frames.push({
+    region: regionHighlight ? { ...regionHighlight } : null,
+    callStack: callStack.map(fr => ({ ...fr, locals: { ...(fr.locals || {}) } })),
+    tree: JSON.parse(JSON.stringify(treeState)),
+    resolved: new Set(resolvedCells),
+    activeId,
+    log,
+    codeLine,
+    fresh: extra.fresh || null,
+  });
+}
+
+function isUniformScan(row, col, size) {
+  const first = GRID[row][col];
+  for (let i = row; i < row + size; i++) {
+    for (let j = col; j < col + size; j++) {
+      if (GRID[i][j] !== first) { return { uniform: false, first }; }
+    }
+  }
+  return { uniform: true, first };
+}
+
+function build(row, col, size, path) {
+  const frameId = nextFrameId++;
+  const fr = { id: frameId, row, col, size, path, phase: 'entering', locals: {} };
+  callStack.push(fr);
+  regionHighlight = { row, col, size };
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span> called. Pushed a new frame; inspecting the yellow region.`,
+    frameId, "l-sig"
+  );
+
+  fr.phase = 'checking uniform';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: run <code>isUniform</code> to see if the region is all 0s or all 1s.`,
+    frameId, "l-check"
+  );
+
+  const { uniform, first } = isUniformScan(row, col, size);
+
+  if (uniform) {
+    fr.phase = `uniform = ${first}`;
+    fr.locals.val = first;
+    snapshot(
+      `<span class="ps">build(${row}, ${col}, ${size})</span>: region is uniform, every cell = <span class="hl">${first}</span>. Return a <span class="gh">leaf(${first})</span>.`,
+      frameId, "l-leaf"
+    );
+
+    // Materialize leaf in the tree.
+    treeState[path] = { val: first, isLeaf: true, children: {}, created: true };
+    for (let i = row; i < row + size; i++) {
+      for (let j = col; j < col + size; j++) { resolvedCells.add(i + ',' + j); }
+    }
+    fr.phase = `leaf(${first}) returned`;
+    snapshot(
+      `Leaf materialized in the tree at path "<span class="hl">${path || 'root'}</span>" with val <span class="gh">${first}</span>.`,
+      frameId, "l-leaf", { fresh: path }
+    );
+
+    callStack.pop();
+    regionHighlight = null;
+    snapshot(
+      `Frame <span class="ps">build(${row}, ${col}, ${size})</span> popped. Returned <span class="gh">leaf(${first})</span> to parent.`,
+      null, null
+    );
+    return;
+  }
+
+  fr.phase = 'mixed → split';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: region has <span class="nl">mixed values</span> → must split into 4 quadrants.`,
+    frameId, "l-check"
+  );
+
+  const half = size / 2;
+  fr.half = half;
+  fr.phase = `half = ${half}`;
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: half = size/2 = <span class="hl">${half}</span>. Will recurse on TL, TR, BL, BR (each ${half}×${half}).`,
+    frameId, "l-half"
+  );
+
+  // ---- TL ----
+  fr.phase = 'recurse TL';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: recurse into top-left → <span class="hl">build(${row}, ${col}, ${half})</span>.`,
+    frameId, "l-tl"
+  );
+  build(row, col, half, path === '' ? 'TL' : path + '-TL');
+  fr.locals.tl = '✓';
+  regionHighlight = { row, col, size };
+  fr.phase = 'TL done';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: TL subtree built. Back in this frame; inspected region restored.`,
+    frameId, "l-tl"
+  );
+
+  // ---- TR ----
+  fr.phase = 'recurse TR';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: recurse into top-right → <span class="hl">build(${row}, ${col + half}, ${half})</span>.`,
+    frameId, "l-tr"
+  );
+  build(row, col + half, half, path === '' ? 'TR' : path + '-TR');
+  fr.locals.tr = '✓';
+  regionHighlight = { row, col, size };
+  fr.phase = 'TR done';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: TR subtree built. Back in this frame.`,
+    frameId, "l-tr"
+  );
+
+  // ---- BL ----
+  fr.phase = 'recurse BL';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: recurse into bottom-left → <span class="hl">build(${row + half}, ${col}, ${half})</span>.`,
+    frameId, "l-bl"
+  );
+  build(row + half, col, half, path === '' ? 'BL' : path + '-BL');
+  fr.locals.bl = '✓';
+  regionHighlight = { row, col, size };
+  fr.phase = 'BL done';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: BL subtree built. Back in this frame.`,
+    frameId, "l-bl"
+  );
+
+  // ---- BR ----
+  fr.phase = 'recurse BR';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: recurse into bottom-right → <span class="hl">build(${row + half}, ${col + half}, ${half})</span>.`,
+    frameId, "l-br"
+  );
+  build(row + half, col + half, half, path === '' ? 'BR' : path + '-BR');
+  fr.locals.br = '✓';
+  regionHighlight = { row, col, size };
+  fr.phase = 'BR done';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: BR subtree built. All 4 children done. Create the internal node.`,
+    frameId, "l-br"
+  );
+
+  // Internal node materialization.
+  treeState[path] = {
+    val: 1, isLeaf: false, created: true,
+    children: {
+      TL: path === '' ? 'TL' : path + '-TL',
+      TR: path === '' ? 'TR' : path + '-TR',
+      BL: path === '' ? 'BL' : path + '-BL',
+      BR: path === '' ? 'BR' : path + '-BR',
+    }
+  };
+  fr.phase = 'return internal';
+  snapshot(
+    `<span class="ps">build(${row}, ${col}, ${size})</span>: return <span class="gh">internal node</span> (isLeaf = false, 4 children attached).`,
+    frameId, "l-internal", { fresh: path }
+  );
+
+  callStack.pop();
+  regionHighlight = null;
+  snapshot(
+    `Frame <span class="ps">build(${row}, ${col}, ${size})</span> popped. Returned internal node to parent.`,
+    null, null
+  );
+}
+
+snapshot(
+  `Initial state. Calling <span class="ps">build(0, 0, 8)</span> on the whole grid.`,
+  null, "l-top"
+);
+build(0, 0, N, '');
+snapshot(
+  `<span class="gh">Done.</span> Quad tree complete — 9 nodes total (1 root + 4 level-1 + 4 level-2). Stack empty.`,
+  null, null
+);
+
+// =============================================================
+// Renderers
+// =============================================================
+function renderGrid(region, resolved) {
+  const g = document.querySelector('[data-role="grid"]');
+  if (!g.firstChild) {
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell v' + GRID[r][c];
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        cell.textContent = GRID[r][c];
+        g.appendChild(cell);
+      }
+    }
+  }
+  // Update resolved outlines.
+  g.querySelectorAll('.cell').forEach(cell => {
+    const key = cell.dataset.r + ',' + cell.dataset.c;
+    cell.classList.toggle('resolved', resolved.has(key));
+  });
+
+  // Region overlay.
+  const overlay = document.querySelector('[data-role="region"]');
+  if (region) {
+    const pct = 100 / N;
+    overlay.style.display = 'block';
+    overlay.style.left = (region.col * pct) + '%';
+    overlay.style.top = (region.row * pct) + '%';
+    overlay.style.width = (region.size * pct) + '%';
+    overlay.style.height = (region.size * pct) + '%';
+  } else {
+    overlay.style.display = 'none';
+  }
+}
+
+function renderStack(stack, activeId) {
+  const container = document.querySelector('[data-role="stack"]');
+  container.innerHTML = '';
+  stack.forEach(fr => {
+    const el = document.createElement('div');
+    el.className = 'frame';
+    if (fr.id === activeId) { el.classList.add('active'); }
+    if (fr.phase && fr.phase.includes('returned')) { el.classList.add('returning'); }
+
+    const head = document.createElement('div');
+    head.className = 'fn-head';
+    head.textContent = `build(${fr.row}, ${fr.col}, ${fr.size})`;
+    el.appendChild(head);
+
+    const pathEl = document.createElement('div');
+    pathEl.className = 'locals';
+    pathEl.innerHTML = `<span class="var">path</span> = "${fr.path || 'root'}"`;
+    el.appendChild(pathEl);
+
+    if (fr.half != null) {
+      const h = document.createElement('div');
+      h.className = 'locals';
+      h.innerHTML = `<span class="var">half</span> = ${fr.half}`;
+      el.appendChild(h);
+    }
+
+    const checks = [];
+    if (fr.locals && fr.locals.tl) { checks.push('TL✓'); }
+    if (fr.locals && fr.locals.tr) { checks.push('TR✓'); }
+    if (fr.locals && fr.locals.bl) { checks.push('BL✓'); }
+    if (fr.locals && fr.locals.br) { checks.push('BR✓'); }
+    if (checks.length) {
+      const c = document.createElement('div');
+      c.className = 'locals';
+      c.innerHTML = `<span class="var">children</span> = ${checks.join(' ')}`;
+      el.appendChild(c);
+    }
+
+    if (fr.locals && fr.locals.val != null) {
+      const v = document.createElement('div');
+      v.className = 'locals';
+      v.innerHTML = `<span class="var">leaf val</span> = ${fr.locals.val}`;
+      el.appendChild(v);
+    }
+
+    const phase = document.createElement('div');
+    phase.className = 'phase';
+    phase.textContent = fr.phase;
+    el.appendChild(phase);
+
+    container.appendChild(el);
+  });
+  if (stack.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.color = 'var(--fg-muted)';
+    empty.style.fontStyle = 'italic';
+    empty.style.fontSize = '0.8rem';
+    empty.textContent = '(stack is empty)';
+    container.appendChild(empty);
+  }
+}
+
+function renderTree(tree, freshPath) {
+  const svg = document.querySelector('[data-role="tree"]');
+  svg.innerHTML = '';
+
+  // Edges first (internal → each child that currently exists in `tree`).
+  Object.entries(tree).forEach(([path, node]) => {
+    if (node.isLeaf) { return; }
+    const p = TREE_POSITIONS[path];
+    if (!p) { return; }
+    ['TL', 'TR', 'BL', 'BR'].forEach(q => {
+      const childPath = node.children[q];
+      if (childPath && tree[childPath]) {
+        const cp = TREE_POSITIONS[childPath];
+        if (cp) { drawEdge(svg, p, cp); }
+      }
+    });
+  });
+
+  // Nodes.
+  Object.entries(tree).forEach(([path, node]) => {
+    const p = TREE_POSITIONS[path];
+    if (!p) { return; }
+    const fresh = (path === freshPath);
+    if (node.isLeaf) {
+      drawLeaf(svg, p, node.val, fresh);
+    } else {
+      drawInternal(svg, p, fresh);
+    }
+  });
+}
+
+function drawEdge(svg, p1, p2) {
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', p1.x);
+  line.setAttribute('y1', p1.y + p1.r - 2);
+  line.setAttribute('x2', p2.x);
+  line.setAttribute('y2', p2.y - p2.r + 2);
+  line.setAttribute('class', 'tn-edge');
+  svg.appendChild(line);
+}
+
+function drawLeaf(svg, p, val, fresh) {
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('cx', p.x);
+  circle.setAttribute('cy', p.y);
+  circle.setAttribute('r', p.r);
+  circle.setAttribute('class', 'tn-leaf v' + val + (fresh ? ' fresh' : ''));
+  svg.appendChild(circle);
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('x', p.x);
+  text.setAttribute('y', p.y);
+  text.setAttribute('class', 'tn-text');
+  text.textContent = String(val);
+  svg.appendChild(text);
+}
+
+function drawInternal(svg, p, fresh) {
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  const s = p.r * 1.8;
+  rect.setAttribute('x', p.x - s / 2);
+  rect.setAttribute('y', p.y - s / 2);
+  rect.setAttribute('width', s);
+  rect.setAttribute('height', s);
+  rect.setAttribute('rx', 4);
+  rect.setAttribute('class', 'tn-internal' + (fresh ? ' fresh' : ''));
+  svg.appendChild(rect);
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('x', p.x);
+  text.setAttribute('y', p.y);
+  text.setAttribute('class', 'tn-text small');
+  text.textContent = '*';
+  svg.appendChild(text);
+}
+
+// =============================================================
+// Engine
+// =============================================================
+function highlightCodeLine(lineId) {
+  document.querySelectorAll('pre.code .line.active').forEach(el => el.classList.remove('active'));
+  if (!lineId) { return; }
+  const el = document.getElementById(lineId);
+  if (el) { el.classList.add('active'); }
+}
+
+class Engine {
+  constructor() {
+    this.i = 0;
+    this.playing = false;
+    this.interval = null;
+    this.speed = parseInt(document.querySelector('[data-act="speed"]').value, 10);
+    document.querySelector('[data-act="next"]').onclick = () => this.step(1);
+    document.querySelector('[data-act="prev"]').onclick = () => this.step(-1);
+    document.querySelector('[data-act="reset"]').onclick = () => { this.pause(); this.i = 0; this.render(); };
+    this.playBtn = document.querySelector('[data-act="play"]');
+    this.playBtn.onclick = () => this.playing ? this.pause() : this.play();
+    document.querySelector('[data-act="speed"]').addEventListener('change', (e) => {
+      this.speed = parseInt(e.target.value, 10);
+      if (this.playing) { this.pause(); this.play(); }
+    });
+    this.counter = document.querySelector('[data-role="counter"]');
+    this.render();
+  }
+  step(d) {
+    const next = this.i + d;
+    if (next < 0 || next >= frames.length) { return; }
+    this.i = next;
+    this.render();
+  }
+  play() {
+    if (this.i >= frames.length - 1) { this.i = 0; }
+    this.playing = true;
+    this.playBtn.textContent = '❚❚ Pause';
+    this.interval = setInterval(() => {
+      if (this.i >= frames.length - 1) { this.pause(); return; }
+      this.i++;
+      this.render();
+    }, this.speed);
+  }
+  pause() {
+    this.playing = false;
+    this.playBtn.textContent = '▶ Play';
+    if (this.interval) { clearInterval(this.interval); this.interval = null; }
+  }
+  render() {
+    const f = frames[this.i];
+    renderGrid(f.region, f.resolved);
+    renderStack(f.callStack, f.activeId);
+    renderTree(f.tree, f.fresh);
+    document.querySelector('[data-role="log"]').innerHTML = f.log;
+    highlightCodeLine(f.codeLine);
+    this.counter.textContent = `step ${this.i} / ${frames.length - 1}`;
+  }
+}
+
+window.addEventListener('load', () => { new Engine(); });
+</script>
+</body>
+</html>

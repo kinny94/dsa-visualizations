@@ -9,6 +9,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | # | Problem | Pattern |
 |---|---|---|
 | [109](https://kinny94.github.io/dsa-visualizations/lc109-sorted-list-to-bst.html) | Convert Sorted List to Binary Search Tree | Recursion / Inorder simulation |
+| [427](https://kinny94.github.io/dsa-visualizations/lc427-construct-quad-tree.html) | Construct Quad Tree | Recursion / Divide & Conquer |
 
 ## Adding a new animation
 
