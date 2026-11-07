@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>LC 39 · Combination Sum · Backtracking</title>
+<style>
+  :root {
+    --bg: #0b1021;
+    --panel: #121833;
+    --panel-2: #1a2147;
+    --ink: #e7ecff;
+    --mute: #8a93b8;
+    --accent: #7cc4ff;
+    --warn: #ffb86b;
+    --good: #83e0a4;
+    --bad: #ff7a90;
+    --line-hl: #31406a;
+    --edge: #5b6a9a;
+    --edge-active: #7cc4ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif; height: 100%; overflow: hidden; }
+  .shell { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
+  header { padding: 10px 20px; border-bottom: 1px solid #22294c; display: flex; justify-content: space-between; align-items: baseline; }
+  header h1 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+  header h1 small { color: var(--mute); font-weight: 400; margin-left: 8px; }
+  header .tag { font-size: 11px; color: var(--mute); }
+  main { display: grid; grid-template-columns: 460px 1fr 320px; gap: 12px; padding: 12px; min-height: 0; }
+  .panel { background: var(--panel); border-radius: 10px; padding: 12px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+  .panel h2 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--mute); font-weight: 600; }
+  pre.code { margin: 0; flex: 1; overflow: auto; font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: 12px; line-height: 1.55; }
+  .line { display: block; padding: 1px 6px; border-radius: 4px; white-space: pre; }
+  .line.hl { background: var(--line-hl); }
+  .kw { color: #c9a0ff; }
+  .fn { color: #7cc4ff; }
+  .ty { color: #9ad9ea; }
+  .st { color: #ffb86b; }
+  .num { color: #e2e49a; }
+  .cm { color: var(--mute); font-style: italic; }
+  /* stage */
+  .stage { background: var(--panel); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+  .stage-rows { padding: 12px 16px 4px; }
+  .row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .row .label { min-width: 90px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--mute); }
+  .boxes { display: flex; gap: 5px; position: relative; }
+  .box { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 1px solid #2a335e; background: var(--panel-2); border-radius: 5px; font-weight: 600; font-size: 13px; transition: all 180ms; position: relative; font-family: "JetBrains Mono", monospace; }
+  .box .ci { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 8px; color: var(--mute); }
+  .box.cur { background: var(--accent); color: #07122a; border-color: var(--accent); transform: scale(1.08); }
+  .box.added { background: var(--good); color: #07122a; border-color: var(--good); }
+  .box.break { background: var(--bad); color: #07122a; border-color: var(--bad); }
+  .target-pill { padding: 6px 12px; border-radius: 6px; background: var(--panel-2); border: 1px solid #2a335e; font-family: "JetBrains Mono", monospace; font-size: 15px; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; transition: all 200ms; }
+  .target-pill.zero { background: var(--good); color: #07122a; border-color: var(--good); }
+  .target-pill.neg  { background: var(--bad);  color: #07122a; border-color: var(--bad); }
+  .empty-tag { color: var(--mute); font-style: italic; font-size: 12px; font-family: "JetBrains Mono", monospace; }
+  .tree-wrap { flex: 1; position: relative; min-height: 0; }
+  svg.tree { width: 100%; height: 100%; }
+  .tree-node rect { fill: var(--panel-2); stroke: #3a4679; stroke-width: 1.5; transition: all 200ms; }
+  .tree-node text.l1 { fill: var(--ink); font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+  .tree-node text.l2 { fill: var(--mute); font-family: "JetBrains Mono", monospace; font-size: 9px; text-anchor: middle; dominant-baseline: central; }
+  .tree-node.pending rect { fill: var(--panel); stroke: #272e4f; stroke-dasharray: 3 2; }
+  .tree-node.pending text { fill: #4e568a; }
+  .tree-node.returned rect { fill: #1a2147; stroke: #3a4679; opacity: 0.55; }
+  .tree-node.returned text { opacity: 0.6; }
+  .tree-node.onstack rect { fill: #1f3463; stroke: var(--accent); stroke-width: 1.5; }
+  .tree-node.active rect { fill: var(--accent); stroke: var(--accent); stroke-width: 2.5; }
+  .tree-node.active text.l1 { fill: #07122a; }
+  .tree-node.active text.l2 { fill: #16365e; }
+  .tree-node.success rect { fill: var(--good); stroke: var(--good); stroke-width: 2.5; }
+  .tree-node.success text.l1 { fill: #07241a; }
+  .tree-node.success text.l2 { fill: #16365e; }
+  .edge { stroke: var(--edge); stroke-width: 1.5; fill: none; transition: all 200ms; }
+  .edge.active { stroke: var(--accent); stroke-width: 2.5; }
+  .edge.pending { opacity: 0.25; stroke-dasharray: 3 2; }
+  .edge-label { font-size: 9px; fill: var(--mute); font-family: "JetBrains Mono", monospace; text-anchor: middle; }
+  /* side */
+  .side { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .result-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .result-list { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 4px; padding: 2px; font-family: "JetBrains Mono", monospace; font-size: 12px; }
+  .res-row { padding: 5px 9px; background: var(--panel-2); border: 1px solid #2a335e; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; transition: all 200ms; }
+  .res-row.new { background: #1f3463; border-color: var(--good); animation: flash 400ms; }
+  @keyframes flash { from { background: var(--good); } to { background: #1f3463; } }
+  .res-row .i { color: var(--mute); font-size: 10px; }
+  .action-card { background: var(--panel); border-radius: 10px; padding: 12px; }
+  .action-card h2 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--mute); font-weight: 600; }
+  .action-card .msg { font-size: 13px; line-height: 1.5; font-family: "JetBrains Mono", monospace; min-height: 42px; }
+  .action-card .msg b { color: var(--accent); font-weight: 600; }
+  .action-card .msg .g { color: var(--good); }
+  .action-card .msg .w { color: var(--warn); }
+  .action-card .msg .r { color: var(--bad); }
+  .legend { background: var(--panel); border-radius: 10px; padding: 10px 12px; }
+  .legend h2 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--mute); font-weight: 600; }
+  .legend ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; font-size: 11px; }
+  .legend li { display: flex; align-items: center; gap: 6px; color: var(--mute); }
+  .legend .sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #2a335e; }
+  .legend .sw-pend { background: var(--panel); border-color: #272e4f; border-style: dashed; }
+  .legend .sw-stack { background: #1f3463; border-color: var(--accent); }
+  .legend .sw-act { background: var(--accent); }
+  .legend .sw-ret { background: #1a2147; opacity: 0.55; }
+  .legend .sw-ok { background: var(--good); }
+  /* bottom */
+  footer { padding: 10px 20px; border-top: 1px solid #22294c; display: flex; align-items: center; gap: 12px; }
+  footer .ctrl { background: var(--panel-2); border: 1px solid #2a335e; color: var(--ink); padding: 6px 14px; border-radius: 6px; font-family: inherit; font-size: 12px; cursor: pointer; transition: all 150ms; }
+  footer .ctrl:hover:not(:disabled) { background: #22306b; border-color: var(--accent); }
+  footer .ctrl:disabled { opacity: 0.4; cursor: not-allowed; }
+  footer .ctrl.play { background: var(--accent); color: #07122a; border-color: var(--accent); font-weight: 600; }
+  footer .progress { flex: 1; height: 4px; background: #22294c; border-radius: 2px; position: relative; overflow: hidden; }
+  footer .progress .bar { position: absolute; left: 0; top: 0; height: 100%; background: var(--accent); transition: width 120ms; }
+  footer .frameinfo { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--mute); min-width: 90px; text-align: right; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <h1>LC 39 Combination Sum <small>— backtracking, candidates = [2, 3, 6, 7], target = 7</small></h1>
+    <span class="tag">Prev · Play · Next · ←/→</span>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Code</h2>
+      <pre class="code" id="code"><span class="line" id="l-sig"><span class="kw">public</span> <span class="ty">List</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt;&gt; <span class="fn">combinationSum</span>(<span class="ty">int</span>[] candidates, <span class="ty">int</span> target) {</span><span class="line" id="l-sort">    <span class="ty">Arrays</span>.<span class="fn">sort</span>(candidates);</span><span class="line" id="l-init">    <span class="ty">List</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt;&gt; result = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();</span><span class="line" id="l-call">    <span class="fn">backtrack</span>(candidates, <span class="num">0</span>, <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;(), target, result);</span><span class="line" id="l-ret">    <span class="kw">return</span> result;</span><span class="line" id="l-sigEnd">}</span><span class="line" id="l-blank"> </span><span class="line" id="l-bt-sig"><span class="kw">private</span> <span class="ty">void</span> <span class="fn">backtrack</span>(<span class="ty">int</span>[] candidates, <span class="ty">int</span> index,</span><span class="line" id="l-bt-sig2">                       <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; current, <span class="ty">int</span> target,</span><span class="line" id="l-bt-sig3">                       <span class="ty">List</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt;&gt; result) {</span><span class="line" id="l-base">    <span class="kw">if</span> (target == <span class="num">0</span>) {</span><span class="line" id="l-add">        result.add(<span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;(current));</span><span class="line" id="l-base-ret">        <span class="kw">return</span>;</span><span class="line" id="l-base-end">    }</span><span class="line" id="l-blank2"> </span><span class="line" id="l-for">    <span class="kw">for</span> (<span class="ty">int</span> i = index; i &lt; candidates.length; i++) {</span><span class="line" id="l-break">        <span class="kw">if</span> (candidates[i] &gt; target) { <span class="kw">break</span>; }</span><span class="line" id="l-cur-add">        current.add(candidates[i]);</span><span class="line" id="l-recurse">        <span class="fn">backtrack</span>(candidates, i, current, target - candidates[i], result);</span><span class="line" id="l-cur-rm">        current.remove(current.size() - <span class="num">1</span>);</span><span class="line" id="l-forEnd">    }</span><span class="line" id="l-btEnd">}</span></pre>
+    </section>
+
+    <section class="stage">
+      <div class="stage-rows">
+        <div class="row">
+          <span class="label">candidates</span>
+          <div class="boxes" id="arr"></div>
+        </div>
+        <div class="row">
+          <span class="label">current</span>
+          <div class="boxes" id="cur"></div>
+          <span class="empty-tag" id="curEmpty">[] empty</span>
+        </div>
+        <div class="row">
+          <span class="label">target</span>
+          <span class="target-pill" id="tgt">t = 7</span>
+        </div>
+      </div>
+      <div class="tree-wrap">
+        <svg class="tree" id="tree" viewBox="0 0 760 360" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="panel result-panel">
+        <h2>result <small style="color:var(--mute);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;" id="resCount">(0)</small></h2>
+        <div class="result-list" id="result"></div>
+      </div>
+      <div class="action-card">
+        <h2>Step</h2>
+        <div class="msg" id="msg">—</div>
+      </div>
+      <div class="legend">
+        <h2>Legend · recursion tree</h2>
+        <ul>
+          <li><span class="sw sw-pend"></span>unvisited</li>
+          <li><span class="sw sw-stack"></span>on call stack</li>
+          <li><span class="sw sw-act"></span>active call</li>
+          <li><span class="sw sw-ret"></span>returned</li>
+          <li><span class="sw sw-ok"></span>target = 0 (success)</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <button class="ctrl" id="prev">← Prev</button>
+    <button class="ctrl play" id="play">▶ Play</button>
+    <button class="ctrl" id="next">Next →</button>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="frameinfo" id="info">0 / 0</div>
+  </footer>
+</div>
+
+<script>
+const CANDIDATES = [2, 3, 6, 7];
+const TARGET = 7;
+
+/* Hardcoded recursion-tree layout for this test case.
+   current (array-at-entry) uniquely identifies each node. */
+const TREE = [
+  { id: 0, current: [],         target: 7, parent: -1, viaI: null, x: 380, y:  40 },
+  { id: 1, current: [2],        target: 5, parent: 0,  viaI: 0,    x: 120, y: 125 },
+  { id: 2, current: [2,2],      target: 3, parent: 1,  viaI: 0,    x:  60, y: 205 },
+  { id: 3, current: [2,2,2],    target: 1, parent: 2,  viaI: 0,    x:  25, y: 285 },
+  { id: 4, current: [2,2,3],    target: 0, parent: 2,  viaI: 1,    x: 115, y: 285 },
+  { id: 5, current: [2,3],      target: 2, parent: 1,  viaI: 1,    x: 185, y: 205 },
+  { id: 6, current: [3],        target: 4, parent: 0,  viaI: 1,    x: 320, y: 125 },
+  { id: 7, current: [3,3],      target: 1, parent: 6,  viaI: 1,    x: 320, y: 205 },
+  { id: 8, current: [6],        target: 1, parent: 0,  viaI: 2,    x: 500, y: 125 },
+  { id: 9, current: [7],        target: 0, parent: 0,  viaI: 3,    x: 660, y: 125 },
+];
+const KEY = arr => JSON.stringify(arr);
+const idByKey = {};
+TREE.forEach(n => idByKey[KEY(n.current)] = n.id);
+
+/* ---------- Simulator ---------- */
+function simulate() {
+  const frames = [];
+  const result = [];
+  const callStack = [];
+  const visited = new Set();
+  const returned = new Set();
+  const added = new Set();
+  let currentList = [];
+  let currentTarget = TARGET;
+  let lastCursor = null;
+
+  function snap(opts) {
+    frames.push({
+      codeLine: opts.codeLine,
+      msg: opts.msg,
+      current: [...currentList],
+      currentTarget,
+      result: result.map(r => [...r]),
+      callStack: [...callStack],
+      visited: [...visited],
+      returned: [...returned],
+      added: [...added],
+      activeNode: callStack.length ? callStack[callStack.length - 1] : null,
+      lastResult: opts.lastResult ?? null,
+      activeEdge: opts.activeEdge ?? null,
+      cursorHint: lastCursor,
+      brokeAt: opts.brokeAt ?? null,
+    });
+  }
+  function fmt(a) { return a.length === 0 ? '[]' : '[' + a.join(',') + ']'; }
+
+  snap({ codeLine: 'l-sort', msg: 'Sort candidates (already sorted: [2, 3, 6, 7]) so the <b>break</b> prune is valid.' });
+  snap({ codeLine: 'l-init', msg: 'Initialize <b>result = []</b>.' });
+  snap({ codeLine: 'l-call', msg: 'Call <b>backtrack(0, [], target=7, result)</b>.' });
+
+  backtrack(0);
+
+  snap({ codeLine: 'l-ret', msg: `<span class="g">return</span> <b>result</b> — ${result.length} combinations found: ${result.map(fmt).join(' and ')}.` });
+  return frames;
+
+  function backtrack(index) {
+    const myId = idByKey[KEY(currentList)];
+    const parentId = TREE[myId].parent;
+    callStack.push(myId);
+    visited.add(myId);
+    snap({
+      codeLine: 'l-bt-sig',
+      msg: `Enter <b>backtrack(index=${index}, current=${fmt(currentList)}, target=${currentTarget})</b>.`,
+      activeEdge: parentId >= 0 ? { from: parentId, to: myId } : null,
+    });
+
+    snap({ codeLine: 'l-base', msg: `Check base case: is <b>target == 0</b>? ${currentTarget === 0 ? '<span class="g">Yes</span>' : '<span class="w">No</span>'}.` });
+    if (currentTarget === 0) {
+      result.push([...currentList]);
+      added.add(myId);
+      snap({
+        codeLine: 'l-add',
+        msg: `<span class="g">✓ Record</span>: result[${result.length - 1}] = ${fmt(currentList)}.`,
+        lastResult: result.length - 1,
+      });
+      snap({ codeLine: 'l-base-ret', msg: `<span class="g">return</span>.` });
+      returned.add(myId);
+      callStack.pop();
+      return;
+    }
+
+    for (let i = index; i < CANDIDATES.length; i++) {
+      snap({
+        codeLine: 'l-for',
+        msg: `<span class="g">for</span> i=${i}: candidate = <b>${CANDIDATES[i]}</b>, remaining target = ${currentTarget}.`,
+      });
+      if (CANDIDATES[i] > currentTarget) {
+        snap({
+          codeLine: 'l-break',
+          msg: `<span class="r">${CANDIDATES[i]} &gt; ${currentTarget}</span> → <b>break</b>. Sorted array ⇒ every later candidate is even bigger; whole loop suffix is pruned.`,
+          brokeAt: i,
+        });
+        break;
+      }
+      currentList.push(CANDIDATES[i]);
+      currentTarget -= CANDIDATES[i];
+      lastCursor = { kind: 'added', idx: currentList.length - 1 };
+      snap({
+        codeLine: 'l-cur-add',
+        msg: `<b>current.add(${CANDIDATES[i]})</b> → current = ${fmt(currentList)}. target becomes <b>${currentTarget}</b>.`,
+      });
+      snap({
+        codeLine: 'l-recurse',
+        msg: `Recurse: <b>backtrack(${i}, ${fmt(currentList)}, target=${currentTarget})</b>. <i>i, not i+1 — reuse allowed.</i>`,
+      });
+      backtrack(i);
+      const removed = currentList.pop();
+      currentTarget += removed;
+      lastCursor = { kind: 'removed', val: removed };
+      snap({
+        codeLine: 'l-cur-rm',
+        msg: `<span class="r">Undo</span>: current.remove last → drop <b>${removed}</b>. target restored to <b>${currentTarget}</b>.`,
+      });
+    }
+
+    snap({ codeLine: 'l-btEnd', msg: `Loop done at node ${myId}. <span class="w">Return</span>.` });
+    returned.add(myId);
+    callStack.pop();
+  }
+}
+
+const FRAMES = simulate();
+
+/* ---------- Renderer ---------- */
+let cur = 0;
+let playing = false;
+let playTimer = null;
+
+const arrEl   = document.getElementById('arr');
+const curEl   = document.getElementById('cur');
+const curEmpt = document.getElementById('curEmpty');
+const tgtEl   = document.getElementById('tgt');
+const treeEl  = document.getElementById('tree');
+const resEl   = document.getElementById('result');
+const resCnt  = document.getElementById('resCount');
+const msgEl   = document.getElementById('msg');
+const barEl   = document.getElementById('bar');
+const infoEl  = document.getElementById('info');
+
+function buildStaticArray() {
+  arrEl.innerHTML = '';
+  CANDIDATES.forEach((v, i) => {
+    const d = document.createElement('div');
+    d.className = 'box';
+    d.id = `arr-${i}`;
+    d.innerHTML = `<span class="ci">${i}</span>${v}`;
+    arrEl.appendChild(d);
+  });
+}
+buildStaticArray();
+
+function render(f) {
+  document.querySelectorAll('.line.hl').forEach(el => el.classList.remove('hl'));
+  if (f.codeLine) {
+    const line = document.getElementById(f.codeLine);
+    if (line) line.classList.add('hl');
+  }
+
+  // candidates row — highlight break
+  CANDIDATES.forEach((_, i) => {
+    const el = document.getElementById(`arr-${i}`);
+    el.classList.remove('break');
+    if (f.brokeAt === i) el.classList.add('break');
+  });
+
+  // current list
+  curEl.innerHTML = '';
+  if (f.current.length === 0) {
+    curEmpt.style.display = 'inline';
+  } else {
+    curEmpt.style.display = 'none';
+    f.current.forEach((v, i) => {
+      const d = document.createElement('div');
+      d.className = 'box';
+      if (f.cursorHint && f.cursorHint.kind === 'added' && f.cursorHint.idx === i) {
+        d.classList.add('added');
+      }
+      d.textContent = v;
+      curEl.appendChild(d);
+    });
+  }
+
+  // target
+  tgtEl.textContent = `t = ${f.currentTarget}`;
+  tgtEl.classList.remove('zero', 'neg');
+  if (f.currentTarget === 0) tgtEl.classList.add('zero');
+  else if (f.currentTarget < 0) tgtEl.classList.add('neg');
+
+  // tree
+  renderTree(f);
+
+  // result
+  resEl.innerHTML = '';
+  f.result.forEach((sub, i) => {
+    const d = document.createElement('div');
+    d.className = 'res-row';
+    if (f.lastResult === i) d.classList.add('new');
+    d.innerHTML = `<span>[${sub.join(', ')}]</span><span class="i">sum=${sub.reduce((a, b) => a + b, 0)}</span>`;
+    resEl.appendChild(d);
+  });
+  if (f.lastResult != null) {
+    const nth = resEl.children[f.lastResult];
+    if (nth) nth.scrollIntoView({ block: 'nearest' });
+  }
+  resCnt.textContent = `(${f.result.length})`;
+
+  msgEl.innerHTML = f.msg || '—';
+  barEl.style.width = ((cur + 1) / FRAMES.length * 100) + '%';
+  infoEl.textContent = `${cur + 1} / ${FRAMES.length}`;
+}
+
+function renderTree(f) {
+  const edgeSvg = [];
+  const nodeSvg = [];
+  const W = 90, H = 40;
+  TREE.forEach(n => {
+    if (n.parent >= 0) {
+      const p = TREE[n.parent];
+      const childVisited = f.visited.includes(n.id);
+      const isActive = f.activeEdge && f.activeEdge.from === n.parent && f.activeEdge.to === n.id;
+      const cls = ['edge'];
+      if (!childVisited) cls.push('pending');
+      if (isActive) cls.push('active');
+      edgeSvg.push(`<line class="${cls.join(' ')}" x1="${p.x}" y1="${p.y + H / 2}" x2="${n.x}" y2="${n.y - H / 2}"/>`);
+      const mx = (p.x + n.x) / 2;
+      const my = (p.y + H / 2 + n.y - H / 2) / 2;
+      edgeSvg.push(`<text class="edge-label" x="${mx}" y="${my}" dx="7">+${CANDIDATES[n.viaI]}</text>`);
+    }
+
+    const cls = ['tree-node'];
+    const isVisited = f.visited.includes(n.id);
+    const isOnStack = f.callStack.includes(n.id);
+    const isActive = f.activeNode === n.id;
+    const hasReturned = f.returned.includes(n.id);
+    const wasAdded = f.added.includes(n.id);
+    if (!isVisited) cls.push('pending');
+    else if (isActive && wasAdded) cls.push('success');
+    else if (isActive) cls.push('active');
+    else if (wasAdded) cls.push('success');
+    else if (isOnStack) cls.push('onstack');
+    else if (hasReturned) cls.push('returned');
+
+    const label1 = n.current.length === 0 ? '∅' : '[' + n.current.join(',') + ']';
+    const label2 = `t=${n.target}`;
+    nodeSvg.push(`<g class="${cls.join(' ')}" transform="translate(${n.x}, ${n.y})">
+      <rect x="${-W / 2}" y="${-H / 2}" width="${W}" height="${H}" rx="6"/>
+      <text class="l1" y="-7">${label1}</text>
+      <text class="l2" y="9">${label2}</text>
+    </g>`);
+  });
+  treeEl.innerHTML = edgeSvg.join('') + nodeSvg.join('');
+}
+
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+const playBtn = document.getElementById('play');
+
+function goto(i) {
+  cur = Math.max(0, Math.min(FRAMES.length - 1, i));
+  render(FRAMES[cur]);
+  prevBtn.disabled = cur === 0;
+  nextBtn.disabled = cur === FRAMES.length - 1;
+}
+function play() {
+  if (cur >= FRAMES.length - 1) goto(0);
+  playing = true;
+  playBtn.textContent = '❚❚ Pause';
+  playTimer = setInterval(() => {
+    if (cur >= FRAMES.length - 1) { stop(); return; }
+    goto(cur + 1);
+  }, 700);
+}
+function stop() {
+  playing = false;
+  playBtn.textContent = '▶ Play';
+  clearInterval(playTimer);
+}
+
+prevBtn.addEventListener('click', () => { stop(); goto(cur - 1); });
+nextBtn.addEventListener('click', () => { stop(); goto(cur + 1); });
+playBtn.addEventListener('click', () => { playing ? stop() : play(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') { stop(); goto(cur - 1); }
+  else if (e.key === 'ArrowRight') { stop(); goto(cur + 1); }
+  else if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
+});
+
+goto(0);
+</script>
+</body>
+</html>
