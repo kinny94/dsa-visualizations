@@ -16,6 +16,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [496](https://kinny94.github.io/dsa-visualizations/lc496-next-greater-element-i.html) | Next Greater Element I | Stack · Monotonic |
 | [141](https://kinny94.github.io/dsa-visualizations/lc141-linked-list-cycle.html) | Linked List Cycle | Linked List · Floyd's |
 | [92](https://kinny94.github.io/dsa-visualizations/lc92-reverse-linked-list-ii.html) | Reverse Linked List II | Linked List · Pointer Surgery |
+| [654](https://kinny94.github.io/dsa-visualizations/lc654-maximum-binary-tree.html) | Maximum Binary Tree | Stack · Monotonic |
 
 ## Adding a new animation
 
