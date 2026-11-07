@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LC 155 · Min Stack · Two-Stack Trick</title>
+<style>
+  :root {
+    --bg: #0d1117; --bg-elev: #161b22; --bg-code: #0a0e14;
+    --fg: #e6edf3; --fg-dim: #8b949e; --fg-muted: #6e7681;
+    --accent: #58a6ff; --accent-2: #d2a8ff;
+    --green: #3fb950; --red: #f85149; --orange: #ffa657; --yellow: #d29922; --purple: #bc8cff;
+    --border: #30363d; --border-soft: #21262d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.4; height: 100vh; overflow: hidden; }
+  .app { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; padding: 0.55rem 0.9rem; gap: 0.45rem; }
+  header.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  header.topbar h1 { font-size: 1.0rem; margin: 0; color: var(--accent-2); }
+  header.topbar .sub { color: var(--fg-dim); font-size: 0.75rem; }
+  header.topbar .sub code { background: var(--bg-code); padding: 1px 6px; border-radius: 3px; color: var(--orange); font-size: 0.75rem; }
+  .legend { display: flex; gap: 0.7rem; flex-wrap: wrap; font-size: 0.68rem; color: var(--fg-dim); }
+  .legend .chip { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .legend .swatch { width: 11px; height: 11px; border-radius: 2px; border: 1px solid var(--border); }
+  .legend .sw-push { background: rgba(63,185,80,0.2); border-color: var(--green); }
+  .legend .sw-pop { background: rgba(248,81,73,0.2); border-color: var(--red); }
+  .legend .sw-min { background: rgba(188,140,255,0.15); border-color: var(--purple); }
+  .legend .sw-line { background: rgba(210,153,34,0.15); border-color: var(--yellow); }
+  main.stage { display: grid; grid-template-columns: 1.1fr 1.1fr 0.85fr; gap: 0.55rem; min-height: 0; }
+  .panel { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.5rem 0.65rem; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .panel h2 { margin: 0 0 0.3rem; font-size: 0.7rem; color: var(--accent-2);
+    font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  pre.code { background: var(--bg-code); padding: 0.55rem 0.7rem; border-radius: 6px;
+    border: 1px solid var(--border-soft); font-size: 0.71rem; line-height: 1.5;
+    overflow: auto; margin: 0; flex: 1; min-height: 0; font-family: "SF Mono", Menlo, monospace; }
+  pre.code .k { color: var(--accent); } pre.code .f { color: var(--purple); }
+  pre.code .c { color: var(--fg-muted); font-style: italic; }
+  pre.code .line { display: block; padding: 0 0.4rem; margin: 0 -0.4rem;
+    border-left: 3px solid transparent; border-radius: 3px; transition: all 0.25s; }
+  pre.code .line.active { background: rgba(210,153,34,0.17); border-left-color: var(--yellow); }
+
+  .stacks-wrap { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    align-items: end; padding: 0.5rem; min-height: 0; }
+  .stack-col { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 0; }
+  .stack-col .title { font-size: 0.7rem; color: var(--accent-2); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 0.4rem; }
+  .stack-col.min .title { color: var(--purple); }
+  .stack-visual { display: flex; flex-direction: column-reverse; gap: 4px; min-height: 160px; align-items: center;
+    padding: 0.4rem 0; border-bottom: 2px solid var(--border); width: 100%; min-width: 80px; }
+  .s-item { min-width: 50px; min-height: 36px; background: var(--bg-code); border: 1.5px solid var(--accent);
+    border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-family: monospace; font-size: 0.9rem; transition: all 0.3s ease; position: relative; }
+  .s-item.pushed { background: rgba(63,185,80,0.2); border-color: var(--green); transform: scale(1.1); }
+  .s-item.popping { background: rgba(248,81,73,0.2); border-color: var(--red); opacity: 0.4; }
+  .s-item.peek::after { content: "← top"; position: absolute; left: calc(100% + 6px); font-size: 0.6rem; color: var(--yellow); white-space: nowrap; }
+  .stack-col.min .s-item { border-color: var(--purple); }
+  .stack-col.min .s-item.pushed { border-color: var(--green); }
+  .stack-base { font-size: 0.6rem; color: var(--fg-muted); padding-top: 4px; }
+
+  .state-panel { display: flex; flex-direction: column; gap: 0.5rem; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+  .card { background: var(--bg-code); border: 1px solid var(--border-soft); border-radius: 6px; padding: 0.5rem 0.6rem; }
+  .card .label { font-size: 0.58rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .card .val { font-family: monospace; font-size: 1.1rem; color: var(--accent); margin-top: 2px; }
+  .card.purple .val { color: var(--purple); }
+
+  .history { flex: 1; overflow-y: auto; background: var(--bg-code); border: 1px solid var(--border-soft);
+    border-radius: 6px; padding: 0.4rem 0.6rem; font-family: monospace; font-size: 0.72rem; }
+  .history .row { padding: 2px 0; color: var(--fg-dim); display: flex; justify-content: space-between; }
+  .history .row.active { color: var(--yellow); font-weight: 600; }
+  .history .row .r { color: var(--green); }
+
+  footer.bottombar { display: grid; grid-template-columns: 1fr auto; gap: 0.55rem; align-items: center; }
+  .log { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.45rem 0.7rem; font-family: monospace; font-size: 0.76rem; min-height: 2.2rem; display: flex; align-items: center; }
+  .log .hl { color: var(--orange); } .log .gh { color: var(--green); }
+  .log .nl { color: var(--red); } .log .ps { color: var(--accent); } .log .p { color: var(--purple); }
+  .controls { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+  .controls button { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border);
+    padding: 0.32rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.73rem; font-family: inherit; }
+  .controls .primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .speed { color: var(--fg-dim); font-size: 0.68rem; }
+  .speed select { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border); padding: 0.18rem; font-size: 0.7rem; }
+  .step-count { color: var(--fg-dim); font-family: monospace; font-size: 0.7rem; margin-left: 0.4rem; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="topbar">
+  <div>
+    <h1>LC 155 · Min Stack · Two-Stack Trick</h1>
+    <div class="sub">operations: <code>push 3, push 5, push 2, push 1, getMin, pop, getMin, pop, top, getMin</code> · min-stack mirrors every new minimum</div>
+  </div>
+  <div class="legend">
+    <span class="chip"><span class="swatch sw-line"></span> current code line</span>
+    <span class="chip"><span class="swatch sw-push"></span> just pushed</span>
+    <span class="chip"><span class="swatch sw-pop"></span> popping</span>
+    <span class="chip"><span class="swatch sw-min"></span> min stack</span>
+  </div>
+</header>
+
+<main class="stage">
+  <section class="panel">
+    <h2>Algorithm</h2>
+    <pre class="code"><span class="line" id="l-class"><span class="k">class</span> <span class="f">MinStack</span> {</span>
+<span class="line">    <span class="k">private</span> Deque&lt;Integer&gt; stack = <span class="k">new</span> ArrayDeque&lt;&gt;();</span>
+<span class="line">    <span class="k">private</span> Deque&lt;Integer&gt; minStack = <span class="k">new</span> ArrayDeque&lt;&gt;();</span>
+<span class="line"></span>
+<span class="line" id="l-push">    <span class="k">public</span> <span class="k">void</span> <span class="f">push</span>(<span class="k">int</span> val) {</span>
+<span class="line" id="l-push-main">        stack.push(val);</span>
+<span class="line" id="l-push-check">        <span class="k">if</span> (minStack.isEmpty() || val &lt;= minStack.peek()) {</span>
+<span class="line" id="l-push-min">            minStack.push(val);          <span class="c">// mirror new min</span></span>
+<span class="line">        }</span>
+<span class="line">    }</span>
+<span class="line"></span>
+<span class="line" id="l-pop">    <span class="k">public</span> <span class="k">void</span> <span class="f">pop</span>() {</span>
+<span class="line" id="l-pop-main">        <span class="k">int</span> v = stack.pop();</span>
+<span class="line" id="l-pop-check">        <span class="k">if</span> (v == minStack.peek()) {</span>
+<span class="line" id="l-pop-min">            minStack.pop();              <span class="c">// unmirror</span></span>
+<span class="line">        }</span>
+<span class="line">    }</span>
+<span class="line"></span>
+<span class="line" id="l-top">    <span class="k">public</span> <span class="k">int</span> <span class="f">top</span>() { <span class="k">return</span> stack.peek(); }</span>
+<span class="line" id="l-min">    <span class="k">public</span> <span class="k">int</span> <span class="f">getMin</span>() { <span class="k">return</span> minStack.peek(); }</span>
+<span class="line">}</span></pre>
+  </section>
+
+  <section class="panel">
+    <h2>Two stacks</h2>
+    <div class="stacks-wrap">
+      <div class="stack-col">
+        <div class="title">main stack</div>
+        <div class="stack-visual" data-role="main-stack"></div>
+        <div class="stack-base">bottom</div>
+      </div>
+      <div class="stack-col min">
+        <div class="title">min stack</div>
+        <div class="stack-visual" data-role="min-stack"></div>
+        <div class="stack-base">bottom</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel state-panel">
+    <h2>State &amp; calls</h2>
+    <div class="cards">
+      <div class="card"><div class="label">top()</div><div class="val" data-role="v-top">—</div></div>
+      <div class="card purple"><div class="label">getMin()</div><div class="val" data-role="v-min">—</div></div>
+    </div>
+    <div class="history" data-role="history"></div>
+  </section>
+</main>
+
+<footer class="bottombar">
+  <div class="log" data-role="log">Click Play or Next to begin.</div>
+  <div class="controls">
+    <button data-act="reset">↺ Reset</button>
+    <button data-act="prev">◀ Prev</button>
+    <button data-act="play" class="primary">▶ Play</button>
+    <button data-act="next">Next ▶</button>
+    <span class="speed">Speed <select data-act="speed">
+      <option value="1800">Slow</option>
+      <option value="1100" selected>Normal</option>
+      <option value="600">Fast</option>
+    </select></span>
+    <span class="step-count" data-role="counter">step 0 / —</span>
+  </div>
+</footer>
+
+</div>
+
+<script>
+'use strict';
+const OPS = [
+  { op: "push", arg: 3 },
+  { op: "push", arg: 5 },
+  { op: "push", arg: 2 },
+  { op: "push", arg: 1 },
+  { op: "getMin" },
+  { op: "pop" },
+  { op: "getMin" },
+  { op: "pop" },
+  { op: "top" },
+  { op: "getMin" },
+];
+
+const frames = [];
+let main = [], min = [];
+let lastPushed = null, lastPopped = null;
+let topVal = null, minVal = null;
+const history = [];
+
+function snap(log, codeLine = null) {
+  frames.push({
+    main: main.slice(), min: min.slice(),
+    lastPushed, lastPopped, topVal, minVal,
+    history: history.slice(), log, codeLine,
+  });
+}
+
+snap(`Initial state: both stacks empty.`, "l-class");
+
+OPS.forEach((op, i) => {
+  lastPushed = null; lastPopped = null;
+
+  if (op.op === "push") {
+    snap(`Call <span class="ps">push(${op.arg})</span>.`, "l-push");
+    main.push(op.arg);
+    lastPushed = op.arg;
+    snap(`<span class="gh">Pushed ${op.arg}</span> onto main stack.`, "l-push-main");
+    const mPeek = min.length ? min[min.length - 1] : null;
+    snap(
+      min.length === 0
+        ? `Min stack empty → always push.`
+        : (op.arg <= mPeek
+            ? `${op.arg} &le; min stack top (${mPeek}) → <span class="p">push to min stack</span>.`
+            : `${op.arg} &gt; min stack top (${mPeek}) → <span class="nl">skip</span> min stack.`),
+      "l-push-check"
+    );
+    if (min.length === 0 || op.arg <= mPeek) {
+      min.push(op.arg);
+      snap(`<span class="p">Mirrored ${op.arg}</span> onto min stack.`, "l-push-min");
+    }
+    history.push({ call: `push(${op.arg})`, result: "" });
+    topVal = main[main.length - 1];
+    minVal = min[min.length - 1];
+    snap(`push(${op.arg}) done. top = <span class="hl">${topVal}</span>, min = <span class="hl">${minVal}</span>.`, null);
+
+  } else if (op.op === "pop") {
+    snap(`Call <span class="ps">pop()</span>.`, "l-pop");
+    const v = main.pop();
+    lastPopped = v;
+    snap(`Popped <span class="nl">${v}</span> from main stack.`, "l-pop-main");
+    const mPeek = min[min.length - 1];
+    snap(
+      v === mPeek
+        ? `Popped value (${v}) == min stack top (${mPeek}) → <span class="nl">pop min stack too</span>.`
+        : `Popped value (${v}) != min stack top (${mPeek}) → <span class="gh">min stack unchanged</span>.`,
+      "l-pop-check"
+    );
+    if (v === mPeek) {
+      min.pop();
+      snap(`Popped <span class="nl">${v}</span> from min stack.`, "l-pop-min");
+    }
+    history.push({ call: `pop()`, result: `(removed ${v})` });
+    topVal = main.length ? main[main.length - 1] : null;
+    minVal = min.length ? min[min.length - 1] : null;
+    snap(`pop() done. top = <span class="hl">${topVal ?? '—'}</span>, min = <span class="hl">${minVal ?? '—'}</span>.`, null);
+
+  } else if (op.op === "top") {
+    snap(`Call <span class="ps">top()</span>.`, "l-top");
+    const r = main[main.length - 1];
+    history.push({ call: `top()`, result: `→ ${r}` });
+    snap(`<span class="gh">top() returned ${r}</span> (peek of main stack).`, "l-top");
+
+  } else if (op.op === "getMin") {
+    snap(`Call <span class="ps">getMin()</span>.`, "l-min");
+    const r = min[min.length - 1];
+    history.push({ call: `getMin()`, result: `→ ${r}` });
+    snap(`<span class="gh">getMin() returned ${r}</span> (peek of min stack — O(1)).`, "l-min");
+  }
+});
+
+snap(`<span class="gh">Done.</span> All operations complete.`, null);
+
+// ====== Renderers ======
+function renderStacks(f) {
+  const renderOne = (role, arr, isPushTarget, isPopTarget) => {
+    const el = document.querySelector(`[data-role="${role}"]`);
+    el.innerHTML = '';
+    arr.forEach((v, idx) => {
+      const item = document.createElement('div');
+      item.className = 's-item';
+      item.textContent = v;
+      if (isPushTarget && idx === arr.length - 1 && v === f.lastPushed) { item.classList.add('pushed'); }
+      if (idx === arr.length - 1) { item.classList.add('peek'); }
+      el.appendChild(item);
+    });
+    if (isPopTarget && f.lastPopped != null && !arr.includes(f.lastPopped)) {
+      // show the just-popped item as ghost above for clarity
+      const ghost = document.createElement('div');
+      ghost.className = 's-item popping';
+      ghost.textContent = f.lastPopped;
+      el.appendChild(ghost);
+    }
+  };
+  renderOne('main-stack', f.main, true, true);
+  renderOne('min-stack', f.min, true, true);
+
+  document.querySelector('[data-role="v-top"]').textContent = f.topVal ?? '—';
+  document.querySelector('[data-role="v-min"]').textContent = f.minVal ?? '—';
+
+  const hist = document.querySelector('[data-role="history"]');
+  hist.innerHTML = '';
+  f.history.forEach((h, i) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<span>${h.call}</span><span class="r">${h.result}</span>`;
+    if (i === f.history.length - 1) { row.classList.add('active'); }
+    hist.appendChild(row);
+  });
+}
+
+function highlightCode(id) {
+  document.querySelectorAll('pre.code .line.active').forEach(el => el.classList.remove('active'));
+  if (id) { document.getElementById(id)?.classList.add('active'); }
+}
+
+class Engine {
+  constructor() {
+    this.i = 0; this.playing = false; this.interval = null;
+    this.speed = parseInt(document.querySelector('[data-act="speed"]').value, 10);
+    document.querySelector('[data-act="next"]').onclick = () => this.step(1);
+    document.querySelector('[data-act="prev"]').onclick = () => this.step(-1);
+    document.querySelector('[data-act="reset"]').onclick = () => { this.pause(); this.i = 0; this.render(); };
+    this.playBtn = document.querySelector('[data-act="play"]');
+    this.playBtn.onclick = () => this.playing ? this.pause() : this.play();
+    document.querySelector('[data-act="speed"]').addEventListener('change', (e) => {
+      this.speed = parseInt(e.target.value, 10);
+      if (this.playing) { this.pause(); this.play(); }
+    });
+    this.counter = document.querySelector('[data-role="counter"]');
+    this.render();
+  }
+  step(d) { const n = this.i + d; if (n < 0 || n >= frames.length) { return; } this.i = n; this.render(); }
+  play() {
+    if (this.i >= frames.length - 1) { this.i = 0; }
+    this.playing = true; this.playBtn.textContent = '❚❚ Pause';
+    this.interval = setInterval(() => {
+      if (this.i >= frames.length - 1) { this.pause(); return; }
+      this.i++; this.render();
+    }, this.speed);
+  }
+  pause() { this.playing = false; this.playBtn.textContent = '▶ Play';
+    if (this.interval) { clearInterval(this.interval); this.interval = null; } }
+  render() {
+    const f = frames[this.i];
+    renderStacks(f);
+    document.querySelector('[data-role="log"]').innerHTML = f.log;
+    highlightCode(f.codeLine);
+    this.counter.textContent = `step ${this.i} / ${frames.length - 1}`;
+  }
+}
+window.addEventListener('load', () => { new Engine(); });
+</script>
+</body>
+</html>

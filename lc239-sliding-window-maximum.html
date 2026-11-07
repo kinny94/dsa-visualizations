@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LC 239 · Sliding Window Maximum · Monotonic Deque</title>
+<style>
+  :root {
+    --bg: #0d1117; --bg-elev: #161b22; --bg-code: #0a0e14;
+    --fg: #e6edf3; --fg-dim: #8b949e; --fg-muted: #6e7681;
+    --accent: #58a6ff; --accent-2: #d2a8ff;
+    --green: #3fb950; --red: #f85149; --orange: #ffa657; --yellow: #d29922; --purple: #bc8cff;
+    --border: #30363d; --border-soft: #21262d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: -apple-system, sans-serif;
+    line-height: 1.4; height: 100vh; overflow: hidden; }
+  .app { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; padding: 0.55rem 0.9rem; gap: 0.45rem; }
+  header.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  header.topbar h1 { font-size: 1.0rem; margin: 0; color: var(--accent-2); }
+  header.topbar .sub { color: var(--fg-dim); font-size: 0.75rem; }
+  header.topbar .sub code { background: var(--bg-code); padding: 1px 6px; border-radius: 3px; color: var(--orange); font-size: 0.75rem; }
+  .legend { display: flex; gap: 0.7rem; flex-wrap: wrap; font-size: 0.68rem; color: var(--fg-dim); }
+  .legend .chip { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .legend .swatch { width: 11px; height: 11px; border-radius: 2px; border: 1px solid var(--border); }
+  .legend .sw-win { background: rgba(210,153,34,0.18); border-color: var(--yellow); }
+  .legend .sw-evict { background: rgba(248,81,73,0.2); border-color: var(--red); }
+  .legend .sw-add { background: rgba(63,185,80,0.2); border-color: var(--green); }
+  .legend .sw-max { background: rgba(188,140,255,0.18); border-color: var(--purple); }
+  .legend .sw-line { background: rgba(210,153,34,0.15); border-color: var(--yellow); }
+  main.stage { display: grid; grid-template-columns: 1fr 1.2fr 0.8fr; gap: 0.55rem; min-height: 0; }
+  .panel { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.5rem 0.65rem; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .panel h2 { margin: 0 0 0.3rem; font-size: 0.7rem; color: var(--accent-2);
+    font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  pre.code { background: var(--bg-code); padding: 0.55rem 0.7rem; border-radius: 6px;
+    border: 1px solid var(--border-soft); font-size: 0.68rem; line-height: 1.45;
+    overflow: auto; margin: 0; flex: 1; min-height: 0; font-family: "SF Mono", Menlo, monospace; }
+  pre.code .k { color: var(--accent); } pre.code .f { color: var(--purple); }
+  pre.code .c { color: var(--fg-muted); font-style: italic; }
+  pre.code .line { display: block; padding: 0 0.4rem; margin: 0 -0.4rem;
+    border-left: 3px solid transparent; border-radius: 3px; transition: all 0.25s; }
+  pre.code .line.active { background: rgba(210,153,34,0.17); border-left-color: var(--yellow); }
+
+  .mid { display: flex; flex-direction: column; gap: 0.7rem; justify-content: center; flex: 1; padding: 0.3rem; }
+  .arr-wrap { position: relative; padding: 1.5rem 0.2rem 0.4rem; }
+  .arr-strip { display: flex; gap: 2px; justify-content: center; }
+  .cell { min-width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
+    font-family: monospace; font-size: 0.85rem; background: var(--bg-code); border: 1px solid var(--border);
+    border-radius: 4px; position: relative; transition: all 0.3s; }
+  .cell.in-win { border-color: var(--yellow); background: rgba(210,153,34,0.1); }
+  .cell.current { border-color: var(--green); background: rgba(63,185,80,0.2); font-weight: 700; transform: translateY(-3px); }
+  .cell .idx { position: absolute; top: -16px; font-size: 0.55rem; color: var(--fg-muted); }
+  .win-overlay { position: absolute; top: 1.3rem; bottom: 0.2rem; border: 2px solid var(--yellow);
+    border-radius: 6px; box-shadow: 0 0 0 1px rgba(210,153,34,0.25); pointer-events: none;
+    transition: all 0.35s ease; }
+
+  .dq-wrap { background: var(--bg-code); border: 1px solid var(--border-soft); border-radius: 6px;
+    padding: 0.5rem 0.6rem; }
+  .dq-label { display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem; }
+  .dq-strip { display: flex; gap: 4px; justify-content: center; min-height: 48px; align-items: center; flex-wrap: wrap; }
+  .dq-item { min-width: 60px; padding: 0.3rem 0.4rem; background: var(--bg); border: 1.5px solid var(--purple);
+    border-radius: 4px; display: flex; flex-direction: column; align-items: center; font-family: monospace;
+    font-size: 0.72rem; transition: all 0.25s ease; }
+  .dq-item .idx { color: var(--fg-muted); font-size: 0.55rem; }
+  .dq-item .val { color: var(--fg); font-size: 0.85rem; font-weight: 600; }
+  .dq-item.added { border-color: var(--green); background: rgba(63,185,80,0.18); transform: scale(1.08); }
+  .dq-item.evict { border-color: var(--red); background: rgba(248,81,73,0.12); opacity: 0.4; }
+  .dq-item.front { box-shadow: 0 0 0 2px rgba(188,140,255,0.3); }
+  .dq-empty { color: var(--fg-muted); font-style: italic; font-size: 0.75rem; }
+
+  .right { display: flex; flex-direction: column; gap: 0.5rem; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+  .card { background: var(--bg-code); border: 1px solid var(--border-soft); border-radius: 6px; padding: 0.45rem 0.55rem; }
+  .card .label { font-size: 0.56rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .card .val { font-family: monospace; font-size: 1rem; color: var(--accent); margin-top: 2px; }
+  .output { flex: 1; overflow-y: auto; background: var(--bg-code); border: 1px solid var(--border-soft);
+    border-radius: 6px; padding: 0.4rem 0.6rem; }
+  .output .lbl { font-size: 0.58rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.3rem; }
+  .output .out-cells { display: flex; gap: 3px; flex-wrap: wrap; }
+  .out-cell { min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+    font-family: monospace; font-size: 0.76rem; color: var(--fg-dim); transition: all 0.3s; }
+  .out-cell.filled { color: var(--fg); border-color: var(--purple); background: rgba(188,140,255,0.1); }
+  .out-cell.fresh { background: rgba(63,185,80,0.2); border-color: var(--green); transform: scale(1.1); }
+
+  footer.bottombar { display: grid; grid-template-columns: 1fr auto; gap: 0.55rem; align-items: center; }
+  .log { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.45rem 0.7rem; font-family: monospace; font-size: 0.74rem; min-height: 2.2rem; display: flex; align-items: center; }
+  .log .hl { color: var(--orange); } .log .gh { color: var(--green); }
+  .log .nl { color: var(--red); } .log .ps { color: var(--accent); } .log .p { color: var(--purple); }
+  .controls { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+  .controls button { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border);
+    padding: 0.32rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.73rem; font-family: inherit; }
+  .controls .primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .speed { color: var(--fg-dim); font-size: 0.68rem; }
+  .speed select { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border); padding: 0.18rem; font-size: 0.7rem; }
+  .step-count { color: var(--fg-dim); font-family: monospace; font-size: 0.7rem; margin-left: 0.4rem; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="topbar">
+  <div>
+    <h1>LC 239 · Sliding Window Maximum · Monotonic Deque</h1>
+    <div class="sub">nums = <code>[1, 3, -1, -3, 5, 3, 6, 7]</code>, k = <code>3</code> · deque stores <b>indices</b>, values strictly decreasing from front → back</div>
+  </div>
+  <div class="legend">
+    <span class="chip"><span class="swatch sw-line"></span> current code line</span>
+    <span class="chip"><span class="swatch sw-win"></span> window</span>
+    <span class="chip"><span class="swatch sw-evict"></span> evicting from deque</span>
+    <span class="chip"><span class="swatch sw-add"></span> added to deque</span>
+    <span class="chip"><span class="swatch sw-max"></span> window max (deque front)</span>
+  </div>
+</header>
+
+<main class="stage">
+  <section class="panel">
+    <h2>Algorithm</h2>
+    <pre class="code"><span class="line" id="l-sig"><span class="k">public</span> <span class="k">int</span>[] <span class="f">maxSlidingWindow</span>(<span class="k">int</span>[] nums, <span class="k">int</span> k) {</span>
+<span class="line" id="l-dq">    Deque&lt;Integer&gt; dq = <span class="k">new</span> ArrayDeque&lt;&gt;();   <span class="c">// holds indices</span></span>
+<span class="line" id="l-res">    <span class="k">int</span>[] res = <span class="k">new</span> <span class="k">int</span>[nums.length - k + 1];</span>
+<span class="line" id="l-for">    <span class="k">for</span> (<span class="k">int</span> i = 0; i &lt; nums.length; i++) {</span>
+<span class="line" id="l-evict-front">        <span class="k">while</span> (!dq.isEmpty() &amp;&amp; dq.peekFirst() &lt;= i - k) {</span>
+<span class="line" id="l-poll-front">            dq.pollFirst();   <span class="c">// index fell out of window</span></span>
+<span class="line">        }</span>
+<span class="line" id="l-evict-back">        <span class="k">while</span> (!dq.isEmpty() &amp;&amp; nums[dq.peekLast()] &lt; nums[i]) {</span>
+<span class="line" id="l-poll-back">            dq.pollLast();    <span class="c">// smaller — dominated by nums[i]</span></span>
+<span class="line">        }</span>
+<span class="line" id="l-offer">        dq.offerLast(i);</span>
+<span class="line" id="l-write">        <span class="k">if</span> (i &gt;= k - 1) { res[i - k + 1] = nums[dq.peekFirst()]; }</span>
+<span class="line">    }</span>
+<span class="line">    <span class="k">return</span> res;</span>
+<span class="line">}</span></pre>
+  </section>
+
+  <section class="panel">
+    <h2>Array · window · deque</h2>
+    <div class="mid">
+      <div class="arr-wrap">
+        <div class="arr-strip" data-role="arr"></div>
+        <div class="win-overlay" data-role="win" style="display:none"></div>
+      </div>
+      <div class="dq-wrap">
+        <div class="dq-label"><span>front (= window max)</span><span>back (= latest)</span></div>
+        <div class="dq-strip" data-role="dq"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel right">
+    <h2>State &amp; output</h2>
+    <div class="cards">
+      <div class="card"><div class="label">i</div><div class="val" data-role="v-i">—</div></div>
+      <div class="card"><div class="label">window max</div><div class="val" data-role="v-max">—</div></div>
+    </div>
+    <div class="output">
+      <div class="lbl">result[]</div>
+      <div class="out-cells" data-role="out"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="bottombar">
+  <div class="log" data-role="log">Click Play or Next to begin.</div>
+  <div class="controls">
+    <button data-act="reset">↺ Reset</button>
+    <button data-act="prev">◀ Prev</button>
+    <button data-act="play" class="primary">▶ Play</button>
+    <button data-act="next">Next ▶</button>
+    <span class="speed">Speed <select data-act="speed">
+      <option value="1800">Slow</option>
+      <option value="1100" selected>Normal</option>
+      <option value="600">Fast</option>
+    </select></span>
+    <span class="step-count" data-role="counter">step 0 / —</span>
+  </div>
+</footer>
+
+</div>
+
+<script>
+'use strict';
+const NUMS = [1, 3, -1, -3, 5, 3, 6, 7];
+const K = 3;
+const N = NUMS.length;
+
+const frames = [];
+let dq = [];              // deque of indices
+let result = new Array(N - K + 1).fill(null);
+let currentI = -1;
+let lastEvictFront = null, lastEvictBack = null, lastAdded = null, lastWritten = null;
+
+function snap(log, codeLine = null) {
+  frames.push({
+    i: currentI,
+    dq: dq.slice(),
+    result: result.slice(),
+    lastEvictFront, lastEvictBack, lastAdded, lastWritten,
+    log, codeLine,
+  });
+}
+
+snap(`Initial state. Deque empty, result array of length ${N - K + 1} ready to fill.`, "l-dq");
+
+for (let i = 0; i < N; i++) {
+  currentI = i;
+  lastEvictFront = null; lastEvictBack = null; lastAdded = null; lastWritten = null;
+  snap(`<span class="hl">i = ${i}</span>, nums[i] = <span class="hl">${NUMS[i]}</span>. Window spans indices [${Math.max(0, i - K + 1)} .. ${i}].`, "l-for");
+
+  // Evict front (out of window)
+  while (dq.length && dq[0] <= i - K) {
+    const removed = dq[0];
+    lastEvictFront = removed;
+    snap(`dq.front = ${removed} &le; i - k = ${i - K} → index fell out of window. <span class="nl">pollFirst</span>.`, "l-evict-front");
+    dq.shift();
+    snap(`Deque after pollFirst: [${dq.join(", ")}].`, "l-poll-front");
+    lastEvictFront = null;
+  }
+
+  // Evict back (smaller)
+  while (dq.length && NUMS[dq[dq.length - 1]] < NUMS[i]) {
+    const removed = dq[dq.length - 1];
+    lastEvictBack = removed;
+    snap(`dq.back value = nums[${removed}] = ${NUMS[removed]} &lt; nums[${i}] = ${NUMS[i]} → it can <span class="nl">never be max</span> while nums[${i}] is in window. <span class="nl">pollLast</span>.`, "l-evict-back");
+    dq.pop();
+    snap(`Deque after pollLast: [${dq.join(", ")}].`, "l-poll-back");
+    lastEvictBack = null;
+  }
+
+  // Add current
+  dq.push(i);
+  lastAdded = i;
+  snap(`<span class="gh">offerLast(${i})</span>. Deque now (indices): [${dq.join(", ")}] (values: [${dq.map(x => NUMS[x]).join(", ")}]).`, "l-offer");
+
+  // Write result
+  if (i >= K - 1) {
+    const maxVal = NUMS[dq[0]];
+    result[i - K + 1] = maxVal;
+    lastWritten = i - K + 1;
+    snap(`Window complete (i &ge; k-1). Max = nums[dq.front] = nums[${dq[0]}] = <span class="gh">${maxVal}</span>. result[${i - K + 1}] = ${maxVal}.`, "l-write");
+  } else {
+    snap(`i &lt; k-1 → window not yet full, skip write.`, "l-write");
+  }
+}
+
+currentI = -1;
+snap(`<span class="gh">Done.</span> result = [${result.join(", ")}].`, null);
+
+// ====== Renderers ======
+function renderAll(f) {
+  const arr = document.querySelector('[data-role="arr"]');
+  arr.innerHTML = '';
+  const winStart = f.i >= 0 ? Math.max(0, f.i - K + 1) : -1;
+  NUMS.forEach((v, idx) => {
+    const c = document.createElement('div'); c.className = 'cell';
+    if (f.i >= 0 && idx >= winStart && idx <= f.i) { c.classList.add('in-win'); }
+    if (idx === f.i) { c.classList.add('current'); }
+    const l = document.createElement('span'); l.className = 'idx'; l.textContent = idx;
+    c.appendChild(l); c.appendChild(document.createTextNode(String(v)));
+    arr.appendChild(c);
+  });
+
+  const win = document.querySelector('[data-role="win"]');
+  if (f.i >= 0) {
+    const first = arr.children[winStart];
+    const last = arr.children[f.i];
+    if (first && last) {
+      const rA = arr.getBoundingClientRect();
+      const r1 = first.getBoundingClientRect();
+      const r2 = last.getBoundingClientRect();
+      win.style.display = 'block';
+      win.style.left = (r1.left - rA.left - 3) + 'px';
+      win.style.width = (r2.right - r1.left + 6) + 'px';
+    }
+  } else { win.style.display = 'none'; }
+
+  const dqEl = document.querySelector('[data-role="dq"]');
+  dqEl.innerHTML = '';
+  if (f.dq.length === 0 && f.lastEvictFront == null && f.lastEvictBack == null) {
+    const empty = document.createElement('div'); empty.className = 'dq-empty'; empty.textContent = '(deque empty)';
+    dqEl.appendChild(empty);
+  } else {
+    f.dq.forEach((idx, pos) => {
+      const item = document.createElement('div'); item.className = 'dq-item';
+      if (pos === 0) { item.classList.add('front'); }
+      if (idx === f.lastAdded) { item.classList.add('added'); }
+      item.innerHTML = `<span class="idx">i=${idx}</span><span class="val">${NUMS[idx]}</span>`;
+      dqEl.appendChild(item);
+    });
+    if (f.lastEvictFront != null) {
+      const g = document.createElement('div'); g.className = 'dq-item evict';
+      g.innerHTML = `<span class="idx">i=${f.lastEvictFront}</span><span class="val">${NUMS[f.lastEvictFront]}</span>`;
+      dqEl.insertBefore(g, dqEl.firstChild);
+    }
+    if (f.lastEvictBack != null) {
+      const g = document.createElement('div'); g.className = 'dq-item evict';
+      g.innerHTML = `<span class="idx">i=${f.lastEvictBack}</span><span class="val">${NUMS[f.lastEvictBack]}</span>`;
+      dqEl.appendChild(g);
+    }
+  }
+
+  document.querySelector('[data-role="v-i"]').textContent = f.i >= 0 ? f.i : '—';
+  document.querySelector('[data-role="v-max"]').textContent = f.dq.length ? NUMS[f.dq[0]] : '—';
+
+  const out = document.querySelector('[data-role="out"]');
+  out.innerHTML = '';
+  f.result.forEach((v, idx) => {
+    const c = document.createElement('div'); c.className = 'out-cell';
+    if (v != null) { c.classList.add('filled'); c.textContent = v; } else { c.textContent = '·'; }
+    if (idx === f.lastWritten) { c.classList.add('fresh'); }
+    out.appendChild(c);
+  });
+}
+
+function highlightCode(id) {
+  document.querySelectorAll('pre.code .line.active').forEach(el => el.classList.remove('active'));
+  if (id) { document.getElementById(id)?.classList.add('active'); }
+}
+
+class Engine {
+  constructor() {
+    this.i = 0; this.playing = false; this.interval = null;
+    this.speed = parseInt(document.querySelector('[data-act="speed"]').value, 10);
+    document.querySelector('[data-act="next"]').onclick = () => this.step(1);
+    document.querySelector('[data-act="prev"]').onclick = () => this.step(-1);
+    document.querySelector('[data-act="reset"]').onclick = () => { this.pause(); this.i = 0; this.render(); };
+    this.playBtn = document.querySelector('[data-act="play"]');
+    this.playBtn.onclick = () => this.playing ? this.pause() : this.play();
+    document.querySelector('[data-act="speed"]').addEventListener('change', (e) => {
+      this.speed = parseInt(e.target.value, 10);
+      if (this.playing) { this.pause(); this.play(); }
+    });
+    this.counter = document.querySelector('[data-role="counter"]');
+    this.render();
+  }
+  step(d) { const n = this.i + d; if (n < 0 || n >= frames.length) { return; } this.i = n; this.render(); }
+  play() {
+    if (this.i >= frames.length - 1) { this.i = 0; }
+    this.playing = true; this.playBtn.textContent = '❚❚ Pause';
+    this.interval = setInterval(() => {
+      if (this.i >= frames.length - 1) { this.pause(); return; }
+      this.i++; this.render();
+    }, this.speed);
+  }
+  pause() { this.playing = false; this.playBtn.textContent = '▶ Play';
+    if (this.interval) { clearInterval(this.interval); this.interval = null; } }
+  render() {
+    const f = frames[this.i];
+    renderAll(f);
+    document.querySelector('[data-role="log"]').innerHTML = f.log;
+    highlightCode(f.codeLine);
+    this.counter.textContent = `step ${this.i} / ${frames.length - 1}`;
+  }
+}
+window.addEventListener('load', () => { new Engine(); });
+</script>
+</body>
+</html>

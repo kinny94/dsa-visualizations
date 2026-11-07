@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LC 496 · Next Greater Element I · Monotonic Stack</title>
+<style>
+  :root { --bg: #0d1117; --bg-elev: #161b22; --bg-code: #0a0e14;
+    --fg: #e6edf3; --fg-dim: #8b949e; --fg-muted: #6e7681;
+    --accent: #58a6ff; --accent-2: #d2a8ff;
+    --green: #3fb950; --red: #f85149; --orange: #ffa657; --yellow: #d29922; --purple: #bc8cff;
+    --border: #30363d; --border-soft: #21262d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: -apple-system, sans-serif;
+    line-height: 1.4; height: 100vh; overflow: hidden; }
+  .app { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; padding: 0.55rem 0.9rem; gap: 0.45rem; }
+  header.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  header.topbar h1 { font-size: 1.0rem; margin: 0; color: var(--accent-2); }
+  header.topbar .sub { color: var(--fg-dim); font-size: 0.75rem; }
+  header.topbar .sub code { background: var(--bg-code); padding: 1px 6px; border-radius: 3px; color: var(--orange); font-size: 0.75rem; }
+  .legend { display: flex; gap: 0.7rem; flex-wrap: wrap; font-size: 0.68rem; color: var(--fg-dim); }
+  .legend .chip { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .legend .swatch { width: 11px; height: 11px; border-radius: 2px; border: 1px solid var(--border); }
+  .legend .sw-cur { background: rgba(63,185,80,0.2); border-color: var(--green); }
+  .legend .sw-pop { background: rgba(248,81,73,0.2); border-color: var(--red); }
+  .legend .sw-map { background: rgba(188,140,255,0.15); border-color: var(--purple); }
+  .legend .sw-line { background: rgba(210,153,34,0.15); border-color: var(--yellow); }
+  main.stage { display: grid; grid-template-columns: 1fr 1.1fr 0.9fr; gap: 0.55rem; min-height: 0; }
+  .panel { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.5rem 0.65rem; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .panel h2 { margin: 0 0 0.3rem; font-size: 0.7rem; color: var(--accent-2);
+    font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  pre.code { background: var(--bg-code); padding: 0.55rem 0.7rem; border-radius: 6px;
+    border: 1px solid var(--border-soft); font-size: 0.70rem; line-height: 1.5;
+    overflow: auto; margin: 0; flex: 1; min-height: 0; font-family: "SF Mono", Menlo, monospace; }
+  pre.code .k { color: var(--accent); } pre.code .f { color: var(--purple); }
+  pre.code .c { color: var(--fg-muted); font-style: italic; }
+  pre.code .line { display: block; padding: 0 0.4rem; margin: 0 -0.4rem;
+    border-left: 3px solid transparent; border-radius: 3px; transition: all 0.25s; }
+  pre.code .line.active { background: rgba(210,153,34,0.17); border-left-color: var(--yellow); }
+
+  .mid { flex: 1; display: flex; flex-direction: column; gap: 1rem; justify-content: center; padding: 0.4rem 0; }
+  .arr-label { font-size: 0.65rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-bottom: 0.3rem; }
+  .arr-strip { display: flex; gap: 3px; justify-content: center; padding-top: 1rem; }
+  .cell { min-width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+    font-family: monospace; font-size: 0.9rem; background: var(--bg-code); border: 1px solid var(--border);
+    border-radius: 4px; position: relative; transition: all 0.3s; }
+  .cell.done { opacity: 0.4; }
+  .cell.current { border-color: var(--green); background: rgba(63,185,80,0.2); font-weight: 700; transform: translateY(-4px); }
+  .cell.resolved { border-color: var(--purple); background: rgba(188,140,255,0.15); }
+  .cell .idx { position: absolute; top: -16px; font-size: 0.55rem; color: var(--fg-muted); }
+
+  .stack-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 0.5rem; }
+  .stack-label { font-size: 0.65rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .stack-visual { display: flex; flex-direction: column-reverse; gap: 3px; min-height: 90px;
+    padding: 0.4rem 1rem; border: 1px dashed var(--border); border-radius: 4px; min-width: 100px;
+    align-items: center; }
+  .s-item { min-width: 50px; min-height: 32px; background: var(--bg-code); border: 1.5px solid var(--accent);
+    border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-family: monospace; font-size: 0.85rem; transition: all 0.3s; }
+  .s-item.pushed { background: rgba(63,185,80,0.18); border-color: var(--green); transform: scale(1.1); }
+  .s-item.popping { background: rgba(248,81,73,0.2); border-color: var(--red); opacity: 0.5; }
+
+  .right { display: flex; flex-direction: column; gap: 0.5rem; }
+  .map-panel, .res-panel { background: var(--bg-code); border: 1px solid var(--border-soft);
+    border-radius: 6px; padding: 0.5rem 0.6rem; }
+  .map-panel .lbl, .res-panel .lbl { font-size: 0.58rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem; }
+  .map-entries { display: flex; flex-direction: column; gap: 3px; max-height: 120px; overflow-y: auto; }
+  .map-row { display: flex; justify-content: space-between; padding: 3px 6px; background: var(--bg-elev);
+    border-radius: 3px; font-family: monospace; font-size: 0.75rem; }
+  .map-row.fresh { background: rgba(63,185,80,0.18); border: 1px solid var(--green); }
+  .map-row .k { color: var(--accent); } .map-row .v { color: var(--purple); }
+  .res-panel { flex: 1; }
+  .nums1-wrap { margin-top: 0.5rem; }
+  .nums1-strip { display: flex; gap: 4px; }
+  .nums1-row { display: flex; flex-direction: column; align-items: center; }
+  .nums1-row .num { min-width: 34px; height: 30px; display: flex; align-items: center; justify-content: center;
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 3px;
+    font-family: monospace; font-size: 0.78rem; }
+  .nums1-row .arrow { color: var(--fg-muted); font-size: 0.6rem; margin: 2px 0; }
+  .nums1-row .res { min-width: 34px; height: 30px; display: flex; align-items: center; justify-content: center;
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 3px;
+    font-family: monospace; font-size: 0.78rem; color: var(--fg-dim); }
+  .nums1-row .res.filled { color: var(--green); border-color: var(--purple); background: rgba(188,140,255,0.1); }
+
+  footer.bottombar { display: grid; grid-template-columns: 1fr auto; gap: 0.55rem; align-items: center; }
+  .log { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.45rem 0.7rem; font-family: monospace; font-size: 0.75rem; min-height: 2.2rem; display: flex; align-items: center; }
+  .log .hl { color: var(--orange); } .log .gh { color: var(--green); }
+  .log .nl { color: var(--red); } .log .ps { color: var(--accent); } .log .p { color: var(--purple); }
+  .controls { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+  .controls button { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border);
+    padding: 0.32rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.73rem; font-family: inherit; }
+  .controls .primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .speed { color: var(--fg-dim); font-size: 0.68rem; }
+  .speed select { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border); padding: 0.18rem; font-size: 0.7rem; }
+  .step-count { color: var(--fg-dim); font-family: monospace; font-size: 0.7rem; margin-left: 0.4rem; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="topbar">
+  <div>
+    <h1>LC 496 · Next Greater Element I · Monotonic Stack</h1>
+    <div class="sub">nums1 = <code>[4, 1, 2]</code>, nums2 = <code>[1, 3, 4, 2]</code> · one pass over nums2 fills a <b>val → next-greater</b> map</div>
+  </div>
+  <div class="legend">
+    <span class="chip"><span class="swatch sw-line"></span> current code line</span>
+    <span class="chip"><span class="swatch sw-cur"></span> current n</span>
+    <span class="chip"><span class="swatch sw-pop"></span> popping (found next greater)</span>
+    <span class="chip"><span class="swatch sw-map"></span> map entry added</span>
+  </div>
+</header>
+
+<main class="stage">
+  <section class="panel">
+    <h2>Algorithm</h2>
+    <pre class="code"><span class="line" id="l-sig"><span class="k">public</span> <span class="k">int</span>[] <span class="f">nextGreaterElement</span>(<span class="k">int</span>[] nums1, <span class="k">int</span>[] nums2) {</span>
+<span class="line" id="l-init">    Map&lt;Integer,Integer&gt; map = <span class="k">new</span> HashMap&lt;&gt;();</span>
+<span class="line">    Deque&lt;Integer&gt; stack = <span class="k">new</span> ArrayDeque&lt;&gt;();</span>
+<span class="line" id="l-for2">    <span class="k">for</span> (<span class="k">int</span> n : nums2) {</span>
+<span class="line" id="l-while">        <span class="k">while</span> (!stack.isEmpty() &amp;&amp; stack.peek() &lt; n) {</span>
+<span class="line" id="l-pop">            map.put(stack.pop(), n);   <span class="c">// n is next greater for popped</span></span>
+<span class="line">        }</span>
+<span class="line" id="l-push">        stack.push(n);</span>
+<span class="line">    }</span>
+<span class="line" id="l-for1">    <span class="k">int</span>[] res = <span class="k">new</span> <span class="k">int</span>[nums1.length];</span>
+<span class="line" id="l-lookup">    <span class="k">for</span> (<span class="k">int</span> i = 0; i &lt; nums1.length; i++) {</span>
+<span class="line">        res[i] = map.getOrDefault(nums1[i], -1);</span>
+<span class="line">    }</span>
+<span class="line" id="l-ret">    <span class="k">return</span> res;</span>
+<span class="line">}</span></pre>
+  </section>
+
+  <section class="panel">
+    <h2>nums2 scan · monotonic stack</h2>
+    <div class="mid">
+      <div>
+        <div class="arr-label">nums2 (one pass)</div>
+        <div class="arr-strip" data-role="nums2"></div>
+      </div>
+      <div class="stack-wrap">
+        <div class="stack-label">stack (decreasing bottom → top)</div>
+        <div class="stack-visual" data-role="stack"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel right">
+    <h2>map &amp; result for nums1</h2>
+    <div class="map-panel">
+      <div class="lbl">map: value → next greater</div>
+      <div class="map-entries" data-role="map"></div>
+    </div>
+    <div class="res-panel">
+      <div class="lbl">nums1 → result</div>
+      <div class="nums1-wrap">
+        <div class="nums1-strip" data-role="nums1"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="bottombar">
+  <div class="log" data-role="log">Click Play or Next to begin.</div>
+  <div class="controls">
+    <button data-act="reset">↺ Reset</button>
+    <button data-act="prev">◀ Prev</button>
+    <button data-act="play" class="primary">▶ Play</button>
+    <button data-act="next">Next ▶</button>
+    <span class="speed">Speed <select data-act="speed">
+      <option value="1800">Slow</option>
+      <option value="1100" selected>Normal</option>
+      <option value="600">Fast</option>
+    </select></span>
+    <span class="step-count" data-role="counter">step 0 / —</span>
+  </div>
+</footer>
+
+</div>
+
+<script>
+'use strict';
+const NUMS1 = [4, 1, 2];
+const NUMS2 = [1, 3, 4, 2];
+
+const frames = [];
+let stack = [];
+const map = {};
+let curIdx2 = -1;
+let lastPopped = null;
+let lastMapKey = null;
+let lastPushed = null;
+let result = NUMS1.map(() => null);
+let curLookup = -1;
+
+function snap(log, codeLine = null) {
+  frames.push({
+    stack: stack.slice(),
+    map: { ...map },
+    curIdx2, lastPopped, lastMapKey, lastPushed,
+    result: result.slice(),
+    curLookup,
+    log, codeLine,
+  });
+}
+
+snap(`Initial: empty stack, empty map.`, "l-init");
+
+for (let i = 0; i < NUMS2.length; i++) {
+  curIdx2 = i;
+  lastPopped = null; lastMapKey = null; lastPushed = null;
+  const n = NUMS2[i];
+  snap(`<span class="hl">n = nums2[${i}] = ${n}</span>.`, "l-for2");
+
+  while (stack.length && stack[stack.length - 1] < n) {
+    const top = stack[stack.length - 1];
+    snap(`stack top (${top}) &lt; n (${n}) → n is the next greater for ${top}. <span class="nl">pop and map</span>.`, "l-while");
+    stack.pop();
+    map[top] = n;
+    lastPopped = top; lastMapKey = top;
+    snap(`<span class="p">map[${top}] = ${n}</span>. Stack now: [${stack.join(", ")}].`, "l-pop");
+    lastPopped = null; lastMapKey = top;
+  }
+
+  if (stack.length === 0 || stack[stack.length - 1] >= n) {
+    snap(stack.length === 0 ? `Stack empty.` : `stack top (${stack[stack.length - 1]}) &ge; n (${n}) → stop popping.`, "l-while");
+  }
+
+  stack.push(n);
+  lastPushed = n;
+  snap(`<span class="gh">Push ${n}</span>. Stack: [${stack.join(", ")}].`, "l-push");
+}
+
+curIdx2 = -1; lastPopped = null; lastMapKey = null; lastPushed = null;
+snap(`End of nums2 pass. Remaining stack items have no next greater; they stay out of the map.`, "l-ret");
+
+for (let i = 0; i < NUMS1.length; i++) {
+  curLookup = i;
+  const v = NUMS1[i];
+  const r = map[v] !== undefined ? map[v] : -1;
+  result[i] = r;
+  snap(`Lookup nums1[${i}] = ${v} in map → <span class="gh">${r === -1 ? '-1 (not found)' : r}</span>.`, "l-lookup");
+}
+
+curLookup = -1;
+snap(`<span class="gh">Done.</span> result = [${result.join(", ")}].`, null);
+
+// ====== Renderers ======
+function renderAll(f) {
+  const n2 = document.querySelector('[data-role="nums2"]');
+  n2.innerHTML = '';
+  NUMS2.forEach((v, idx) => {
+    const c = document.createElement('div'); c.className = 'cell';
+    if (f.curIdx2 >= 0 && idx < f.curIdx2) { c.classList.add('done'); }
+    if (idx === f.curIdx2) { c.classList.add('current'); }
+    if (f.map[v] != null) { c.classList.add('resolved'); }
+    const l = document.createElement('span'); l.className = 'idx'; l.textContent = idx;
+    c.appendChild(l); c.appendChild(document.createTextNode(String(v)));
+    n2.appendChild(c);
+  });
+
+  const st = document.querySelector('[data-role="stack"]');
+  st.innerHTML = '';
+  f.stack.forEach(v => {
+    const it = document.createElement('div'); it.className = 's-item'; it.textContent = v;
+    if (v === f.lastPushed) { it.classList.add('pushed'); }
+    st.appendChild(it);
+  });
+  if (f.lastPopped != null) {
+    const g = document.createElement('div'); g.className = 's-item popping'; g.textContent = f.lastPopped;
+    st.appendChild(g);
+  }
+
+  const mp = document.querySelector('[data-role="map"]');
+  mp.innerHTML = '';
+  const entries = Object.entries(f.map);
+  if (entries.length === 0) {
+    const e = document.createElement('div'); e.style.color = 'var(--fg-muted)'; e.style.fontStyle = 'italic';
+    e.style.fontSize = '0.7rem'; e.textContent = '(empty)'; mp.appendChild(e);
+  } else {
+    entries.forEach(([k, v]) => {
+      const r = document.createElement('div'); r.className = 'map-row';
+      if (String(k) === String(f.lastMapKey)) { r.classList.add('fresh'); }
+      r.innerHTML = `<span class="k">${k}</span><span>→</span><span class="v">${v}</span>`;
+      mp.appendChild(r);
+    });
+  }
+
+  const n1 = document.querySelector('[data-role="nums1"]');
+  n1.innerHTML = '';
+  NUMS1.forEach((v, idx) => {
+    const col = document.createElement('div'); col.className = 'nums1-row';
+    const num = document.createElement('div'); num.className = 'num'; num.textContent = v;
+    const arr = document.createElement('div'); arr.className = 'arrow'; arr.textContent = '↓';
+    const res = document.createElement('div'); res.className = 'res';
+    res.textContent = f.result[idx] == null ? '?' : f.result[idx];
+    if (f.result[idx] != null) { res.classList.add('filled'); }
+    if (idx === f.curLookup) { res.style.boxShadow = '0 0 0 2px var(--yellow)'; }
+    col.appendChild(num); col.appendChild(arr); col.appendChild(res);
+    n1.appendChild(col);
+  });
+}
+
+function highlightCode(id) {
+  document.querySelectorAll('pre.code .line.active').forEach(el => el.classList.remove('active'));
+  if (id) { document.getElementById(id)?.classList.add('active'); }
+}
+
+class Engine {
+  constructor() {
+    this.i = 0; this.playing = false; this.interval = null;
+    this.speed = parseInt(document.querySelector('[data-act="speed"]').value, 10);
+    document.querySelector('[data-act="next"]').onclick = () => this.step(1);
+    document.querySelector('[data-act="prev"]').onclick = () => this.step(-1);
+    document.querySelector('[data-act="reset"]').onclick = () => { this.pause(); this.i = 0; this.render(); };
+    this.playBtn = document.querySelector('[data-act="play"]');
+    this.playBtn.onclick = () => this.playing ? this.pause() : this.play();
+    document.querySelector('[data-act="speed"]').addEventListener('change', (e) => {
+      this.speed = parseInt(e.target.value, 10);
+      if (this.playing) { this.pause(); this.play(); }
+    });
+    this.counter = document.querySelector('[data-role="counter"]');
+    this.render();
+  }
+  step(d) { const n = this.i + d; if (n < 0 || n >= frames.length) { return; } this.i = n; this.render(); }
+  play() {
+    if (this.i >= frames.length - 1) { this.i = 0; }
+    this.playing = true; this.playBtn.textContent = '❚❚ Pause';
+    this.interval = setInterval(() => {
+      if (this.i >= frames.length - 1) { this.pause(); return; }
+      this.i++; this.render();
+    }, this.speed);
+  }
+  pause() { this.playing = false; this.playBtn.textContent = '▶ Play';
+    if (this.interval) { clearInterval(this.interval); this.interval = null; } }
+  render() {
+    const f = frames[this.i];
+    renderAll(f);
+    document.querySelector('[data-role="log"]').innerHTML = f.log;
+    highlightCode(f.codeLine);
+    this.counter.textContent = `step ${this.i} / ${frames.length - 1}`;
+  }
+}
+window.addEventListener('load', () => { new Engine(); });
+</script>
+</body>
+</html>

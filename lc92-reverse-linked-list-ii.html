@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LC 92 · Reverse Linked List II · Head-Insertion Surgery</title>
+<style>
+  :root { --bg: #0d1117; --bg-elev: #161b22; --bg-code: #0a0e14;
+    --fg: #e6edf3; --fg-dim: #8b949e; --fg-muted: #6e7681;
+    --accent: #58a6ff; --accent-2: #d2a8ff;
+    --green: #3fb950; --red: #f85149; --orange: #ffa657; --yellow: #d29922; --purple: #bc8cff;
+    --border: #30363d; --border-soft: #21262d;
+    --prev-c: #ffa657; --curr-c: #bc8cff; --next-c: #3fb950; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: -apple-system, sans-serif;
+    line-height: 1.4; height: 100vh; overflow: hidden; }
+  .app { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; padding: 0.55rem 0.9rem; gap: 0.45rem; }
+  header.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  header.topbar h1 { font-size: 1.0rem; margin: 0; color: var(--accent-2); }
+  header.topbar .sub { color: var(--fg-dim); font-size: 0.75rem; }
+  header.topbar .sub code { background: var(--bg-code); padding: 1px 6px; border-radius: 3px; color: var(--orange); font-size: 0.75rem; }
+  .legend { display: flex; gap: 0.7rem; flex-wrap: wrap; font-size: 0.68rem; color: var(--fg-dim); }
+  .legend .chip { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .legend .swatch { width: 11px; height: 11px; border-radius: 2px; border: 1px solid var(--border); }
+  .legend .sw-prev { background: var(--prev-c); }
+  .legend .sw-curr { background: var(--curr-c); }
+  .legend .sw-next { background: var(--next-c); }
+  .legend .sw-line { background: rgba(210,153,34,0.15); border-color: var(--yellow); }
+  main.stage { display: grid; grid-template-columns: 1.1fr 1.5fr 0.7fr; gap: 0.55rem; min-height: 0; }
+  .panel { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.5rem 0.65rem; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .panel h2 { margin: 0 0 0.3rem; font-size: 0.7rem; color: var(--accent-2);
+    font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  pre.code { background: var(--bg-code); padding: 0.55rem 0.7rem; border-radius: 6px;
+    border: 1px solid var(--border-soft); font-size: 0.68rem; line-height: 1.5;
+    overflow: auto; margin: 0; flex: 1; min-height: 0; font-family: "SF Mono", Menlo, monospace; }
+  pre.code .k { color: var(--accent); } pre.code .f { color: var(--purple); }
+  pre.code .c { color: var(--fg-muted); font-style: italic; }
+  pre.code .line { display: block; padding: 0 0.4rem; margin: 0 -0.4rem;
+    border-left: 3px solid transparent; border-radius: 3px; transition: all 0.25s; }
+  pre.code .line.active { background: rgba(210,153,34,0.17); border-left-color: var(--yellow); }
+
+  .list-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; padding: 0.5rem; }
+  svg.list { width: 100%; height: 100%; max-height: 320px; }
+  .ln-circle { fill: var(--bg-code); stroke: var(--accent); stroke-width: 2; transition: all 0.3s; }
+  .ln-circle.dummy { fill: #1a1f2a; stroke: var(--fg-muted); }
+  .ln-circle.in-section { stroke: var(--purple); stroke-width: 2.5; }
+  .ln-text { fill: var(--fg); font-family: monospace; font-size: 0.82rem; text-anchor: middle; dominant-baseline: central; font-weight: 600; }
+  .ln-text.dummy { fill: var(--fg-muted); }
+  .ln-text.small { font-size: 0.55rem; fill: var(--fg-muted); }
+  .ln-edge { stroke: var(--border); stroke-width: 2; fill: none; marker-end: url(#arrow); transition: all 0.4s ease; }
+  .ln-edge.fresh { stroke: var(--green); stroke-width: 2.5; marker-end: url(#arrow-g); }
+  .ln-edge.stale { stroke: var(--red); stroke-width: 1.5; stroke-dasharray: 4 3; opacity: 0.6; marker-end: url(#arrow-r); }
+  .ptr-label { font-family: monospace; font-size: 0.72rem; font-weight: 700; text-anchor: middle; transition: all 0.4s ease; }
+  .ptr-label.prev { fill: var(--prev-c); }
+  .ptr-label.curr { fill: var(--curr-c); }
+  .ptr-label.next { fill: var(--next-c); }
+
+  .right { display: flex; flex-direction: column; gap: 0.5rem; }
+  .card { background: var(--bg-code); border: 1px solid var(--border-soft); border-radius: 6px; padding: 0.5rem 0.6rem; }
+  .card .label { font-size: 0.58rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .card .val { font-family: monospace; font-size: 1rem; margin-top: 2px; }
+  .card.p .val { color: var(--prev-c); }
+  .card.c .val { color: var(--curr-c); }
+  .card.n .val { color: var(--next-c); }
+  .iter-card { background: var(--bg-code); border: 1px solid var(--border-soft);
+    border-radius: 6px; padding: 0.4rem 0.6rem; font-family: monospace; font-size: 0.75rem; color: var(--accent); }
+
+  footer.bottombar { display: grid; grid-template-columns: 1fr auto; gap: 0.55rem; align-items: center; }
+  .log { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.45rem 0.7rem; font-family: monospace; font-size: 0.74rem; min-height: 2.2rem; display: flex; align-items: center; }
+  .log .hl { color: var(--orange); } .log .gh { color: var(--green); }
+  .log .nl { color: var(--red); } .log .ps { color: var(--accent); } .log .p { color: var(--purple); }
+  .controls { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+  .controls button { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border);
+    padding: 0.32rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.73rem; font-family: inherit; }
+  .controls .primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .speed { color: var(--fg-dim); font-size: 0.68rem; }
+  .speed select { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border); padding: 0.18rem; font-size: 0.7rem; }
+  .step-count { color: var(--fg-dim); font-family: monospace; font-size: 0.7rem; margin-left: 0.4rem; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="topbar">
+  <div>
+    <h1>LC 92 · Reverse Linked List II · Head-Insertion Surgery</h1>
+    <div class="sub">head = <code>[1, 2, 3, 4, 5]</code>, left = <code>2</code>, right = <code>4</code> · each iter yanks curr's successor and plugs it right after prev</div>
+  </div>
+  <div class="legend">
+    <span class="chip"><span class="swatch sw-line"></span> current code line</span>
+    <span class="chip"><span class="swatch sw-prev"></span> prev (fixed anchor)</span>
+    <span class="chip"><span class="swatch sw-curr"></span> curr (sinks to tail of section)</span>
+    <span class="chip"><span class="swatch sw-next"></span> next (gets pulled to front)</span>
+  </div>
+</header>
+
+<main class="stage">
+  <section class="panel">
+    <h2>Algorithm</h2>
+    <pre class="code"><span class="line" id="l-sig"><span class="k">public</span> ListNode <span class="f">reverseBetween</span>(ListNode head, <span class="k">int</span> left, <span class="k">int</span> right) {</span>
+<span class="line" id="l-guard">    <span class="k">if</span> (head == <span class="k">null</span> || left == right) { <span class="k">return</span> head; }</span>
+<span class="line" id="l-dummy">    ListNode dummy = <span class="k">new</span> ListNode(0, head);</span>
+<span class="line" id="l-prev">    ListNode prev = dummy;</span>
+<span class="line" id="l-walk">    <span class="k">for</span> (<span class="k">int</span> i = 1; i &lt; left; i++) { prev = prev.next; }</span>
+<span class="line" id="l-curr">    ListNode curr = prev.next;</span>
+<span class="line" id="l-for">    <span class="k">for</span> (<span class="k">int</span> i = 0; i &lt; right - left; i++) {</span>
+<span class="line" id="l-next">        ListNode next = curr.next;</span>
+<span class="line" id="l-cn">        curr.next = next.next;     <span class="c">// detach next from after curr</span></span>
+<span class="line" id="l-nn">        next.next = prev.next;     <span class="c">// stitch next → old front</span></span>
+<span class="line" id="l-pn">        prev.next = next;          <span class="c">// make next the new front</span></span>
+<span class="line">    }</span>
+<span class="line" id="l-ret">    <span class="k">return</span> dummy.next;</span>
+<span class="line">}</span></pre>
+  </section>
+
+  <section class="panel">
+    <h2>Linked list · pointer surgery</h2>
+    <div class="list-wrap">
+      <svg class="list" viewBox="0 0 640 280" data-role="svg">
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L0,10 L9,5 z" fill="var(--border)"/>
+          </marker>
+          <marker id="arrow-g" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L0,10 L9,5 z" fill="var(--green)"/>
+          </marker>
+          <marker id="arrow-r" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L0,10 L9,5 z" fill="var(--red)"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+  </section>
+
+  <section class="panel right">
+    <h2>Pointers</h2>
+    <div class="card p"><div class="label">prev</div><div class="val" data-role="v-prev">—</div></div>
+    <div class="card c"><div class="label">curr</div><div class="val" data-role="v-curr">—</div></div>
+    <div class="card n"><div class="label">next</div><div class="val" data-role="v-next">—</div></div>
+    <div class="iter-card" data-role="v-iter">iter 0 of 2</div>
+    <div class="card"><div class="label">head (dummy.next)</div><div class="val" data-role="v-head" style="color:var(--green)">—</div></div>
+  </section>
+</main>
+
+<footer class="bottombar">
+  <div class="log" data-role="log">Click Play or Next to begin.</div>
+  <div class="controls">
+    <button data-act="reset">↺ Reset</button>
+    <button data-act="prev">◀ Prev</button>
+    <button data-act="play" class="primary">▶ Play</button>
+    <button data-act="next">Next ▶</button>
+    <span class="speed">Speed <select data-act="speed">
+      <option value="1800">Slow</option>
+      <option value="1100" selected>Normal</option>
+      <option value="600">Fast</option>
+    </select></span>
+    <span class="step-count" data-role="counter">step 0 / —</span>
+  </div>
+</footer>
+
+</div>
+
+<script>
+'use strict';
+// Node ids: D (dummy), 1..5. Positions are fixed; only `next` pointers change.
+const VALS = { D: '·', 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 };
+const ORDER = ['D', 1, 2, 3, 4, 5];
+const POS = {
+  D: { x: 55,  y: 150 },
+  1: { x: 150, y: 150 },
+  2: { x: 245, y: 150 },
+  3: { x: 340, y: 150 },
+  4: { x: 435, y: 150 },
+  5: { x: 530, y: 150 },
+};
+const R = 26;
+const LEFT = 2, RIGHT = 4;
+
+// Live linked-list state: id -> nextId
+let nxt = { D: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: null };
+let prev = null, curr = null, next = null;
+let iter = -1;
+let freshEdges = [];    // edges just created, highlight green
+let staleEdges = [];    // edges just removed, show in red briefly
+
+const frames = [];
+
+function snap(log, codeLine = null) {
+  frames.push({
+    nxt: { ...nxt },
+    prev, curr, next, iter,
+    freshEdges: freshEdges.slice(),
+    staleEdges: staleEdges.slice(),
+    log, codeLine,
+  });
+  freshEdges = []; staleEdges = [];
+}
+
+snap(`Initial list: D → 1 → 2 → 3 → 4 → 5. We want to reverse positions ${LEFT}..${RIGHT}.`, "l-sig");
+
+snap(`head != null and left != right → proceed.`, "l-guard");
+
+snap(`Insert dummy node D in front. prev will anchor before the reversal section.`, "l-dummy");
+
+prev = 'D';
+snap(`<span class="hl">prev = dummy (D)</span>.`, "l-prev");
+
+// Walk prev to position left-1 = 1
+for (let i = 1; i < LEFT; i++) {
+  prev = nxt[prev];
+  snap(`Walk: prev = prev.next → <span class="hl">prev at node ${prev}</span> (position ${i + 1 - 1 + 0}).`, "l-walk");
+}
+
+curr = nxt[prev];
+snap(`<span class="hl">curr = prev.next → curr at node ${curr}</span> (first node of the section). curr will become the tail after reversal.`, "l-curr");
+
+for (let i = 0; i < RIGHT - LEFT; i++) {
+  iter = i;
+  snap(`<span class="hl">Iteration ${i + 1} of ${RIGHT - LEFT}</span>: pull curr.next and insert it right after prev.`, "l-for");
+
+  next = nxt[curr];
+  snap(`<span class="hl">next = curr.next → next at node ${next}</span>.`, "l-next");
+
+  // curr.next = next.next
+  const old1 = nxt[curr];
+  staleEdges.push([curr, old1]);
+  nxt[curr] = nxt[next];
+  freshEdges.push([curr, nxt[curr]]);
+  snap(`<span class="nl">curr.next = next.next</span>: node ${curr} now points past node ${next} → to node ${nxt[curr] ?? 'null'}.`, "l-cn");
+
+  // next.next = prev.next
+  const old2 = nxt[next];
+  if (old2 != null) { staleEdges.push([next, old2]); }
+  nxt[next] = nxt[prev];
+  freshEdges.push([next, nxt[next]]);
+  snap(`<span class="nl">next.next = prev.next</span>: node ${next} now points to node ${nxt[next]} (the current front of the section).`, "l-nn");
+
+  // prev.next = next
+  const old3 = nxt[prev];
+  staleEdges.push([prev, old3]);
+  nxt[prev] = next;
+  freshEdges.push([prev, nxt[prev]]);
+  snap(`<span class="nl">prev.next = next</span>: node ${next} becomes the new front after prev. Section flipped one more step.`, "l-pn");
+
+  next = null;
+}
+
+snap(`Loop done. <span class="gh">return dummy.next = node ${nxt['D']}</span>. Section reversed in-place.`, "l-ret");
+
+// =========================
+function renderAll(f) {
+  const svg = document.querySelector('[data-role="svg"]');
+  while (svg.lastChild && svg.lastChild.nodeName !== 'defs') { svg.removeChild(svg.lastChild); }
+
+  // Draw stale edges first (ghosty red).
+  f.staleEdges.forEach(([from, to]) => {
+    if (to == null) { return; }
+    drawEdge(svg, POS[from], POS[to], 'stale', from, to);
+  });
+
+  // Draw live next edges from current state.
+  Object.entries(f.nxt).forEach(([from, to]) => {
+    if (to == null) { return; }
+    const isFresh = f.freshEdges.some(([a, b]) => String(a) === from && String(b) === String(to));
+    drawEdge(svg, POS[from], POS[to], isFresh ? 'fresh' : '', from, to);
+  });
+
+  // Nodes.
+  ORDER.forEach(id => {
+    const p = POS[id];
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', R);
+    let cls = 'ln-circle';
+    if (id === 'D') { cls += ' dummy'; }
+    // Position-based "in section" shading
+    const posIdx = ORDER.indexOf(id); // 0=D, 1=node1, ... 5=node5
+    if (posIdx >= LEFT && posIdx <= RIGHT) { cls += ' in-section'; }
+    c.setAttribute('class', cls);
+    svg.appendChild(c);
+
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', p.x); t.setAttribute('y', p.y);
+    t.setAttribute('class', 'ln-text' + (id === 'D' ? ' dummy' : ''));
+    t.textContent = VALS[id];
+    svg.appendChild(t);
+
+    const idxLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    idxLabel.setAttribute('x', p.x); idxLabel.setAttribute('y', p.y - R - 8);
+    idxLabel.setAttribute('class', 'ln-text small');
+    idxLabel.textContent = id === 'D' ? 'dummy' : ('pos ' + posIdx);
+    svg.appendChild(idxLabel);
+  });
+
+  // Pointer labels.
+  const addPtr = (name, id, cls, offsetY, offsetX = 0) => {
+    if (id == null) { return; }
+    const p = POS[id];
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', p.x + offsetX); t.setAttribute('y', p.y + R + offsetY);
+    t.setAttribute('class', 'ptr-label ' + cls);
+    t.textContent = name;
+    svg.appendChild(t);
+  };
+  addPtr('prev', f.prev, 'prev', 22, -18);
+  addPtr('curr', f.curr, 'curr', 22, 18);
+  addPtr('next', f.next, 'next', 48, 0);
+
+  // Right side.
+  document.querySelector('[data-role="v-prev"]').textContent = f.prev == null ? '—' : (f.prev === 'D' ? 'dummy' : `node ${f.prev}`);
+  document.querySelector('[data-role="v-curr"]').textContent = f.curr == null ? '—' : `node ${f.curr}`;
+  document.querySelector('[data-role="v-next"]').textContent = f.next == null ? '—' : `node ${f.next}`;
+  document.querySelector('[data-role="v-iter"]').textContent = f.iter < 0 ? `iter 0 of ${RIGHT - LEFT}` : `iter ${f.iter + 1} of ${RIGHT - LEFT}`;
+
+  // Walk head → ... → null to show current list.
+  const list = [];
+  let x = f.nxt['D'];
+  let safety = 10;
+  while (x != null && safety-- > 0) { list.push(x); x = f.nxt[x]; }
+  document.querySelector('[data-role="v-head"]').textContent = list.join(' → ') || '—';
+}
+
+function drawEdge(svg, p1, p2, cls, fromId, toId) {
+  // Default: straight below the circles.
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  const dx = p2.x - p1.x;
+  let d;
+  if (Math.abs(dx) <= 110) {
+    // Short, adjacent — straight line between edges.
+    const dirX = Math.sign(dx);
+    const sx = p1.x + dirX * R;
+    const ex = p2.x - dirX * R - dirX * 6;
+    d = `M ${sx} ${p1.y} L ${ex} ${p2.y}`;
+  } else {
+    // Long jump — curve above the row to avoid passing through nodes.
+    const sx = p1.x + Math.sign(dx) * R * 0.3;
+    const ex = p2.x - Math.sign(dx) * R * 0.3;
+    const peakY = p1.y - 70;
+    d = `M ${sx} ${p1.y - R} C ${sx} ${peakY}, ${ex} ${peakY}, ${ex} ${p2.y - R}`;
+  }
+  line.setAttribute('d', d);
+  line.setAttribute('class', 'ln-edge' + (cls ? ' ' + cls : ''));
+  svg.appendChild(line);
+}
+
+function highlightCode(id) {
+  document.querySelectorAll('pre.code .line.active').forEach(el => el.classList.remove('active'));
+  if (id) { document.getElementById(id)?.classList.add('active'); }
+}
+
+class Engine {
+  constructor() {
+    this.i = 0; this.playing = false; this.interval = null;
+    this.speed = parseInt(document.querySelector('[data-act="speed"]').value, 10);
+    document.querySelector('[data-act="next"]').onclick = () => this.step(1);
+    document.querySelector('[data-act="prev"]').onclick = () => this.step(-1);
+    document.querySelector('[data-act="reset"]').onclick = () => { this.pause(); this.i = 0; this.render(); };
+    this.playBtn = document.querySelector('[data-act="play"]');
+    this.playBtn.onclick = () => this.playing ? this.pause() : this.play();
+    document.querySelector('[data-act="speed"]').addEventListener('change', (e) => {
+      this.speed = parseInt(e.target.value, 10);
+      if (this.playing) { this.pause(); this.play(); }
+    });
+    this.counter = document.querySelector('[data-role="counter"]');
+    this.render();
+  }
+  step(d) { const n = this.i + d; if (n < 0 || n >= frames.length) { return; } this.i = n; this.render(); }
+  play() {
+    if (this.i >= frames.length - 1) { this.i = 0; }
+    this.playing = true; this.playBtn.textContent = '❚❚ Pause';
+    this.interval = setInterval(() => {
+      if (this.i >= frames.length - 1) { this.pause(); return; }
+      this.i++; this.render();
+    }, this.speed);
+  }
+  pause() { this.playing = false; this.playBtn.textContent = '▶ Play';
+    if (this.interval) { clearInterval(this.interval); this.interval = null; } }
+  render() {
+    const f = frames[this.i];
+    renderAll(f);
+    document.querySelector('[data-role="log"]').innerHTML = f.log;
+    highlightCode(f.codeLine);
+    this.counter.textContent = `step ${this.i} / ${frames.length - 1}`;
+  }
+}
+window.addEventListener('load', () => { new Engine(); });
+</script>
+</body>
+</html>

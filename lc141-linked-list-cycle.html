@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LC 141 · Linked List Cycle · Floyd's Tortoise &amp; Hare</title>
+<style>
+  :root { --bg: #0d1117; --bg-elev: #161b22; --bg-code: #0a0e14;
+    --fg: #e6edf3; --fg-dim: #8b949e; --fg-muted: #6e7681;
+    --accent: #58a6ff; --accent-2: #d2a8ff;
+    --green: #3fb950; --red: #f85149; --orange: #ffa657; --yellow: #d29922; --purple: #bc8cff;
+    --border: #30363d; --border-soft: #21262d;
+    --slow: #ffa657; --fast: #58a6ff; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: -apple-system, sans-serif;
+    line-height: 1.4; height: 100vh; overflow: hidden; }
+  .app { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; padding: 0.55rem 0.9rem; gap: 0.45rem; }
+  header.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  header.topbar h1 { font-size: 1.0rem; margin: 0; color: var(--accent-2); }
+  header.topbar .sub { color: var(--fg-dim); font-size: 0.75rem; }
+  header.topbar .sub code { background: var(--bg-code); padding: 1px 6px; border-radius: 3px; color: var(--orange); font-size: 0.75rem; }
+  .legend { display: flex; gap: 0.7rem; flex-wrap: wrap; font-size: 0.68rem; color: var(--fg-dim); }
+  .legend .chip { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .legend .swatch { width: 11px; height: 11px; border-radius: 2px; border: 1px solid var(--border); }
+  .legend .sw-slow { background: var(--slow); }
+  .legend .sw-fast { background: var(--fast); }
+  .legend .sw-both { background: linear-gradient(90deg, var(--slow) 50%, var(--fast) 50%); }
+  .legend .sw-line { background: rgba(210,153,34,0.15); border-color: var(--yellow); }
+  main.stage { display: grid; grid-template-columns: 1.1fr 1.4fr 0.8fr; gap: 0.55rem; min-height: 0; }
+  .panel { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.5rem 0.65rem; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .panel h2 { margin: 0 0 0.3rem; font-size: 0.7rem; color: var(--accent-2);
+    font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  pre.code { background: var(--bg-code); padding: 0.55rem 0.7rem; border-radius: 6px;
+    border: 1px solid var(--border-soft); font-size: 0.72rem; line-height: 1.5;
+    overflow: auto; margin: 0; flex: 1; min-height: 0; font-family: "SF Mono", Menlo, monospace; }
+  pre.code .k { color: var(--accent); } pre.code .f { color: var(--purple); }
+  pre.code .c { color: var(--fg-muted); font-style: italic; }
+  pre.code .line { display: block; padding: 0 0.4rem; margin: 0 -0.4rem;
+    border-left: 3px solid transparent; border-radius: 3px; transition: all 0.25s; }
+  pre.code .line.active { background: rgba(210,153,34,0.17); border-left-color: var(--yellow); }
+
+  .list-wrap { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 1rem; }
+  svg.list { width: 100%; height: 100%; max-height: 300px; }
+  .ln-circle { fill: var(--bg-code); stroke: var(--accent); stroke-width: 2; }
+  .ln-text { fill: var(--fg); font-family: monospace; font-size: 0.85rem; text-anchor: middle; dominant-baseline: central; font-weight: 600; }
+  .ln-edge { stroke: var(--border); stroke-width: 2; fill: none; marker-end: url(#arrow); }
+  .ptr-slow { fill: var(--slow); font-family: monospace; font-size: 0.72rem; font-weight: 700; text-anchor: middle; transition: all 0.4s ease; }
+  .ptr-fast { fill: var(--fast); font-family: monospace; font-size: 0.72rem; font-weight: 700; text-anchor: middle; transition: all 0.4s ease; }
+  .ptr-arrow-slow { stroke: var(--slow); stroke-width: 2; fill: none; marker-end: url(#arrow-slow); transition: all 0.4s ease; }
+  .ptr-arrow-fast { stroke: var(--fast); stroke-width: 2; fill: none; marker-end: url(#arrow-fast); transition: all 0.4s ease; }
+  .ln-circle.slow { stroke: var(--slow); stroke-width: 3; }
+  .ln-circle.fast { stroke: var(--fast); stroke-width: 3; }
+  .ln-circle.both { fill: rgba(63,185,80,0.3); stroke: var(--green); stroke-width: 4; }
+
+  .right { display: flex; flex-direction: column; gap: 0.5rem; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+  .card { background: var(--bg-code); border: 1px solid var(--border-soft); border-radius: 6px; padding: 0.5rem 0.6rem; }
+  .card .label { font-size: 0.58rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .card .val { font-family: monospace; font-size: 1.1rem; margin-top: 2px; }
+  .card.slow .val { color: var(--slow); } .card.fast .val { color: var(--fast); }
+  .history { flex: 1; overflow-y: auto; background: var(--bg-code); border: 1px solid var(--border-soft);
+    border-radius: 6px; padding: 0.4rem 0.6rem; font-family: monospace; font-size: 0.7rem; }
+  .history .row { padding: 2px 0; color: var(--fg-dim); }
+  .history .row.active { color: var(--yellow); font-weight: 600; }
+
+  footer.bottombar { display: grid; grid-template-columns: 1fr auto; gap: 0.55rem; align-items: center; }
+  .log { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.45rem 0.7rem; font-family: monospace; font-size: 0.76rem; min-height: 2.2rem; display: flex; align-items: center; }
+  .log .hl { color: var(--orange); } .log .gh { color: var(--green); }
+  .log .nl { color: var(--red); } .log .ps { color: var(--accent); }
+  .log .s { color: var(--slow); } .log .fs { color: var(--fast); }
+  .controls { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+  .controls button { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border);
+    padding: 0.32rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.73rem; font-family: inherit; }
+  .controls .primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .speed { color: var(--fg-dim); font-size: 0.68rem; }
+  .speed select { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border); padding: 0.18rem; font-size: 0.7rem; }
+  .step-count { color: var(--fg-dim); font-family: monospace; font-size: 0.7rem; margin-left: 0.4rem; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="topbar">
+  <div>
+    <h1>LC 141 · Linked List Cycle · Floyd's Tortoise &amp; Hare</h1>
+    <div class="sub">head = <code>[3, 2, 0, -4]</code>, cycle at pos <code>1</code> (tail → node idx 1) · slow moves 1, fast moves 2; they meet iff there's a cycle</div>
+  </div>
+  <div class="legend">
+    <span class="chip"><span class="swatch sw-line"></span> current code line</span>
+    <span class="chip"><span class="swatch sw-slow"></span> slow (1×)</span>
+    <span class="chip"><span class="swatch sw-fast"></span> fast (2×)</span>
+    <span class="chip"><span class="swatch sw-both"></span> they met (cycle!)</span>
+  </div>
+</header>
+
+<main class="stage">
+  <section class="panel">
+    <h2>Algorithm</h2>
+    <pre class="code"><span class="line" id="l-sig"><span class="k">public</span> <span class="k">boolean</span> <span class="f">hasCycle</span>(ListNode head) {</span>
+<span class="line" id="l-null">    <span class="k">if</span> (head == <span class="k">null</span>) { <span class="k">return</span> <span class="k">false</span>; }</span>
+<span class="line" id="l-init">    ListNode slow = head, fast = head;</span>
+<span class="line" id="l-while">    <span class="k">while</span> (fast != <span class="k">null</span> &amp;&amp; fast.next != <span class="k">null</span>) {</span>
+<span class="line" id="l-slow">        slow = slow.next;         <span class="c">// 1 step</span></span>
+<span class="line" id="l-fast">        fast = fast.next.next;    <span class="c">// 2 steps</span></span>
+<span class="line" id="l-check">        <span class="k">if</span> (slow == fast) { <span class="k">return</span> <span class="k">true</span>; }</span>
+<span class="line">    }</span>
+<span class="line" id="l-false">    <span class="k">return</span> <span class="k">false</span>;</span>
+<span class="line">}</span></pre>
+  </section>
+
+  <section class="panel">
+    <h2>Linked list (with cycle)</h2>
+    <div class="list-wrap">
+      <svg class="list" viewBox="0 0 540 280" data-role="svg">
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L0,10 L9,5 z" fill="var(--border)"/>
+          </marker>
+          <marker id="arrow-slow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L0,10 L9,5 z" fill="var(--slow)"/>
+          </marker>
+          <marker id="arrow-fast" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+            <path d="M0,0 L0,10 L9,5 z" fill="var(--fast)"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+  </section>
+
+  <section class="panel right">
+    <h2>Pointers &amp; iterations</h2>
+    <div class="cards">
+      <div class="card slow"><div class="label">slow</div><div class="val" data-role="v-slow">—</div></div>
+      <div class="card fast"><div class="label">fast</div><div class="val" data-role="v-fast">—</div></div>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="label">iteration</div><div class="val" data-role="v-iter">0</div></div>
+      <div class="card"><div class="label">result</div><div class="val" data-role="v-res">?</div></div>
+    </div>
+    <div class="history" data-role="history"></div>
+  </section>
+</main>
+
+<footer class="bottombar">
+  <div class="log" data-role="log">Click Play or Next to begin.</div>
+  <div class="controls">
+    <button data-act="reset">↺ Reset</button>
+    <button data-act="prev">◀ Prev</button>
+    <button data-act="play" class="primary">▶ Play</button>
+    <button data-act="next">Next ▶</button>
+    <span class="speed">Speed <select data-act="speed">
+      <option value="1800">Slow</option>
+      <option value="1100" selected>Normal</option>
+      <option value="600">Fast</option>
+    </select></span>
+    <span class="step-count" data-role="counter">step 0 / —</span>
+  </div>
+</footer>
+
+</div>
+
+<script>
+'use strict';
+// Build the linked list with a cycle.
+// nodes[0] = 3, nodes[1] = 2, nodes[2] = 0, nodes[3] = -4
+// nodes[3].next = nodes[1]  (cycle)
+const VALS = [3, 2, 0, -4];
+const CYCLE_START = 1;
+const N = VALS.length;
+
+// Positions in the SVG viewBox 540x280. Arrange nodes on a straight line,
+// and draw the cycle edge as a curve looping back.
+const POS = [
+  { x: 60,  y: 110 },
+  { x: 180, y: 110 },
+  { x: 300, y: 110 },
+  { x: 420, y: 110 },
+];
+const R = 26;
+
+const frames = [];
+const history = [];
+let slow = 0, fast = 0;
+let iter = 0, result = null;
+
+function snap(log, codeLine = null, meet = false) {
+  frames.push({
+    slow, fast, iter, result, meet,
+    history: history.slice(),
+    log, codeLine,
+  });
+}
+
+// Simulate.
+slow = 0; fast = 0;
+snap(`Initial: both slow and fast at head (index 0, val ${VALS[0]}).`, "l-init");
+
+while (true) {
+  // while (fast != null && fast.next != null)
+  snap(`Check loop condition: fast (idx ${fast}) and fast.next both non-null → enter body.`, "l-while");
+
+  const nextSlow = (slow + 1) % N; // but only valid if we haven't fallen off; our test has a cycle so no null risk
+  slow = (slow === N - 1) ? CYCLE_START : slow + 1;
+  snap(`slow = slow.next → <span class="s">slow at idx ${slow}, val ${VALS[slow]}</span>.`, "l-slow");
+
+  // fast moves twice
+  const f1 = (fast === N - 1) ? CYCLE_START : fast + 1;
+  const f2 = (f1 === N - 1) ? CYCLE_START : f1 + 1;
+  fast = f2;
+  snap(`fast = fast.next.next → <span class="fs">fast at idx ${fast}, val ${VALS[fast]}</span> (two hops from before).`, "l-fast");
+
+  iter++;
+  history.push({ iter, slow, fast });
+
+  if (slow === fast) {
+    result = true;
+    snap(`<span class="gh">slow == fast!</span> Both at idx ${slow}. Cycle detected. <span class="gh">return true</span>.`, "l-check", true);
+    break;
+  } else {
+    snap(`slow (${slow}) != fast (${fast}). Continue.`, "l-check");
+  }
+  if (iter > 15) { break; } // safety
+}
+snap(`<span class="gh">Done.</span> hasCycle = true. Pointers met at idx ${slow} after ${iter} iterations.`, null);
+
+// ===== Renderers =====
+function nodeAt(idx) { return POS[idx]; }
+
+function renderList(f) {
+  const svg = document.querySelector('[data-role="svg"]');
+  // Clear everything but defs.
+  while (svg.lastChild && svg.lastChild.nodeName !== 'defs') { svg.removeChild(svg.lastChild); }
+
+  // Straight edges (0→1, 1→2, 2→3).
+  for (let i = 0; i < N - 1; i++) {
+    const p1 = POS[i], p2 = POS[i + 1];
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', p1.x + R);
+    line.setAttribute('y1', p1.y);
+    line.setAttribute('x2', p2.x - R - 6);
+    line.setAttribute('y2', p2.y);
+    line.setAttribute('class', 'ln-edge');
+    svg.appendChild(line);
+  }
+  // Cycle edge: node 3 -> node 1 via a curve underneath.
+  const p3 = POS[N - 1], pC = POS[CYCLE_START];
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  // start just under p3, curve down to the right then left to pC+below
+  const sx = p3.x, sy = p3.y + R;
+  const ex = pC.x, ey = pC.y + R + 4;
+  const d = `M ${sx} ${sy} C ${sx} ${sy + 90}, ${ex} ${ey + 90}, ${ex} ${ey}`;
+  path.setAttribute('d', d);
+  path.setAttribute('class', 'ln-edge');
+  svg.appendChild(path);
+
+  // Nodes.
+  POS.forEach((p, i) => {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y); circle.setAttribute('r', R);
+    let cls = 'ln-circle';
+    if (f.meet && i === f.slow) { cls += ' both'; }
+    else if (i === f.slow && i === f.fast) { cls += ' both'; }
+    else if (i === f.slow) { cls += ' slow'; }
+    else if (i === f.fast) { cls += ' fast'; }
+    circle.setAttribute('class', cls);
+    svg.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', p.x); text.setAttribute('y', p.y);
+    text.setAttribute('class', 'ln-text');
+    text.textContent = VALS[i];
+    svg.appendChild(text);
+
+    const idx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    idx.setAttribute('x', p.x); idx.setAttribute('y', p.y - R - 8);
+    idx.setAttribute('class', 'ln-text'); idx.setAttribute('font-size', '0.6rem');
+    idx.setAttribute('fill', 'var(--fg-muted)');
+    idx.textContent = 'i=' + i;
+    svg.appendChild(idx);
+  });
+
+  // Pointer labels above nodes.
+  const slowP = POS[f.slow];
+  const slowLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  slowLabel.setAttribute('x', slowP.x - 14); slowLabel.setAttribute('y', slowP.y + R + 24);
+  slowLabel.setAttribute('class', 'ptr-slow');
+  slowLabel.textContent = 'slow';
+  svg.appendChild(slowLabel);
+
+  const fastP = POS[f.fast];
+  const fastLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  fastLabel.setAttribute('x', fastP.x + 14); fastLabel.setAttribute('y', fastP.y + R + 24);
+  fastLabel.setAttribute('class', 'ptr-fast');
+  fastLabel.textContent = 'fast';
+  svg.appendChild(fastLabel);
+
+  // Right-side cards.
+  document.querySelector('[data-role="v-slow"]').textContent = `idx ${f.slow} (val ${VALS[f.slow]})`;
+  document.querySelector('[data-role="v-fast"]').textContent = `idx ${f.fast} (val ${VALS[f.fast]})`;
+  document.querySelector('[data-role="v-iter"]').textContent = f.iter;
+  document.querySelector('[data-role="v-res"]').textContent = f.result == null ? '?' : (f.result ? 'true' : 'false');
+
+  const hist = document.querySelector('[data-role="history"]');
+  hist.innerHTML = '';
+  f.history.forEach((h, i) => {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `iter ${h.iter}: slow=i${h.slow}, fast=i${h.fast}`;
+    if (i === f.history.length - 1) { row.classList.add('active'); }
+    hist.appendChild(row);
+  });
+}
+
+function highlightCode(id) {
+  document.querySelectorAll('pre.code .line.active').forEach(el => el.classList.remove('active'));
+  if (id) { document.getElementById(id)?.classList.add('active'); }
+}
+
+class Engine {
+  constructor() {
+    this.i = 0; this.playing = false; this.interval = null;
+    this.speed = parseInt(document.querySelector('[data-act="speed"]').value, 10);
+    document.querySelector('[data-act="next"]').onclick = () => this.step(1);
+    document.querySelector('[data-act="prev"]').onclick = () => this.step(-1);
+    document.querySelector('[data-act="reset"]').onclick = () => { this.pause(); this.i = 0; this.render(); };
+    this.playBtn = document.querySelector('[data-act="play"]');
+    this.playBtn.onclick = () => this.playing ? this.pause() : this.play();
+    document.querySelector('[data-act="speed"]').addEventListener('change', (e) => {
+      this.speed = parseInt(e.target.value, 10);
+      if (this.playing) { this.pause(); this.play(); }
+    });
+    this.counter = document.querySelector('[data-role="counter"]');
+    this.render();
+  }
+  step(d) { const n = this.i + d; if (n < 0 || n >= frames.length) { return; } this.i = n; this.render(); }
+  play() {
+    if (this.i >= frames.length - 1) { this.i = 0; }
+    this.playing = true; this.playBtn.textContent = '❚❚ Pause';
+    this.interval = setInterval(() => {
+      if (this.i >= frames.length - 1) { this.pause(); return; }
+      this.i++; this.render();
+    }, this.speed);
+  }
+  pause() { this.playing = false; this.playBtn.textContent = '▶ Play';
+    if (this.interval) { clearInterval(this.interval); this.interval = null; } }
+  render() {
+    const f = frames[this.i];
+    renderList(f);
+    document.querySelector('[data-role="log"]').innerHTML = f.log;
+    highlightCode(f.codeLine);
+    this.counter.textContent = `step ${this.i} / ${frames.length - 1}`;
+  }
+}
+window.addEventListener('load', () => { new Engine(); });
+</script>
+</body>
+</html>

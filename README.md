@@ -10,6 +10,12 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 |---|---|---|
 | [109](https://kinny94.github.io/dsa-visualizations/lc109-sorted-list-to-bst.html) | Convert Sorted List to Binary Search Tree | Recursion / Inorder simulation |
 | [427](https://kinny94.github.io/dsa-visualizations/lc427-construct-quad-tree.html) | Construct Quad Tree | Recursion / Divide & Conquer |
+| [346](https://kinny94.github.io/dsa-visualizations/lc346-moving-average.html) | Moving Average from Data Stream | Queue · Bounded |
+| [239](https://kinny94.github.io/dsa-visualizations/lc239-sliding-window-maximum.html) | Sliding Window Maximum | Queue · Monotonic Deque |
+| [155](https://kinny94.github.io/dsa-visualizations/lc155-min-stack.html) | Min Stack | Stack · Two-Stack |
+| [496](https://kinny94.github.io/dsa-visualizations/lc496-next-greater-element-i.html) | Next Greater Element I | Stack · Monotonic |
+| [141](https://kinny94.github.io/dsa-visualizations/lc141-linked-list-cycle.html) | Linked List Cycle | Linked List · Floyd's |
+| [92](https://kinny94.github.io/dsa-visualizations/lc92-reverse-linked-list-ii.html) | Reverse Linked List II | Linked List · Pointer Surgery |
 
 ## Adding a new animation
 
