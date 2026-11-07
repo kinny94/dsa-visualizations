@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LC 109 · Sorted List → BST · Inorder Simulation (Recursion Visualized)</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-elev: #161b22;
+    --bg-code: #0a0e14;
+    --fg: #e6edf3;
+    --fg-dim: #8b949e;
+    --fg-muted: #6e7681;
+    --accent: #58a6ff;
+    --accent-2: #d2a8ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --orange: #ffa657;
+    --yellow: #d29922;
+    --purple: #bc8cff;
+    --border: #30363d;
+    --border-soft: #21262d;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    line-height: 1.4; height: 100vh; overflow: hidden;
+  }
+
+  .app {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: 1fr;
+    height: 100vh; padding: 0.6rem 0.9rem; gap: 0.5rem;
+  }
+
+  header.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  header.topbar h1 { font-size: 1.05rem; margin: 0; color: var(--accent-2); }
+  header.topbar .sub { color: var(--fg-dim); font-size: 0.78rem; }
+  header.topbar .sub code { background: var(--bg-code); padding: 1px 6px; border-radius: 3px; color: var(--orange); font-size: 0.78rem; }
+  .legend { display: flex; gap: 0.75rem; flex-wrap: wrap; font-size: 0.7rem; color: var(--fg-dim); }
+  .legend .chip { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .legend .swatch { width: 11px; height: 11px; border-radius: 2px; border: 1px solid var(--border); }
+  .legend .sw-active { background: rgba(210,153,34,0.15); border-color: var(--yellow); }
+  .legend .sw-returning { background: rgba(63,185,80,0.15); border-color: var(--green); }
+  .legend .sw-null { background: #1a1217; border-color: var(--red); }
+  .legend .sw-fresh { background: rgba(63,185,80,0.3); border-color: var(--green); }
+  .legend .sw-head { background: rgba(210,153,34,0.1); border-color: var(--yellow); }
+  .legend .sw-line { background: rgba(210,153,34,0.15); border-color: var(--yellow); }
+
+  main.stage {
+    display: grid;
+    grid-template-columns: minmax(360px, 1.1fr) minmax(300px, 1fr) minmax(260px, 0.9fr);
+    grid-template-rows: 1fr;
+    gap: 0.6rem; min-height: 0;
+  }
+  @media (max-width: 1100px) {
+    main.stage { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; }
+    main.stage .col-code { grid-column: 1 / span 2; }
+  }
+
+  .panel {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.55rem 0.7rem; display: flex; flex-direction: column;
+    min-height: 0; min-width: 0;
+  }
+  .panel h2 {
+    margin: 0 0 0.35rem; font-size: 0.72rem; color: var(--accent-2);
+    font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .col { display: flex; flex-direction: column; gap: 0.6rem; min-height: 0; min-width: 0; }
+
+  /* ===== Code panel ===== */
+  .panel.code-panel { overflow: hidden; }
+  pre.code {
+    background: var(--bg-code); padding: 0.6rem 0.75rem; border-radius: 6px;
+    border: 1px solid var(--border-soft); font-size: 0.73rem; line-height: 1.45;
+    overflow: auto; margin: 0; flex: 1; min-height: 0;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre.code .k { color: var(--accent); }
+  pre.code .f { color: var(--purple); }
+  pre.code .c { color: var(--fg-muted); font-style: italic; }
+  pre.code .s { color: var(--orange); }
+  pre.code .line {
+    display: block; padding: 0 0.4rem; margin: 0 -0.4rem;
+    border-left: 3px solid transparent; border-radius: 3px;
+    transition: background 0.25s ease, border-color 0.25s ease;
+  }
+  pre.code .line.active {
+    background: rgba(210, 153, 34, 0.17); border-left-color: var(--yellow);
+    box-shadow: inset 0 0 0 1px rgba(210, 153, 34, 0.25);
+  }
+
+  /* ===== Linked list ===== */
+  .panel.list-panel { flex: 0 0 auto; }
+  .list-wrap { position: relative; padding: 1.25rem 0.25rem 0.4rem; }
+  .list-strip { display: flex; align-items: center; gap: 0; justify-content: center; }
+  .ll-node {
+    min-width: 40px; height: 40px; background: var(--bg-code); border: 1px solid var(--border);
+    border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-family: monospace; font-size: 0.82rem; transition: all 0.4s ease;
+    position: relative;
+  }
+  .ll-node .lbl { position: absolute; top: -14px; font-size: 0.6rem; color: var(--fg-muted); }
+  .ll-node.consumed { opacity: 0.3; text-decoration: line-through; background: #171a1d; }
+  .ll-node.head-here {
+    border-color: var(--yellow);
+    box-shadow: 0 0 0 2px rgba(210,153,34,0.3), 0 3px 8px rgba(210,153,34,0.2);
+    transform: translateY(-3px); background: rgba(210, 153, 34, 0.1);
+  }
+  .ll-arrow { color: var(--fg-muted); padding: 0 3px; font-family: monospace; font-size: 0.8rem; }
+  .head-pointer {
+    position: absolute; top: 0; color: var(--yellow); font-weight: 700; font-size: 0.68rem;
+    transition: left 0.4s ease;
+  }
+  .head-pointer::after { content: ' ↓'; }
+
+  /* ===== Tree (SVG) ===== */
+  .panel.tree-panel { flex: 1 1 auto; }
+  .tree-wrap { flex: 1; display: flex; justify-content: center; align-items: center; min-height: 0; }
+  svg.tree { width: 100%; height: 100%; max-height: 260px; }
+  .tn-circle { fill: var(--bg-code); stroke: var(--accent); stroke-width: 2; transition: all 0.4s ease; }
+  .tn-circle.fresh { fill: rgba(63, 185, 80, 0.3); stroke: var(--green); stroke-width: 3; }
+  .tn-text { fill: var(--fg); font-family: monospace; font-size: 0.78rem; text-anchor: middle; dominant-baseline: central; }
+  .tn-edge { stroke: var(--border); stroke-width: 2; fill: none; transition: all 0.4s ease; }
+
+  /* ===== Call stack ===== */
+  .stack-visual {
+    display: flex; flex-direction: column-reverse; gap: 4px;
+    padding: 0.3rem 0; flex: 1; overflow-y: auto; min-height: 0;
+    position: relative; padding-left: 0.5rem; border-left: 2px solid var(--border-soft);
+  }
+  .frame {
+    background: var(--bg-code); border: 1px solid var(--border-soft); border-left: 3px solid var(--border);
+    border-radius: 4px; padding: 0.35rem 0.55rem; font-family: monospace; font-size: 0.72rem;
+    display: flex; flex-direction: column; gap: 1px; transition: all 0.25s ease;
+  }
+  .frame.active { border-left-color: var(--yellow); background: rgba(210,153,34,0.08); box-shadow: 0 2px 6px rgba(210,153,34,0.15); }
+  .frame.returning { border-left-color: var(--green); background: rgba(63,185,80,0.08); }
+  .frame.null-return { background: #1a1217; border-left-color: var(--red); opacity: 0.8; }
+  .frame .fn-head { color: var(--accent-2); font-weight: 600; font-size: 0.72rem; }
+  .frame .locals { color: var(--fg-muted); font-size: 0.67rem; }
+  .frame .locals .var { color: var(--accent); }
+  .frame .phase { color: var(--orange); font-size: 0.65rem; margin-top: 1px; }
+
+  /* ===== Bottom bar: log + controls ===== */
+  footer.bottombar {
+    display: grid; grid-template-columns: 1fr auto; gap: 0.6rem; align-items: center;
+  }
+  .log {
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.78rem; color: var(--fg);
+    min-height: 2.4rem; display: flex; align-items: center;
+  }
+  .log .hl { color: var(--orange); }
+  .log .gh { color: var(--green); }
+  .log .nl { color: var(--red); }
+  .log .ps { color: var(--accent); }
+  .controls { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+  .controls button {
+    background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border);
+    padding: 0.35rem 0.65rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem;
+    font-family: inherit; transition: all 0.15s;
+  }
+  .controls button:hover:not(:disabled) { background: var(--border-soft); border-color: var(--accent); color: var(--accent); }
+  .controls .primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .controls .primary:hover:not(:disabled) { background: #7dbbff; }
+  .speed { display: flex; gap: 0.2rem; align-items: center; color: var(--fg-dim); font-size: 0.7rem; }
+  .speed select { background: var(--bg-elev); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 0.2rem; font-size: 0.72rem; }
+  .step-count { color: var(--fg-dim); font-family: monospace; font-size: 0.72rem; margin-left: 0.5rem; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="topbar">
+  <div>
+    <h1>LC 109 · Sorted List → BST · Inorder Simulation</h1>
+    <div class="sub">
+      input <code>[-10, -3, 0, 5, 9]</code> · code line, call stack, head pointer, and tree all sync with every step
+    </div>
+  </div>
+  <div class="legend">
+    <span class="chip"><span class="swatch sw-line"></span> current code line</span>
+    <span class="chip"><span class="swatch sw-active"></span> active frame</span>
+    <span class="chip"><span class="swatch sw-returning"></span> returning</span>
+    <span class="chip"><span class="swatch sw-null"></span> null return</span>
+    <span class="chip"><span class="swatch sw-fresh"></span> fresh tree node</span>
+    <span class="chip"><span class="swatch sw-head"></span> head position</span>
+  </div>
+</header>
+
+<main class="stage">
+  <section class="panel code-panel col-code">
+    <h2>Algorithm</h2>
+    <pre class="code"><span class="line" id="l-init"><span class="k">private</span> ListNode head;</span>
+<span class="line"></span>
+<span class="line" id="l-public"><span class="k">public</span> TreeNode <span class="f">sortedListToBST</span>(ListNode head) {</span>
+<span class="line">    <span class="k">this</span>.head = head;</span>
+<span class="line" id="l-count">    <span class="k">int</span> n = 0;</span>
+<span class="line">    <span class="k">for</span> (ListNode p = head; p != <span class="k">null</span>; p = p.next) {</span>
+<span class="line">        n++;</span>
+<span class="line">    }</span>
+<span class="line" id="l-top">    <span class="k">return</span> <span class="f">build</span>(0, n - 1);</span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line" id="l-sig"><span class="k">private</span> TreeNode <span class="f">build</span>(<span class="k">int</span> lo, <span class="k">int</span> hi) {</span>
+<span class="line" id="l-guard">    <span class="k">if</span> (lo &gt; hi) {</span>
+<span class="line" id="l-null">        <span class="k">return</span> <span class="k">null</span>;</span>
+<span class="line">    }</span>
+<span class="line" id="l-mid">    <span class="k">int</span> mid = (lo + hi) / 2;</span>
+<span class="line" id="l-left">    TreeNode left  = <span class="f">build</span>(lo, mid - 1);      <span class="c">// walk left subtree first (inorder)</span></span>
+<span class="line" id="l-root">    TreeNode root  = <span class="k">new</span> TreeNode(head.val);  <span class="c">// head is at the mid-th node</span></span>
+<span class="line" id="l-advance">    head = head.next;                       <span class="c">// advance head past it</span></span>
+<span class="line" id="l-attachL">    root.left  = left;</span>
+<span class="line" id="l-right">    root.right = <span class="f">build</span>(mid + 1, hi);           <span class="c">// then right subtree</span></span>
+<span class="line" id="l-return">    <span class="k">return</span> root;</span>
+<span class="line">}</span></pre>
+  </section>
+
+  <section class="col">
+    <div class="panel list-panel">
+      <h2>Linked list &amp; head</h2>
+      <div class="list-wrap">
+        <div class="head-pointer" data-role="head-ptr" style="left: 0;">head</div>
+        <div class="list-strip" data-role="ll"></div>
+      </div>
+    </div>
+    <div class="panel tree-panel">
+      <h2>Tree being built</h2>
+      <div class="tree-wrap">
+        <svg class="tree" viewBox="0 0 480 240" preserveAspectRatio="xMidYMid meet" data-role="tree"></svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Call stack (bottom → top)</h2>
+    <div class="stack-visual" data-role="stack"></div>
+  </section>
+</main>
+
+<footer class="bottombar">
+  <div class="log" data-role="log">Click Play or Next to begin.</div>
+  <div class="controls">
+    <button data-act="reset">↺ Reset</button>
+    <button data-act="prev">◀ Prev</button>
+    <button data-act="play" class="primary">▶ Play</button>
+    <button data-act="next">Next ▶</button>
+    <span class="speed">Speed <select data-act="speed">
+      <option value="1800">Slow</option>
+      <option value="1100" selected>Normal</option>
+      <option value="600">Fast</option>
+    </select></span>
+    <span class="step-count" data-role="counter">step 0 / —</span>
+  </div>
+</footer>
+
+</div>
+
+<script>
+'use strict';
+
+// =============================================================
+// Simulate the algorithm on [-10, -3, 0, 5, 9], emitting a frame
+// per observable step. Each frame is a snapshot of the whole
+// visual state.
+// =============================================================
+const LIST = [-10, -3, 0, 5, 9];
+const N = LIST.length;
+
+// Each snapshot describes:
+//   headIdx      -- current head index into LIST (N if null)
+//   callStack    -- array of frames, bottom → top
+//                   each frame = { id, lo, hi, mid, phase, leftBuiltId?, rootId?, ret?, isNullReturn? }
+//   tree         -- map id -> { val, leftId?, rightId?, created }
+//   rootId       -- id of the final root (once known)
+//   activeId     -- which stack frame is active (top), or 'returning' for a return step
+//   log          -- narration line (allowed HTML spans: hl gh nl ps)
+const frames = [];
+let nextNodeId = 1;
+let nextFrameId = 1;
+const treeState = {};    // nodeId -> {val, leftId, rightId}
+let headIdx = 0;
+const callStack = [];    // live stack, we snapshot it each frame
+
+function snapshot(log, activeId = null, codeLine = null, extra = {}) {
+  frames.push({
+    headIdx,
+    callStack: callStack.map(fr => ({ ...fr, locals: { ...(fr.locals || {}) } })),
+    tree: JSON.parse(JSON.stringify(treeState)),
+    activeId,
+    log,
+    codeLine,
+    highlight: extra.highlight || null,
+  });
+}
+
+function build(lo, hi) {
+  const frameId = nextFrameId++;
+  const fr = { id: frameId, lo, hi, mid: null, phase: 'entering', locals: {} };
+  callStack.push(fr);
+  snapshot(
+    `<span class="ps">build(${lo}, ${hi})</span> called. Pushing a new frame on the stack.`,
+    frameId,
+    "l-sig"
+  );
+
+  if (lo > hi) {
+    fr.phase = 'return null';
+    fr.isNullReturn = true;
+    snapshot(
+      `<span class="ps">build(${lo}, ${hi})</span>: <code>lo &gt; hi</code> — returning <span class="nl">null</span>. This is a null leaf child.`,
+      frameId,
+      "l-null"
+    );
+    callStack.pop();
+    snapshot(
+      `Frame <span class="ps">build(${lo}, ${hi})</span> popped, returned <span class="nl">null</span>.`,
+      null,
+      null
+    );
+    return null;
+  }
+
+  const mid = Math.floor((lo + hi) / 2);
+  fr.mid = mid;
+  fr.phase = 'mid computed';
+  snapshot(
+    `<span class="ps">build(${lo}, ${hi})</span>: mid = (${lo} + ${hi}) / 2 = <span class="hl">${mid}</span>. This index's list node will become this subtree's root.`,
+    frameId,
+    "l-mid"
+  );
+
+  fr.phase = 'recurse left';
+  snapshot(
+    `<span class="ps">build(${lo}, ${hi})</span>: about to recurse into left half <span class="hl">build(${lo}, ${mid - 1})</span>.`,
+    frameId,
+    "l-left"
+  );
+  const leftId = build(lo, mid - 1);
+  fr.locals.leftBuilt = leftId;
+  fr.phase = 'left done';
+  snapshot(
+    `<span class="ps">build(${lo}, ${hi})</span>: left subtree built (${leftId == null ? '<span class="nl">null</span>' : 'node #' + leftId}). head is now at index <span class="hl">${headIdx}</span> — the mid-th list node.`,
+    frameId,
+    "l-left"
+  );
+
+  // Consume head as this subtree's root.
+  const nodeId = nextNodeId++;
+  const val = LIST[headIdx];
+  treeState[nodeId] = { val, leftId: null, rightId: null, created: true };
+  fr.phase = 'root created';
+  fr.locals.rootId = nodeId;
+  snapshot(
+    `<span class="ps">build(${lo}, ${hi})</span>: create tree node with val <span class="gh">${val}</span> (consumed from head). This is tree node #${nodeId}.`,
+    frameId, "l-root", { highlight: { newNode: nodeId } }
+  );
+  headIdx++;
+  snapshot(
+    `<span class="ps">build(${lo}, ${hi})</span>: advance head past the consumed node. head → index <span class="hl">${headIdx === N ? 'null' : headIdx}</span>.`,
+    frameId,
+    "l-advance"
+  );
+
+  treeState[nodeId].leftId = leftId;
+  if (leftId != null) {
+    treeState[nodeId].created = false; // prevent flashing root as fresh after left attach
+    treeState[nodeId].rootAttached = true;
+  }
+  snapshot(
+    `<span class="ps">build(${lo}, ${hi})</span>: attach the already-built left subtree ${leftId == null ? '(<span class="nl">null</span>)' : '(node #' + leftId + ')'} as <code>root.left</code>.`,
+    frameId,
+    "l-attachL"
+  );
+
+  fr.phase = 'recurse right';
+  snapshot(
+    `<span class="ps">build(${lo}, ${hi})</span>: recurse into right half <span class="hl">build(${mid + 1}, ${hi})</span>.`,
+    frameId,
+    "l-right"
+  );
+  const rightId = build(mid + 1, hi);
+  treeState[nodeId].rightId = rightId;
+  fr.phase = 'done';
+  fr.locals.returnId = nodeId;
+  snapshot(
+    `<span class="ps">build(${lo}, ${hi})</span>: right subtree built (${rightId == null ? '<span class="nl">null</span>' : 'node #' + rightId}). Attach as <code>root.right</code>. Return node #${nodeId}.`,
+    frameId,
+    "l-return"
+  );
+  callStack.pop();
+  snapshot(
+    `Frame <span class="ps">build(${lo}, ${hi})</span> popped, returned node #${nodeId} (val ${val}).`,
+    null,
+    null
+  );
+  return nodeId;
+}
+
+// Initial snapshot before we start.
+snapshot(`Initial state. head at index <span class="hl">0</span>. Call <span class="ps">sortedListToBST</span>. We computed n = ${N} and now call <span class="ps">build(0, ${N - 1})</span>.`, null, "l-top");
+
+const rootId = build(0, N - 1);
+snapshot(`<span class="gh">Done.</span> Final tree rooted at node #${rootId}. The call stack is empty, head is at the end of the list.`, null, null);
+
+// =============================================================
+// Renderers
+// =============================================================
+function renderList(headIdx) {
+  const ll = document.querySelector('[data-role="ll"]');
+  ll.innerHTML = '';
+  LIST.forEach((v, i) => {
+    const node = document.createElement('div');
+    node.className = 'll-node';
+    if (i < headIdx) node.classList.add('consumed');
+    if (i === headIdx) node.classList.add('head-here');
+    const lbl = document.createElement('span');
+    lbl.className = 'lbl';
+    lbl.textContent = 'i=' + i;
+    node.appendChild(lbl);
+    node.appendChild(document.createTextNode(String(v)));
+    ll.appendChild(node);
+    if (i < LIST.length - 1) {
+      const arr = document.createElement('span');
+      arr.className = 'll-arrow';
+      arr.textContent = '→';
+      ll.appendChild(arr);
+    }
+  });
+
+  // Position head pointer
+  const ptr = document.querySelector('[data-role="head-ptr"]');
+  if (headIdx >= LIST.length) {
+    ptr.textContent = 'head = null';
+    ptr.style.left = '100%';
+    ptr.style.transform = 'translateX(-100%)';
+  } else {
+    ptr.textContent = 'head';
+    // 50px node + ~20px arrow = 70px step; approx
+    const nodes = ll.querySelectorAll('.ll-node');
+    if (nodes[headIdx]) {
+      const target = nodes[headIdx];
+      const rect = target.getBoundingClientRect();
+      const parentRect = ll.getBoundingClientRect();
+      ptr.style.left = (rect.left - parentRect.left + rect.width / 2 - 12) + 'px';
+      ptr.style.transform = 'none';
+    }
+  }
+}
+
+function renderStack(stack, activeId) {
+  const container = document.querySelector('[data-role="stack"]');
+  container.innerHTML = '';
+  stack.forEach(fr => {
+    const el = document.createElement('div');
+    el.className = 'frame';
+    if (fr.id === activeId) el.classList.add('active');
+    if (fr.isNullReturn) el.classList.add('null-return');
+    if (fr.phase === 'done') el.classList.add('returning');
+
+    const head = document.createElement('div');
+    head.className = 'fn-head';
+    head.textContent = 'build(' + fr.lo + ', ' + fr.hi + ')';
+    el.appendChild(head);
+
+    if (fr.mid != null) {
+      const mid = document.createElement('div');
+      mid.className = 'locals';
+      mid.innerHTML = '<span class="var">mid</span> = ' + fr.mid;
+      el.appendChild(mid);
+    }
+    if (fr.locals && fr.locals.leftBuilt !== undefined && fr.phase !== 'recurse left') {
+      const l = document.createElement('div');
+      l.className = 'locals';
+      l.innerHTML = '<span class="var">left</span> = ' + (fr.locals.leftBuilt == null ? 'null' : '#' + fr.locals.leftBuilt);
+      el.appendChild(l);
+    }
+    if (fr.locals && fr.locals.rootId) {
+      const r = document.createElement('div');
+      r.className = 'locals';
+      r.innerHTML = '<span class="var">root</span> = #' + fr.locals.rootId + ' (val ' + treeState[fr.locals.rootId]?.val + ')';
+      el.appendChild(r);
+    }
+    const phase = document.createElement('div');
+    phase.className = 'phase';
+    phase.textContent = fr.phase;
+    el.appendChild(phase);
+
+    container.appendChild(el);
+  });
+  if (stack.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.color = 'var(--fg-muted)';
+    empty.style.fontStyle = 'italic';
+    empty.style.fontSize = '0.85rem';
+    empty.textContent = '(stack is empty)';
+    container.appendChild(empty);
+  }
+}
+
+// =============================================================
+// Tree layout: fixed positions for the 5-node BST.
+// After the build on [-10, -3, 0, 5, 9], we know the final tree:
+//           0
+//         /   \
+//      -10     5
+//        \     \
+//        -3    9
+// Position nodes by their (level, position-in-level) ahead of time.
+// We'll keep each node at its final slot regardless of when it appears.
+// =============================================================
+const TREE_POSITIONS = {
+  // Map value -> {x, y}
+  0:   { x: 240, y: 40 },
+  '-10': { x: 120, y: 115 },
+  5:   { x: 360, y: 115 },
+  '-3': { x: 180, y: 190 },
+  9:   { x: 420, y: 190 },
+};
+
+function renderTree(tree, lastFrame) {
+  const svg = document.querySelector('[data-role="tree"]');
+  svg.innerHTML = '';
+  // Determine fresh node (just created in this frame)
+  const freshId = lastFrame && lastFrame.highlight && lastFrame.highlight.newNode;
+
+  // Draw edges first.
+  Object.entries(tree).forEach(([id, node]) => {
+    const p = TREE_POSITIONS[String(node.val)];
+    if (!p) return;
+    if (node.leftId && tree[node.leftId]) {
+      const c = TREE_POSITIONS[String(tree[node.leftId].val)];
+      if (c) drawEdge(svg, p, c, false);
+    }
+    if (node.rightId && tree[node.rightId]) {
+      const c = TREE_POSITIONS[String(tree[node.rightId].val)];
+      if (c) drawEdge(svg, p, c, false);
+    }
+  });
+  // Draw nodes.
+  Object.entries(tree).forEach(([id, node]) => {
+    const p = TREE_POSITIONS[String(node.val)];
+    if (!p) return;
+    drawNode(svg, p, node.val, Number(id) === Number(freshId));
+  });
+}
+
+function drawEdge(svg, p1, p2, fresh) {
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', p1.x);
+  line.setAttribute('y1', p1.y + 18);
+  line.setAttribute('x2', p2.x);
+  line.setAttribute('y2', p2.y - 18);
+  line.setAttribute('class', 'tn-edge' + (fresh ? ' fresh' : ''));
+  svg.appendChild(line);
+}
+
+function drawNode(svg, p, val, fresh) {
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('cx', p.x);
+  circle.setAttribute('cy', p.y);
+  circle.setAttribute('r', 22);
+  circle.setAttribute('class', 'tn-circle' + (fresh ? ' fresh' : ''));
+  svg.appendChild(circle);
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('x', p.x);
+  text.setAttribute('y', p.y);
+  text.setAttribute('class', 'tn-text');
+  text.textContent = String(val);
+  svg.appendChild(text);
+}
+
+// =============================================================
+// Engine
+// =============================================================
+function highlightCodeLine(lineId) {
+  document.querySelectorAll('pre.code .line.active').forEach(el => el.classList.remove('active'));
+  if (!lineId) return;
+  const el = document.getElementById(lineId);
+  if (el) { el.classList.add('active'); }
+}
+
+class Engine {
+  constructor() {
+    this.i = 0;
+    this.playing = false;
+    this.interval = null;
+    this.speed = parseInt(document.querySelector('[data-act="speed"]').value, 10);
+    document.querySelector('[data-act="next"]').onclick = () => this.step(1);
+    document.querySelector('[data-act="prev"]').onclick = () => this.step(-1);
+    document.querySelector('[data-act="reset"]').onclick = () => { this.pause(); this.i = 0; this.render(); };
+    this.playBtn = document.querySelector('[data-act="play"]');
+    this.playBtn.onclick = () => this.playing ? this.pause() : this.play();
+    document.querySelector('[data-act="speed"]').addEventListener('change', (e) => {
+      this.speed = parseInt(e.target.value, 10);
+      if (this.playing) { this.pause(); this.play(); }
+    });
+    this.counter = document.querySelector('[data-role="counter"]');
+    this.render();
+  }
+  step(d) {
+    const next = this.i + d;
+    if (next < 0 || next >= frames.length) return;
+    this.i = next;
+    this.render();
+  }
+  play() {
+    if (this.i >= frames.length - 1) this.i = 0;
+    this.playing = true;
+    this.playBtn.textContent = '❚❚ Pause';
+    this.interval = setInterval(() => {
+      if (this.i >= frames.length - 1) { this.pause(); return; }
+      this.i++;
+      this.render();
+    }, this.speed);
+  }
+  pause() {
+    this.playing = false;
+    this.playBtn.textContent = '▶ Play';
+    if (this.interval) { clearInterval(this.interval); this.interval = null; }
+  }
+  render() {
+    const f = frames[this.i];
+    renderList(f.headIdx);
+    renderStack(f.callStack, f.activeId);
+    renderTree(f.tree, f);
+    document.querySelector('[data-role="log"]').innerHTML = f.log;
+    highlightCodeLine(f.codeLine);
+    this.counter.textContent = `step ${this.i} / ${frames.length - 1}`;
+  }
+}
+
+window.addEventListener('load', () => { new Engine(); });
+window.addEventListener('resize', () => {
+  // re-position the head pointer on resize
+  const engine = window.__engine;
+});
+</script>
+</body>
+</html>

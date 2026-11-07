@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>DSA Visualizations</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f1116;
+      --panel: #171a21;
+      --border: #272c38;
+      --text: #e6e8ee;
+      --muted: #8a93a6;
+      --accent: #7aa2ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 48px 24px;
+      font: 15px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+    }
+    main { width: 100%; max-width: 760px; }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      letter-spacing: -0.01em;
+    }
+    .sub {
+      color: var(--muted);
+      margin-bottom: 32px;
+      font-size: 13px;
+    }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: border-color .15s, transform .15s;
+    }
+    li:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .num {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      min-width: 48px;
+      font-size: 13px;
+    }
+    a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+      flex: 1;
+    }
+    .tag {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+    }
+    footer {
+      margin-top: 40px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    a.gh { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>DSA Visualizations</h1>
+    <p class="sub">Interactive step-through animations for LeetCode solutions.</p>
+    <ul id="list">
+      <li>
+        <span class="num">LC 109</span>
+        <a href="lc109-sorted-list-to-bst.html">Convert Sorted List to Binary Search Tree</a>
+        <span class="tag">Recursion</span>
+      </li>
+    </ul>
+    <footer>
+      Source: <a class="gh" href="https://github.com/kinny94/dsa-visualizations">github.com/kinny94/dsa-visualizations</a>
+    </footer>
+  </main>
+</body>
+</html>
