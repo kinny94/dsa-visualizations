@@ -17,6 +17,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [141](https://kinny94.github.io/dsa-visualizations/lc141-linked-list-cycle.html) | Linked List Cycle | Linked List · Floyd's |
 | [92](https://kinny94.github.io/dsa-visualizations/lc92-reverse-linked-list-ii.html) | Reverse Linked List II | Linked List · Pointer Surgery |
 | [654](https://kinny94.github.io/dsa-visualizations/lc654-maximum-binary-tree.html) | Maximum Binary Tree | Stack · Monotonic |
+| [78](https://kinny94.github.io/dsa-visualizations/lc78-subsets.html) | Subsets | Recursion · Backtracking |
 
 ## Adding a new animation
 
