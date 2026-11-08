@@ -23,6 +23,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [90](https://kinny94.github.io/dsa-visualizations/lc90-subsets-ii.html) | Subsets II | Recursion · Backtracking |
 | [216](https://kinny94.github.io/dsa-visualizations/lc216-combination-sum-iii.html) | Combination Sum III | Recursion · Backtracking |
 | [77](https://kinny94.github.io/dsa-visualizations/lc77-combinations.html) | Combinations | Recursion · Backtracking |
+| [46](https://kinny94.github.io/dsa-visualizations/lc46-permutations.html) | Permutations | Recursion · Backtracking |
 
 ## Adding a new animation
 

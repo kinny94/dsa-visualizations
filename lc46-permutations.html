@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 46 — Permutations</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 310px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    transition: all 0.25s;
+  }
+  .pill .pill-k {
+    color: #888;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pill .pill-v {
+    font-weight: bold;
+    color: #ffa500;
+  }
+  .pill.size.full .pill-v { color: #4de88c; }
+  .pill.size.full { background: #0f6b3a; border-color: #0f9950; }
+  .label {
+    width: 72px;
+    font-size: 11px;
+    color: #aaa;
+    text-align: right;
+  }
+  .pool { display: flex; gap: 6px; }
+  .cell {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.25s;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+  }
+  .cell.i-cursor {
+    border-color: #e94560;
+    background: #e94560;
+    transform: scale(1.1);
+  }
+  .cell.i-cursor.skipping {
+    background: #6b1a1a;
+    border-color: #ff6b6b;
+    color: #ff9999;
+  }
+  .cell.dim { opacity: 0.3; }
+  .used-row { display: flex; gap: 6px; }
+  .used-cell {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    transition: all 0.25s;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    color: #888;
+  }
+  .used-cell.true {
+    background: #0f6b3a;
+    border-color: #0f9950;
+    color: #4de88c;
+    font-weight: bold;
+  }
+  .used-cell.flipping {
+    animation: flip 0.35s ease-out;
+  }
+  @keyframes flip {
+    0% { transform: rotateY(0deg); }
+    50% { transform: rotateY(90deg) scale(1.1); }
+    100% { transform: rotateY(0deg); }
+  }
+  .current-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+  }
+  #currentCells { display: flex; gap: 6px; }
+  #currentCells .cell {
+    background: #0f6b3a;
+    border-color: #0f9950;
+  }
+  #currentCells .cell.just-added {
+    animation: pop 0.3s ease-out;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.success rect { fill: #0f9950; stroke: #4de88c; stroke-width: 3; }
+  .node-box.success text { fill: #fff; font-weight: bold; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-record { background: #0f9950; color: white; }
+  .kind-pick { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .kind-skip { background: #ff6b6b; color: white; }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #1a4a7a; color: white; }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    list-style: none;
+  }
+  .result-list li {
+    padding: 4px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #0f9950;
+  }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 2px; }
+  .chip-active { background: #e94560; }
+  .chip-success { background: #0f9950; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .chip-used { background: #0f6b3a; border: 1px solid #0f9950; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 46 — Permutations</h1>
+    <div class="subtitle">Backtracking with used[] flag &nbsp;·&nbsp; nums = [1, 2, 3]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill"><span class="pill-k">n</span><span class="pill-v">3</span></span>
+      <span class="pill size" id="pillSize"><span class="pill-k">size</span><span class="pill-v" id="sizeVal">0 / 3</span></span>
+    </div>
+    <div class="row">
+      <span class="label">nums:</span>
+      <div class="pool" id="pool"></div>
+    </div>
+    <div class="row">
+      <span class="label">used[]:</span>
+      <div class="used-row" id="usedRow"></div>
+    </div>
+    <div class="row current-wrap">
+      <span class="label">current:</span>
+      <div id="currentCells"></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 1100 380" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result (permutations)</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-success"></div>recorded permutation</div>
+      <div class="legend-item"><div class="chip chip-used"></div>used[i] = true</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const NUMS = [1, 2, 3];
+  const N = NUMS.length;
+
+  // ============ POOL ============
+  const poolEl = document.getElementById('pool');
+  const poolCells = [];
+  NUMS.forEach(v => {
+    const c = document.createElement('div');
+    c.className = 'cell';
+    c.textContent = v;
+    poolEl.appendChild(c);
+    poolCells.push(c);
+  });
+
+  // ============ USED ARRAY ============
+  const usedRowEl = document.getElementById('usedRow');
+  const usedCells = [];
+  for (let i = 0; i < N; i++) {
+    const c = document.createElement('div');
+    c.className = 'used-cell';
+    c.textContent = 'F';
+    usedRowEl.appendChild(c);
+    usedCells.push(c);
+  }
+
+  // ============ CODE ============
+  const codeText = [
+    "public List<List<Integer>> permute(int[] nums) {",
+    "    List<List<Integer>> result = new ArrayList<>();",
+    "    backtrack(nums, new boolean[nums.length],",
+    "              new ArrayList<>(), result);",
+    "    return result;",
+    "}",
+    "",
+    "private void backtrack(int[] nums, boolean[] used,",
+    "                       List<Integer> current,",
+    "                       List<List<Integer>> result) {",
+    "    if (current.size() == nums.length) {",
+    "        result.add(new ArrayList<>(current));",
+    "        return;",
+    "    }",
+    "    for (int i = 0; i < nums.length; i++) {",
+    "        if (used[i]) {",
+    "            continue;",
+    "        }",
+    "        used[i] = true;",
+    "        current.add(nums[i]);",
+    "        backtrack(nums, used, current, result);",
+    "        current.remove(current.size() - 1);",
+    "        used[i] = false;",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE DEFINITION ============
+  const nodes = {
+    n0:   { x: 550, y:  40, w: 50, label: "[]" },
+    n1:   { x: 190, y: 140, w: 60, label: "[1]" },
+    n2:   { x: 550, y: 140, w: 60, label: "[2]" },
+    n3:   { x: 910, y: 140, w: 60, label: "[3]" },
+    n12:  { x: 100, y: 240, w: 70, label: "[1, 2]" },
+    n13:  { x: 280, y: 240, w: 70, label: "[1, 3]" },
+    n21:  { x: 460, y: 240, w: 70, label: "[2, 1]" },
+    n23:  { x: 640, y: 240, w: 70, label: "[2, 3]" },
+    n31:  { x: 820, y: 240, w: 70, label: "[3, 1]" },
+    n32:  { x: 1000, y: 240, w: 70, label: "[3, 2]" },
+    n123: { x: 100, y: 340, w: 80, label: "[1, 2, 3]" },
+    n132: { x: 280, y: 340, w: 80, label: "[1, 3, 2]" },
+    n213: { x: 460, y: 340, w: 80, label: "[2, 1, 3]" },
+    n231: { x: 640, y: 340, w: 80, label: "[2, 3, 1]" },
+    n312: { x: 820, y: 340, w: 80, label: "[3, 1, 2]" },
+    n321: { x: 1000, y: 340, w: 80, label: "[3, 2, 1]" }
+  };
+  const edges = [
+    ["n0", "n1"], ["n0", "n2"], ["n0", "n3"],
+    ["n1", "n12"], ["n1", "n13"],
+    ["n2", "n21"], ["n2", "n23"],
+    ["n3", "n31"], ["n3", "n32"],
+    ["n12", "n123"], ["n13", "n132"],
+    ["n21", "n213"], ["n23", "n231"],
+    ["n31", "n312"], ["n32", "n321"]
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(([from, to]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 14);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 14);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box');
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 14);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 28);
+    rect.setAttribute('rx', 5);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y + 1);
+    t.textContent = n.label;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  const steps = [
+    { line: [3,4], activeI: null, current: [], used: [false,false,false], skippingI: null,
+      action: "Entry: result=[], used=[F,F,F]. Call backtrack(...).",
+      kind: "call", activeNode: null, onPath: [], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [11, 15], activeI: null, current: [], used: [false,false,false], skippingI: null,
+      action: "n0 base check: size=0 ≠ 3. Enter loop i=0..2.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [16, 17, 18, 19], activeI: 0, current: [1], used: [true,false,false], skippingI: null,
+      action: "i=0: used[0] false. Flip used[0]=true. current.add(nums[0]=1). current=[1].",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [20], activeI: 0, current: [1], used: [true,false,false], skippingI: null,
+      action: "Call backtrack(...). Descend into [1].",
+      kind: "call", activeNode: "n1", onPath: ["n0"], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [11, 15, 16, 17], activeI: 0, current: [1], used: [true,false,false], skippingI: 0,
+      action: "n1 base check: size=1 ≠ 3. Loop i=0: used[0]=true → continue (skip).",
+      kind: "skip", activeNode: "n1", onPath: ["n0"], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [16, 17, 18, 19], activeI: 1, current: [1, 2], used: [true,true,false], skippingI: null,
+      action: "i=1: used[1] false. Flip used[1]=true. current.add(2). current=[1, 2].",
+      kind: "pick", activeNode: "n1", onPath: ["n0"], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [20], activeI: 1, current: [1, 2], used: [true,true,false], skippingI: null,
+      action: "Call backtrack(...). Descend into [1, 2].",
+      kind: "call", activeNode: "n12", onPath: ["n0", "n1"], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [16, 17], activeI: 1, current: [1, 2], used: [true,true,false], skippingI: 1,
+      action: "n12 loop: i=0 skipped (used), i=1 skipped (used).",
+      kind: "skip", activeNode: "n12", onPath: ["n0", "n1"], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 2, current: [1, 2, 3], used: [true,true,true], skippingI: null,
+      action: "i=2: free. Flip used[2]=true. current.add(3). current=[1, 2, 3]. Call.",
+      kind: "pick", activeNode: "n123", onPath: ["n0", "n1", "n12"], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [11, 12], activeI: null, current: [1, 2, 3], used: [true,true,true], skippingI: null,
+      action: "n123 base: size==n ✓. RECORD [1, 2, 3]. ★",
+      kind: "record", activeNode: "n123", onPath: ["n0", "n1", "n12"], successNodes: ["n123"], doneNodes: [], result: [[1,2,3]] },
+
+    { line: [13, 21, 22], activeI: 2, current: [1, 2], used: [true,true,false], skippingI: null,
+      action: "Return. Back in n12. Undo: current.remove, used[2]=false.",
+      kind: "return", activeNode: "n12", onPath: ["n0", "n1"], successNodes: ["n123"], doneNodes: ["n123"], result: [[1,2,3]] },
+
+    { line: [16, 23, 24], activeI: null, current: [1, 2], used: [true,true,false], skippingI: null,
+      action: "Loop in n12 exhausted. Return from n12.",
+      kind: "return", activeNode: "n12", onPath: ["n0", "n1"], successNodes: ["n123"], doneNodes: ["n12", "n123"], result: [[1,2,3]] },
+
+    { line: [21, 22], activeI: 1, current: [1], used: [true,false,false], skippingI: null,
+      action: "Back in n1. Undo: current.remove, used[1]=false.",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: ["n123"], doneNodes: ["n12", "n123"], result: [[1,2,3]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 2, current: [1, 3], used: [true,false,true], skippingI: null,
+      action: "i=2 in n1: free. Flip used[2]=true. current.add(3). current=[1, 3]. Call.",
+      kind: "pick", activeNode: "n13", onPath: ["n0", "n1"], successNodes: ["n123"], doneNodes: ["n12", "n123"], result: [[1,2,3]] },
+
+    { line: [16, 17], activeI: 0, current: [1, 3], used: [true,false,true], skippingI: 0,
+      action: "n13 loop: i=0 skipped (used).",
+      kind: "skip", activeNode: "n13", onPath: ["n0", "n1"], successNodes: ["n123"], doneNodes: ["n12", "n123"], result: [[1,2,3]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 1, current: [1, 3, 2], used: [true,true,true], skippingI: null,
+      action: "i=1: free. Flip used[1]=true. current.add(2). current=[1, 3, 2]. Call.",
+      kind: "pick", activeNode: "n132", onPath: ["n0", "n1", "n13"], successNodes: ["n123"], doneNodes: ["n12", "n123"], result: [[1,2,3]] },
+
+    { line: [11, 12], activeI: null, current: [1, 3, 2], used: [true,true,true], skippingI: null,
+      action: "RECORD [1, 3, 2]. ★",
+      kind: "record", activeNode: "n132", onPath: ["n0", "n1", "n13"], successNodes: ["n123", "n132"], doneNodes: ["n12", "n123"], result: [[1,2,3], [1,3,2]] },
+
+    { line: [13, 21, 22, 16, 17, 23], activeI: null, current: [1], used: [true,false,false], skippingI: null,
+      action: "Return. Undo n13's i=1 pick. i=2 skipped (used). Loop ends. Return from n13. Undo n1's i=2 pick.",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: ["n123", "n132"], doneNodes: ["n12", "n13", "n123", "n132"], result: [[1,2,3], [1,3,2]] },
+
+    { line: [23, 24, 21, 22], activeI: null, current: [], used: [false,false,false], skippingI: null,
+      action: "Loop in n1 exhausted. Return from n1. Back in n0. Undo: current.remove, used[0]=false.",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n123", "n132"], doneNodes: ["n1", "n12", "n13", "n123", "n132"], result: [[1,2,3], [1,3,2]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 1, current: [2], used: [false,true,false], skippingI: null,
+      action: "i=1 in n0: free. Flip used[1]=true. current.add(2). current=[2]. Call.",
+      kind: "pick", activeNode: "n2", onPath: ["n0"], successNodes: ["n123", "n132"], doneNodes: ["n1", "n12", "n13", "n123", "n132"], result: [[1,2,3], [1,3,2]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 0, current: [2, 1], used: [true,true,false], skippingI: null,
+      action: "n2 loop i=0: free. Flip used[0]=true. current.add(1). current=[2, 1]. Call.",
+      kind: "pick", activeNode: "n21", onPath: ["n0", "n2"], successNodes: ["n123", "n132"], doneNodes: ["n1", "n12", "n13", "n123", "n132"], result: [[1,2,3], [1,3,2]] },
+
+    { line: [16, 17], activeI: 1, current: [2, 1], used: [true,true,false], skippingI: 1,
+      action: "n21 loop: i=0 skipped, i=1 skipped.",
+      kind: "skip", activeNode: "n21", onPath: ["n0", "n2"], successNodes: ["n123", "n132"], doneNodes: ["n1", "n12", "n13", "n123", "n132"], result: [[1,2,3], [1,3,2]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 2, current: [2, 1, 3], used: [true,true,true], skippingI: null,
+      action: "i=2: free. current.add(3). current=[2, 1, 3]. Call.",
+      kind: "pick", activeNode: "n213", onPath: ["n0", "n2", "n21"], successNodes: ["n123", "n132"], doneNodes: ["n1", "n12", "n13", "n123", "n132"], result: [[1,2,3], [1,3,2]] },
+
+    { line: [11, 12], activeI: null, current: [2, 1, 3], used: [true,true,true], skippingI: null,
+      action: "RECORD [2, 1, 3]. ★",
+      kind: "record", activeNode: "n213", onPath: ["n0", "n2", "n21"], successNodes: ["n123", "n132", "n213"], doneNodes: ["n1", "n12", "n13", "n123", "n132"], result: [[1,2,3], [1,3,2], [2,1,3]] },
+
+    { line: [13, 21, 22, 16, 23, 24, 21, 22], activeI: null, current: [2], used: [false,true,false], skippingI: null,
+      action: "Return. Unwind n21. Loop in n21 ends. Return from n21. Back in n2. Undo: remove 1, used[0]=false.",
+      kind: "return", activeNode: "n2", onPath: ["n0"], successNodes: ["n123", "n132", "n213"], doneNodes: ["n1", "n12", "n13", "n21", "n123", "n132", "n213"], result: [[1,2,3], [1,3,2], [2,1,3]] },
+
+    { line: [16, 17], activeI: 1, current: [2], used: [false,true,false], skippingI: 1,
+      action: "Next in n2: i=1 skipped (used).",
+      kind: "skip", activeNode: "n2", onPath: ["n0"], successNodes: ["n123", "n132", "n213"], doneNodes: ["n1", "n12", "n13", "n21", "n123", "n132", "n213"], result: [[1,2,3], [1,3,2], [2,1,3]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 2, current: [2, 3], used: [false,true,true], skippingI: null,
+      action: "i=2: free. current.add(3). current=[2, 3]. Call.",
+      kind: "pick", activeNode: "n23", onPath: ["n0", "n2"], successNodes: ["n123", "n132", "n213"], doneNodes: ["n1", "n12", "n13", "n21", "n123", "n132", "n213"], result: [[1,2,3], [1,3,2], [2,1,3]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 0, current: [2, 3, 1], used: [true,true,true], skippingI: null,
+      action: "n23 loop i=0: free. current.add(1). current=[2, 3, 1]. Call.",
+      kind: "pick", activeNode: "n231", onPath: ["n0", "n2", "n23"], successNodes: ["n123", "n132", "n213"], doneNodes: ["n1", "n12", "n13", "n21", "n123", "n132", "n213"], result: [[1,2,3], [1,3,2], [2,1,3]] },
+
+    { line: [11, 12], activeI: null, current: [2, 3, 1], used: [true,true,true], skippingI: null,
+      action: "RECORD [2, 3, 1]. ★",
+      kind: "record", activeNode: "n231", onPath: ["n0", "n2", "n23"], successNodes: ["n123", "n132", "n213", "n231"], doneNodes: ["n1", "n12", "n13", "n21", "n123", "n132", "n213"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1]] },
+
+    { line: [13, 21, 22, 16, 23, 24, 21, 22, 23, 24], activeI: null, current: [], used: [false,false,false], skippingI: null,
+      action: "Unwind: Return n231 → undo n23 i=0 → i=1,2 skipped → return n23 → undo n2 i=2 → loop n2 ends → return n2 → undo n0 i=1.",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n123", "n132", "n213", "n231"], doneNodes: ["n1", "n12", "n13", "n2", "n21", "n23", "n123", "n132", "n213", "n231"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 2, current: [3], used: [false,false,true], skippingI: null,
+      action: "i=2 in n0: free. current.add(3). current=[3]. Call.",
+      kind: "pick", activeNode: "n3", onPath: ["n0"], successNodes: ["n123", "n132", "n213", "n231"], doneNodes: ["n1", "n12", "n13", "n2", "n21", "n23", "n123", "n132", "n213", "n231"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 0, current: [3, 1], used: [true,false,true], skippingI: null,
+      action: "n3 loop i=0: free. current.add(1). current=[3, 1]. Call.",
+      kind: "pick", activeNode: "n31", onPath: ["n0", "n3"], successNodes: ["n123", "n132", "n213", "n231"], doneNodes: ["n1", "n12", "n13", "n2", "n21", "n23", "n123", "n132", "n213", "n231"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1]] },
+
+    { line: [16, 17], activeI: 0, current: [3, 1], used: [true,false,true], skippingI: 0,
+      action: "n31 loop: i=0 skipped (used).",
+      kind: "skip", activeNode: "n31", onPath: ["n0", "n3"], successNodes: ["n123", "n132", "n213", "n231"], doneNodes: ["n1", "n12", "n13", "n2", "n21", "n23", "n123", "n132", "n213", "n231"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 1, current: [3, 1, 2], used: [true,true,true], skippingI: null,
+      action: "i=1: free. current.add(2). current=[3, 1, 2]. Call.",
+      kind: "pick", activeNode: "n312", onPath: ["n0", "n3", "n31"], successNodes: ["n123", "n132", "n213", "n231"], doneNodes: ["n1", "n12", "n13", "n2", "n21", "n23", "n123", "n132", "n213", "n231"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1]] },
+
+    { line: [11, 12], activeI: null, current: [3, 1, 2], used: [true,true,true], skippingI: null,
+      action: "RECORD [3, 1, 2]. ★",
+      kind: "record", activeNode: "n312", onPath: ["n0", "n3", "n31"], successNodes: ["n123", "n132", "n213", "n231", "n312"], doneNodes: ["n1", "n12", "n13", "n2", "n21", "n23", "n123", "n132", "n213", "n231"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1], [3,1,2]] },
+
+    { line: [13, 21, 22, 16, 23, 24, 21, 22], activeI: null, current: [3], used: [false,false,true], skippingI: null,
+      action: "Unwind: Return n312 → undo n31 i=1 → i=2 skipped → return n31 → undo n3 i=0.",
+      kind: "return", activeNode: "n3", onPath: ["n0"], successNodes: ["n123", "n132", "n213", "n231", "n312"], doneNodes: ["n1", "n12", "n13", "n2", "n21", "n23", "n31", "n123", "n132", "n213", "n231", "n312"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1], [3,1,2]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 1, current: [3, 2], used: [false,true,true], skippingI: null,
+      action: "n3 loop i=1: free. current.add(2). current=[3, 2]. Call.",
+      kind: "pick", activeNode: "n32", onPath: ["n0", "n3"], successNodes: ["n123", "n132", "n213", "n231", "n312"], doneNodes: ["n1", "n12", "n13", "n2", "n21", "n23", "n31", "n123", "n132", "n213", "n231", "n312"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1], [3,1,2]] },
+
+    { line: [16, 17, 18, 19, 20], activeI: 0, current: [3, 2, 1], used: [true,true,true], skippingI: null,
+      action: "n32 loop i=0: free. current.add(1). current=[3, 2, 1]. Call.",
+      kind: "pick", activeNode: "n321", onPath: ["n0", "n3", "n32"], successNodes: ["n123", "n132", "n213", "n231", "n312"], doneNodes: ["n1", "n12", "n13", "n2", "n21", "n23", "n31", "n123", "n132", "n213", "n231", "n312"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1], [3,1,2]] },
+
+    { line: [11, 12], activeI: null, current: [3, 2, 1], used: [true,true,true], skippingI: null,
+      action: "RECORD [3, 2, 1]. ★",
+      kind: "record", activeNode: "n321", onPath: ["n0", "n3", "n32"], successNodes: ["n123", "n132", "n213", "n231", "n312", "n321"], doneNodes: ["n1", "n12", "n13", "n2", "n21", "n23", "n31", "n123", "n132", "n213", "n231", "n312"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1], [3,1,2], [3,2,1]] },
+
+    { line: [13, 21, 22, 16, 23, 24, 21, 22, 23, 24, 21, 22, 23, 24], activeI: null, current: [], used: [false,false,false], skippingI: null,
+      action: "Unwind all: Return n321 → return n32 → return n3 → return n0. DONE — 6 permutations = 3!.",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n123", "n132", "n213", "n231", "n312", "n321"], doneNodes: ["n0", "n1", "n12", "n13", "n2", "n21", "n23", "n3", "n31", "n32", "n123", "n132", "n213", "n231", "n312", "n321"], result: [[1,2,3], [1,3,2], [2,1,3], [2,3,1], [3,1,2], [3,2,1]] }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  let prevUsed = [false, false, false];
+  const currentCellsEl = document.getElementById('currentCells');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const sizeValEl = document.getElementById('sizeVal');
+  const pillSizeEl = document.getElementById('pillSize');
+
+  function render(idx, animateAdd = false) {
+    const s = steps[idx];
+    // Code lines
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pool cells
+    poolCells.forEach((el, i) => {
+      el.classList.remove('i-cursor', 'skipping', 'dim');
+      if (s.used[i]) {
+        el.classList.add('dim');
+      }
+      if (s.activeI === i) {
+        el.classList.add('i-cursor');
+      }
+      if (s.skippingI === i) {
+        el.classList.add('i-cursor', 'skipping');
+      }
+    });
+    // Used cells
+    usedCells.forEach((el, i) => {
+      el.classList.remove('true', 'flipping');
+      if (s.used[i]) {
+        el.classList.add('true');
+        el.textContent = 'T';
+      } else {
+        el.textContent = 'F';
+      }
+      if (animateAdd && s.used[i] !== prevUsed[i]) {
+        el.classList.add('flipping');
+      }
+    });
+    prevUsed = [...s.used];
+    // Pills
+    sizeValEl.textContent = `${s.current.length} / ${N}`;
+    pillSizeEl.classList.toggle('full', s.current.length === N);
+    // Current
+    currentCellsEl.innerHTML = '';
+    s.current.forEach((v, i) => {
+      const c = document.createElement('div');
+      c.className = 'cell';
+      if (animateAdd && i === s.current.length - 1 && s.kind === 'pick') {
+        c.classList.add('just-added');
+      }
+      c.textContent = v;
+      currentCellsEl.appendChild(c);
+    });
+    // Tree
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-path', 'success', 'done');
+      if (s.successNodes.includes(key)) {
+        el.classList.add('success');
+      } else if (s.doneNodes.includes(key)) {
+        el.classList.add('done');
+      } else if (s.activeNode === key) {
+        el.classList.add('active');
+      } else if (s.onPath.includes(key)) {
+        el.classList.add('on-path');
+      }
+    });
+    edges.forEach(([from, to]) => {
+      const e = edgeEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      const pathSet = new Set([...s.onPath, s.activeNode]);
+      if (pathSet.has(from) && pathSet.has(to)) {
+        e.classList.add('on-path');
+      }
+    });
+    // Result
+    resultEl.innerHTML = '';
+    s.result.forEach((p, i) => {
+      const li = document.createElement('li');
+      li.textContent = JSON.stringify(p).replace(/,/g, ', ');
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    // Action card
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+
+  function goTo(idx, animate = false) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) {
+      prevResultLen = 0;
+      prevUsed = [false, false, false];
+    }
+    render(stepIdx, animate);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    prevUsed = stepIdx > 0 ? [...steps[stepIdx - 1].used] : [false, false, false];
+    goTo(stepIdx - 1, false);
+  });
+  nextBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(stepIdx + 1, true);
+  });
+  resetBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(0, false);
+  });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1, true);
+    }, 1100);
+  });
+
+  goTo(0, false);
+</script>
+</body>
+</html>
