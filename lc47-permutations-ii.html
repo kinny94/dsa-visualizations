@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 47 — Permutations II</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 310px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    transition: all 0.25s;
+  }
+  .pill .pill-k {
+    color: #888;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pill .pill-v {
+    font-weight: bold;
+    color: #ffa500;
+  }
+  .pill.size.full .pill-v { color: #4de88c; }
+  .pill.size.full { background: #0f6b3a; border-color: #0f9950; }
+  .label {
+    width: 72px;
+    font-size: 11px;
+    color: #aaa;
+    text-align: right;
+  }
+  .pool { display: flex; gap: 6px; }
+  .cell {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.25s;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+  }
+  .cell.i-cursor {
+    border-color: #e94560;
+    background: #e94560;
+    transform: scale(1.1);
+  }
+  .cell.i-cursor.skipping-used {
+    background: #6b1a1a;
+    border-color: #ff6b6b;
+    color: #ff9999;
+  }
+  .cell.i-cursor.skipping-dup {
+    background: #4a1a6b;
+    border-color: #a855f7;
+    color: #e0b0ff;
+  }
+  .cell.dim { opacity: 0.3; }
+  .used-row { display: flex; gap: 6px; }
+  .used-cell {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    transition: all 0.25s;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    color: #888;
+  }
+  .used-cell.true {
+    background: #0f6b3a;
+    border-color: #0f9950;
+    color: #4de88c;
+    font-weight: bold;
+  }
+  .used-cell.flipping { animation: flip 0.35s ease-out; }
+  @keyframes flip {
+    0% { transform: rotateY(0deg); }
+    50% { transform: rotateY(90deg) scale(1.1); }
+    100% { transform: rotateY(0deg); }
+  }
+  .current-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+  }
+  #currentCells { display: flex; gap: 6px; }
+  #currentCells .cell {
+    background: #0f6b3a;
+    border-color: #0f9950;
+  }
+  #currentCells .cell.just-added {
+    animation: pop 0.3s ease-out;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.success rect { fill: #0f9950; stroke: #4de88c; stroke-width: 3; }
+  .node-box.success text { fill: #fff; font-weight: bold; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .node-box.dupskip rect { fill: #4a1a6b; stroke: #a855f7; stroke-width: 2; stroke-dasharray: 4,3; }
+  .node-box.dupskip text { fill: #e0b0ff; font-style: italic; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.dup-edge { stroke: #a855f7; stroke-dasharray: 4,3; stroke-width: 1.5; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-record { background: #0f9950; color: white; }
+  .kind-pick { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .kind-skip { background: #ff6b6b; color: white; }
+  .kind-dupskip { background: #a855f7; color: white; }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #1a4a7a; color: white; }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    list-style: none;
+  }
+  .result-list li {
+    padding: 4px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #0f9950;
+  }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 2px; }
+  .chip-active { background: #e94560; }
+  .chip-success { background: #0f9950; }
+  .chip-dupskip { background: #4a1a6b; border: 1px dashed #a855f7; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .chip-used { background: #0f6b3a; border: 1px solid #0f9950; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 47 — Permutations II</h1>
+    <div class="subtitle">Sorted + used[] + !used[i-1] dup-skip &nbsp;·&nbsp; nums = [1, 1, 2]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill"><span class="pill-k">n</span><span class="pill-v">3</span></span>
+      <span class="pill size" id="pillSize"><span class="pill-k">size</span><span class="pill-v" id="sizeVal">0 / 3</span></span>
+    </div>
+    <div class="row">
+      <span class="label">nums:</span>
+      <div class="pool" id="pool"></div>
+    </div>
+    <div class="row">
+      <span class="label">used[]:</span>
+      <div class="used-row" id="usedRow"></div>
+    </div>
+    <div class="row current-wrap">
+      <span class="label">current:</span>
+      <div id="currentCells"></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 900 410" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result (unique permutations)</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-success"></div>recorded permutation</div>
+      <div class="legend-item"><div class="chip chip-used"></div>used[i] = true</div>
+      <div class="legend-item"><div class="chip chip-dupskip"></div>duplicate-skip (sibling)</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const NUMS = [1, 1, 2];  // already sorted
+  const N = NUMS.length;
+
+  // ============ POOL ============
+  const poolEl = document.getElementById('pool');
+  const poolCells = [];
+  NUMS.forEach(v => {
+    const c = document.createElement('div');
+    c.className = 'cell';
+    c.textContent = v;
+    poolEl.appendChild(c);
+    poolCells.push(c);
+  });
+
+  // ============ USED ARRAY ============
+  const usedRowEl = document.getElementById('usedRow');
+  const usedCells = [];
+  for (let i = 0; i < N; i++) {
+    const c = document.createElement('div');
+    c.className = 'used-cell';
+    c.textContent = 'F';
+    usedRowEl.appendChild(c);
+    usedCells.push(c);
+  }
+
+  // ============ CODE ============
+  const codeText = [
+    "public List<List<Integer>> permuteUnique(int[] nums) {",
+    "    Arrays.sort(nums);",
+    "    List<List<Integer>> result = new ArrayList<>();",
+    "    backtrack(nums, new boolean[nums.length],",
+    "              new ArrayList<>(), result);",
+    "    return result;",
+    "}",
+    "",
+    "private void backtrack(int[] nums, boolean[] used,",
+    "                       List<Integer> current,",
+    "                       List<List<Integer>> result) {",
+    "    if (current.size() == nums.length) {",
+    "        result.add(new ArrayList<>(current));",
+    "        return;",
+    "    }",
+    "    for (int i = 0; i < nums.length; i++) {",
+    "        if (used[i]) {",
+    "            continue;",
+    "        }",
+    "        if (i > 0 && nums[i] == nums[i - 1]",
+    "                && !used[i - 1]) {",
+    "            continue;",
+    "        }",
+    "        used[i] = true;",
+    "        current.add(nums[i]);",
+    "        backtrack(nums, used, current, result);",
+    "        current.remove(current.size() - 1);",
+    "        used[i] = false;",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  const nodes = {
+    n0:        { x: 350, y:  40, w:  50, label: "[]" },
+    n_1a:      { x: 200, y: 160, w:  55, label: "[1]" },
+    n_2:       { x: 500, y: 160, w:  55, label: "[2]" },
+    sk_root:   { x: 700, y: 160, w: 110, label: "dup-skip i=1" },
+    n_1a1b:    { x: 120, y: 270, w:  70, label: "[1, 1]" },
+    n_1a2:     { x: 280, y: 270, w:  70, label: "[1, 2]" },
+    n_21:      { x: 460, y: 270, w:  70, label: "[2, 1]" },
+    sk_2:      { x: 600, y: 270, w: 110, label: "dup-skip i=1" },
+    n_1a1b2:   { x: 120, y: 380, w:  85, label: "[1, 1, 2]" },
+    n_1a2_1:   { x: 280, y: 380, w:  85, label: "[1, 2, 1]" },
+    n_211:     { x: 460, y: 380, w:  85, label: "[2, 1, 1]" }
+  };
+  const edges = [
+    ["n0", "n_1a",   "solid"],
+    ["n0", "n_2",    "solid"],
+    ["n0", "sk_root","dup"],
+    ["n_1a", "n_1a1b", "solid"],
+    ["n_1a", "n_1a2",  "solid"],
+    ["n_2",  "n_21",   "solid"],
+    ["n_2",  "sk_2",   "dup"],
+    ["n_1a1b", "n_1a1b2", "solid"],
+    ["n_1a2",  "n_1a2_1", "solid"],
+    ["n_21",   "n_211",   "solid"]
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(([from, to, kind]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 14);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 14);
+    line.setAttribute('class', kind === 'dup' ? 'edge dup-edge' : 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box');
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 14);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 28);
+    rect.setAttribute('rx', 5);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y + 1);
+    t.textContent = n.label;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    if (key.startsWith('sk_')) {
+      g.classList.add('dupskip');
+      g.style.display = 'none';
+    }
+  });
+
+  // ============ STEP DATA ============
+  // skippingI: index whose check just failed (used or dup-skip); skipKind: "used" | "dup"
+  const steps = [
+    { line: [2, 4], activeI: null, current: [], used: [false,false,false], skippingI: null, skipKind: null,
+      action: "Arrays.sort(nums) → [1, 1, 2]. Call backtrack(used=[F,F,F], current=[]).",
+      kind: "call", activeNode: null, onPath: [], successNodes: [], doneNodes: [], revealedSk: [], result: [] },
+
+    { line: [12, 16, 17], activeI: 0, current: [], used: [false,false,false], skippingI: null, skipKind: null,
+      action: "n0 base: size=0 ≠ 3. i=0: used[0]? No. i=0 so dup check (i>0) is false.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], revealedSk: [], result: [] },
+
+    { line: [23, 24], activeI: 0, current: [1], used: [true,false,false], skippingI: null, skipKind: null,
+      action: "Flip used[0]=T. current.add(1). current = [1].",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], revealedSk: [], result: [] },
+
+    { line: [25], activeI: 0, current: [1], used: [true,false,false], skippingI: null, skipKind: null,
+      action: "Call backtrack. Descend to n_1a.",
+      kind: "call", activeNode: "n_1a", onPath: ["n0"], successNodes: [], doneNodes: [], revealedSk: [], result: [] },
+
+    { line: [16, 17, 18], activeI: 0, current: [1], used: [true,false,false], skippingI: 0, skipKind: "used",
+      action: "n_1a loop: i=0 → used[0]=T → continue (skip, index already consumed).",
+      kind: "skip", activeNode: "n_1a", onPath: ["n0"], successNodes: [], doneNodes: [], revealedSk: [], result: [] },
+
+    { line: [16, 19, 20], activeI: 1, current: [1], used: [true,false,false], skippingI: null, skipKind: null,
+      action: "i=1: used[1]? No. Dup check: nums[1]==nums[0] (1==1) ✓, but !used[0] = !T = FALSE. NO dup-skip — descending through the first 1.",
+      kind: "check", activeNode: "n_1a", onPath: ["n0"], successNodes: [], doneNodes: [], revealedSk: [], result: [] },
+
+    { line: [23, 24], activeI: 1, current: [1, 1], used: [true,true,false], skippingI: null, skipKind: null,
+      action: "Flip used[1]=T. current.add(1). current = [1, 1].",
+      kind: "pick", activeNode: "n_1a", onPath: ["n0"], successNodes: [], doneNodes: [], revealedSk: [], result: [] },
+
+    { line: [25], activeI: 1, current: [1, 1], used: [true,true,false], skippingI: null, skipKind: null,
+      action: "Call → n_1a1b.",
+      kind: "call", activeNode: "n_1a1b", onPath: ["n0", "n_1a"], successNodes: [], doneNodes: [], revealedSk: [], result: [] },
+
+    { line: [16, 17, 18], activeI: 1, current: [1, 1], used: [true,true,false], skippingI: 1, skipKind: "used",
+      action: "n_1a1b loop: i=0 and i=1 both skipped (used).",
+      kind: "skip", activeNode: "n_1a1b", onPath: ["n0", "n_1a"], successNodes: [], doneNodes: [], revealedSk: [], result: [] },
+
+    { line: [16, 23, 24, 25], activeI: 2, current: [1, 1, 2], used: [true,true,true], skippingI: null, skipKind: null,
+      action: "i=2: free. Flip used[2]=T. current.add(2). current = [1, 1, 2]. Call → n_1a1b2.",
+      kind: "pick", activeNode: "n_1a1b2", onPath: ["n0", "n_1a", "n_1a1b"], successNodes: [], doneNodes: [], revealedSk: [], result: [] },
+
+    { line: [12, 13, 14], activeI: null, current: [1, 1, 2], used: [true,true,true], skippingI: null, skipKind: null,
+      action: "Base: size == n. RECORD [1, 1, 2]. ★",
+      kind: "record", activeNode: "n_1a1b2", onPath: ["n0", "n_1a", "n_1a1b"], successNodes: ["n_1a1b2"], doneNodes: [], revealedSk: [], result: [[1,1,2]] },
+
+    { line: [26, 27], activeI: 2, current: [1, 1], used: [true,true,false], skippingI: null, skipKind: null,
+      action: "Return. Back in n_1a1b. current.remove, used[2]=F.",
+      kind: "return", activeNode: "n_1a1b", onPath: ["n0", "n_1a"], successNodes: ["n_1a1b2"], doneNodes: ["n_1a1b2"], revealedSk: [], result: [[1,1,2]] },
+
+    { line: [15, 29], activeI: null, current: [1, 1], used: [true,true,false], skippingI: null, skipKind: null,
+      action: "Loop in n_1a1b exhausted. Return from n_1a1b.",
+      kind: "return", activeNode: "n_1a1b", onPath: ["n0", "n_1a"], successNodes: ["n_1a1b2"], doneNodes: ["n_1a1b", "n_1a1b2"], revealedSk: [], result: [[1,1,2]] },
+
+    { line: [26, 27], activeI: 1, current: [1], used: [true,false,false], skippingI: null, skipKind: null,
+      action: "Back in n_1a. current.remove, used[1]=F.",
+      kind: "return", activeNode: "n_1a", onPath: ["n0"], successNodes: ["n_1a1b2"], doneNodes: ["n_1a1b", "n_1a1b2"], revealedSk: [], result: [[1,1,2]] },
+
+    { line: [16, 23, 24, 25], activeI: 2, current: [1, 2], used: [true,false,true], skippingI: null, skipKind: null,
+      action: "n_1a next i=2: free, not dup (nums[2]=2 ≠ nums[1]=1). Pick 2. current = [1, 2]. Call → n_1a2.",
+      kind: "pick", activeNode: "n_1a2", onPath: ["n0", "n_1a"], successNodes: ["n_1a1b2"], doneNodes: ["n_1a1b", "n_1a1b2"], revealedSk: [], result: [[1,1,2]] },
+
+    { line: [16, 19, 20], activeI: 1, current: [1, 2], used: [true,false,true], skippingI: null, skipKind: null,
+      action: "n_1a2 loop: i=0 skipped (used). i=1: dup check nums[1]==nums[0] ✓, !used[0]=F → NO dup-skip.",
+      kind: "check", activeNode: "n_1a2", onPath: ["n0", "n_1a"], successNodes: ["n_1a1b2"], doneNodes: ["n_1a1b", "n_1a1b2"], revealedSk: [], result: [[1,1,2]] },
+
+    { line: [23, 24, 25], activeI: 1, current: [1, 2, 1], used: [true,true,true], skippingI: null, skipKind: null,
+      action: "Pick 1. current = [1, 2, 1]. Call → n_1a2_1.",
+      kind: "pick", activeNode: "n_1a2_1", onPath: ["n0", "n_1a", "n_1a2"], successNodes: ["n_1a1b2"], doneNodes: ["n_1a1b", "n_1a1b2"], revealedSk: [], result: [[1,1,2]] },
+
+    { line: [12, 13, 14], activeI: null, current: [1, 2, 1], used: [true,true,true], skippingI: null, skipKind: null,
+      action: "RECORD [1, 2, 1]. ★",
+      kind: "record", activeNode: "n_1a2_1", onPath: ["n0", "n_1a", "n_1a2"], successNodes: ["n_1a1b2", "n_1a2_1"], doneNodes: ["n_1a1b", "n_1a1b2"], revealedSk: [], result: [[1,1,2], [1,2,1]] },
+
+    { line: [26, 27, 15, 29, 26, 27], activeI: null, current: [1], used: [true,false,false], skippingI: null, skipKind: null,
+      action: "Unwind: return n_1a2_1 → undo in n_1a2 → loop ends → return n_1a2 → back in n_1a, undo i=2.",
+      kind: "return", activeNode: "n_1a", onPath: ["n0"], successNodes: ["n_1a1b2", "n_1a2_1"], doneNodes: ["n_1a1b", "n_1a1b2", "n_1a2", "n_1a2_1"], revealedSk: [], result: [[1,1,2], [1,2,1]] },
+
+    { line: [15, 29, 26, 27], activeI: null, current: [], used: [false,false,false], skippingI: null, skipKind: null,
+      action: "Loop in n_1a exhausted. Return. Back in n0: undo i=0 (used[0]=F, current=[]).",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n_1a1b2", "n_1a2_1"], doneNodes: ["n_1a", "n_1a1b", "n_1a1b2", "n_1a2", "n_1a2_1"], revealedSk: [], result: [[1,1,2], [1,2,1]] },
+
+    { line: [16, 19, 20, 21], activeI: 1, current: [], used: [false,false,false], skippingI: 1, skipKind: "dup",
+      action: "n0 next i=1: used[1]? No. Dup check: nums[1]==nums[0] (1==1) ✓, !used[0] = !F = TRUE. ★ DUP-SKIP — sibling at same level, avoids rebuilding the first 1's subtree.",
+      kind: "dupskip", activeNode: "n0", onPath: [], successNodes: ["n_1a1b2", "n_1a2_1"], doneNodes: ["n_1a", "n_1a1b", "n_1a1b2", "n_1a2", "n_1a2_1"], revealedSk: ["sk_root"], result: [[1,1,2], [1,2,1]] },
+
+    { line: [16, 23, 24, 25], activeI: 2, current: [2], used: [false,false,true], skippingI: null, skipKind: null,
+      action: "i=2: free. Pick 2. current = [2]. Call → n_2.",
+      kind: "pick", activeNode: "n_2", onPath: ["n0"], successNodes: ["n_1a1b2", "n_1a2_1"], doneNodes: ["n_1a", "n_1a1b", "n_1a1b2", "n_1a2", "n_1a2_1"], revealedSk: ["sk_root"], result: [[1,1,2], [1,2,1]] },
+
+    { line: [16, 23, 24, 25], activeI: 0, current: [2, 1], used: [true,false,true], skippingI: null, skipKind: null,
+      action: "n_2 loop i=0: free, i=0 so no dup check. Pick 1. current = [2, 1]. Call → n_21.",
+      kind: "pick", activeNode: "n_21", onPath: ["n0", "n_2"], successNodes: ["n_1a1b2", "n_1a2_1"], doneNodes: ["n_1a", "n_1a1b", "n_1a1b2", "n_1a2", "n_1a2_1"], revealedSk: ["sk_root"], result: [[1,1,2], [1,2,1]] },
+
+    { line: [16, 19, 20, 23, 24, 25], activeI: 1, current: [2, 1, 1], used: [true,true,true], skippingI: null, skipKind: null,
+      action: "n_21 loop: i=0 skip (used), i=1 dup check nums[1]==nums[0], !used[0]=F → NO skip. Pick 1. current = [2, 1, 1]. Call → n_211.",
+      kind: "pick", activeNode: "n_211", onPath: ["n0", "n_2", "n_21"], successNodes: ["n_1a1b2", "n_1a2_1"], doneNodes: ["n_1a", "n_1a1b", "n_1a1b2", "n_1a2", "n_1a2_1"], revealedSk: ["sk_root"], result: [[1,1,2], [1,2,1]] },
+
+    { line: [12, 13, 14], activeI: null, current: [2, 1, 1], used: [true,true,true], skippingI: null, skipKind: null,
+      action: "RECORD [2, 1, 1]. ★",
+      kind: "record", activeNode: "n_211", onPath: ["n0", "n_2", "n_21"], successNodes: ["n_1a1b2", "n_1a2_1", "n_211"], doneNodes: ["n_1a", "n_1a1b", "n_1a1b2", "n_1a2", "n_1a2_1"], revealedSk: ["sk_root"], result: [[1,1,2], [1,2,1], [2,1,1]] },
+
+    { line: [26, 27, 15, 29, 26, 27], activeI: null, current: [2], used: [false,false,true], skippingI: null, skipKind: null,
+      action: "Unwind: return n_211 → undo in n_21 → loop ends (i=2 used) → return n_21 → back in n_2, undo i=0.",
+      kind: "return", activeNode: "n_2", onPath: ["n0"], successNodes: ["n_1a1b2", "n_1a2_1", "n_211"], doneNodes: ["n_1a", "n_1a1b", "n_1a1b2", "n_1a2", "n_1a2_1", "n_21", "n_211"], revealedSk: ["sk_root"], result: [[1,1,2], [1,2,1], [2,1,1]] },
+
+    { line: [16, 19, 20, 21], activeI: 1, current: [2], used: [false,false,true], skippingI: 1, skipKind: "dup",
+      action: "n_2 next i=1: used[1]? No. Dup check: nums[1]==nums[0] ✓, !used[0] = !F = TRUE. ★ DUP-SKIP — would rebuild [2, 1, 1].",
+      kind: "dupskip", activeNode: "n_2", onPath: ["n0"], successNodes: ["n_1a1b2", "n_1a2_1", "n_211"], doneNodes: ["n_1a", "n_1a1b", "n_1a1b2", "n_1a2", "n_1a2_1", "n_21", "n_211"], revealedSk: ["sk_root", "sk_2"], result: [[1,1,2], [1,2,1], [2,1,1]] },
+
+    { line: [16, 17, 18, 15, 29, 26, 27, 15, 29], activeI: null, current: [], used: [false,false,false], skippingI: null, skipKind: null,
+      action: "n_2 i=2 skipped (used). Loop ends. Return n_2. Back in n0: undo i=2, loop ends, return from n0. DONE — 3 unique permutations.",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n_1a1b2", "n_1a2_1", "n_211"], doneNodes: ["n0", "n_1a", "n_1a1b", "n_1a1b2", "n_1a2", "n_1a2_1", "n_2", "n_21", "n_211"], revealedSk: ["sk_root", "sk_2"], result: [[1,1,2], [1,2,1], [2,1,1]] }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  let prevUsed = [false, false, false];
+  const currentCellsEl = document.getElementById('currentCells');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const sizeValEl = document.getElementById('sizeVal');
+  const pillSizeEl = document.getElementById('pillSize');
+
+  function render(idx, animate = false) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    poolCells.forEach((el, i) => {
+      el.classList.remove('i-cursor', 'skipping-used', 'skipping-dup', 'dim');
+      if (s.used[i]) {
+        el.classList.add('dim');
+      }
+      if (s.activeI === i && s.skippingI !== i) {
+        el.classList.add('i-cursor');
+      }
+      if (s.skippingI === i) {
+        el.classList.add('i-cursor');
+        if (s.skipKind === 'dup') {
+          el.classList.add('skipping-dup');
+        } else {
+          el.classList.add('skipping-used');
+        }
+      }
+    });
+    usedCells.forEach((el, i) => {
+      el.classList.remove('true', 'flipping');
+      if (s.used[i]) {
+        el.classList.add('true');
+        el.textContent = 'T';
+      } else {
+        el.textContent = 'F';
+      }
+      if (animate && s.used[i] !== prevUsed[i]) {
+        el.classList.add('flipping');
+      }
+    });
+    prevUsed = [...s.used];
+    sizeValEl.textContent = `${s.current.length} / ${N}`;
+    pillSizeEl.classList.toggle('full', s.current.length === N);
+    currentCellsEl.innerHTML = '';
+    s.current.forEach((v, i) => {
+      const c = document.createElement('div');
+      c.className = 'cell';
+      if (animate && i === s.current.length - 1 && s.kind === 'pick') {
+        c.classList.add('just-added');
+      }
+      c.textContent = v;
+      currentCellsEl.appendChild(c);
+    });
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-path', 'success', 'done');
+      if (key.startsWith('sk_')) {
+        el.style.display = s.revealedSk.includes(key) ? '' : 'none';
+      } else {
+        if (s.successNodes.includes(key)) {
+          el.classList.add('success');
+        } else if (s.doneNodes.includes(key)) {
+          el.classList.add('done');
+        } else if (s.activeNode === key) {
+          el.classList.add('active');
+        } else if (s.onPath.includes(key)) {
+          el.classList.add('on-path');
+        }
+      }
+    });
+    edges.forEach(([from, to, kind]) => {
+      const e = edgeEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      if (kind === 'dup') {
+        e.style.display = s.revealedSk.includes(to) ? '' : 'none';
+      } else {
+        const pathSet = new Set([...s.onPath, s.activeNode]);
+        if (pathSet.has(from) && pathSet.has(to)) {
+          e.classList.add('on-path');
+        }
+      }
+    });
+    resultEl.innerHTML = '';
+    s.result.forEach((p, i) => {
+      const li = document.createElement('li');
+      li.textContent = JSON.stringify(p).replace(/,/g, ', ');
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+
+  function goTo(idx, animate = false) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) {
+      prevResultLen = 0;
+      prevUsed = [false, false, false];
+    }
+    render(stepIdx, animate);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    prevUsed = stepIdx > 0 ? [...steps[stepIdx - 1].used] : [false, false, false];
+    goTo(stepIdx - 1, false);
+  });
+  nextBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(stepIdx + 1, true);
+  });
+  resetBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(0, false);
+  });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1, true);
+    }, 1100);
+  });
+
+  goTo(0, false);
+</script>
+</body>
+</html>
