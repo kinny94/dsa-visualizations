@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 216 — Combination Sum III</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 310px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    transition: all 0.25s;
+  }
+  .pill .pill-k {
+    color: #888;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pill .pill-v {
+    font-weight: bold;
+    color: #ffa500;
+  }
+  .pill.target.hit .pill-v { color: #4de88c; }
+  .pill.target.hit { background: #0f6b3a; border-color: #0f9950; }
+  .pill.size.full .pill-v { color: #4de88c; }
+  .pill.size.full { background: #0f6b3a; border-color: #0f9950; }
+  .label {
+    width: 62px;
+    font-size: 11px;
+    color: #aaa;
+    text-align: right;
+  }
+  .pool {
+    display: flex;
+    gap: 5px;
+  }
+  .cell {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.2s;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+  }
+  .cell.i-cursor {
+    border-color: #e94560;
+    background: #e94560;
+    transform: scale(1.1);
+  }
+  .cell.i-cursor.broken {
+    border-color: #ff6b6b;
+    background: #4a1a1a;
+    color: #ff8080;
+  }
+  .cell.index-mark {
+    border-color: #ffa500;
+    box-shadow: inset 0 0 0 1px #ffa500;
+  }
+  .cell.dim {
+    opacity: 0.35;
+  }
+  .current-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+  }
+  #currentCells { display: flex; gap: 6px; }
+  #currentCells .cell {
+    background: #0f6b3a;
+    border-color: #0f9950;
+  }
+  #currentCells .cell.just-added {
+    animation: pop 0.3s ease-out;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.success rect { fill: #0f9950; stroke: #4de88c; stroke-width: 3; }
+  .node-box.success text { fill: #fff; font-weight: bold; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .node-box.sizecap rect { fill: #4a2f0a; stroke: #b8860b; stroke-width: 2; stroke-dasharray: 3,2; }
+  .node-box.sizecap text { fill: #ffcf7a; font-style: italic; }
+  .node-box.break rect { fill: #4a1a1a; stroke: #ff6b6b; stroke-width: 2; stroke-dasharray: 4,3; }
+  .node-box.break text { fill: #ff9999; font-style: italic; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.break-edge { stroke: #ff6b6b; stroke-dasharray: 4,3; stroke-width: 1.5; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-record { background: #0f9950; color: white; }
+  .kind-pick { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .kind-break { background: #ff6b6b; color: white; }
+  .kind-sizecap { background: #b8860b; color: white; }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #1a4a7a; color: white; }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    list-style: none;
+  }
+  .result-list li {
+    padding: 4px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #0f9950;
+  }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #aaa;
+  }
+  .chip {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+  .chip-active { background: #e94560; }
+  .chip-success { background: #0f9950; }
+  .chip-sizecap { background: #4a2f0a; border: 1px dashed #b8860b; }
+  .chip-break { background: #4a1a1a; border: 1px dashed #ff6b6b; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 216 — Combination Sum III</h1>
+    <div class="subtitle">Fixed pool {1..9}, each used at most once &nbsp;·&nbsp; k = 2, n = 5</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill" id="pillK"><span class="pill-k">k</span><span class="pill-v">2</span></span>
+      <span class="pill target" id="pillTarget"><span class="pill-k">target</span><span class="pill-v" id="targetVal">5</span></span>
+      <span class="pill size" id="pillSize"><span class="pill-k">size</span><span class="pill-v" id="sizeVal">0 / 2</span></span>
+    </div>
+    <div class="row">
+      <span class="label">pool:</span>
+      <div class="pool" id="pool"></div>
+    </div>
+    <div class="row current-wrap">
+      <span class="label">current:</span>
+      <div id="currentCells"></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 1050 350" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result (combinations recorded)</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-success"></div>recorded (sum=n, size=k)</div>
+      <div class="legend-item"><div class="chip chip-sizecap"></div>size cap (size=k, sum≠0)</div>
+      <div class="legend-item"><div class="chip chip-break"></div>pruned (i &gt; target)</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ POOL ============
+  const poolEl = document.getElementById('pool');
+  const poolCells = [];
+  for (let d = 1; d <= 9; d++) {
+    const c = document.createElement('div');
+    c.className = 'cell';
+    c.textContent = d;
+    poolEl.appendChild(c);
+    poolCells.push(c);
+  }
+
+  // ============ CODE ============
+  const codeText = [
+    "public List<List<Integer>> combinationSum3(int k, int n) {",
+    "    List<List<Integer>> result = new ArrayList<>();",
+    "    backtrack(k, 1, new ArrayList<>(), result, n);",
+    "    return result;",
+    "}",
+    "",
+    "private void backtrack(int k, int index, List<Integer> current,",
+    "                       List<List<Integer>> result, int target) {",
+    "    if (target == 0 && current.size() == k) {",
+    "        result.add(new ArrayList<>(current));",
+    "        return;",
+    "    }",
+    "    if (target < 0 || current.size() == k) {",
+    "        return;",
+    "    }",
+    "    for (int i = index; i <= 9; i++) {",
+    "        if (i > target) {",
+    "            break;",
+    "        }",
+    "        current.add(i);",
+    "        backtrack(k, i + 1, current, result, target - i);",
+    "        current.remove(current.size() - 1);",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE DEFINITION ============
+  const nodes = {
+    n0:  { x: 560, y: 40,  w: 60, label: "[]" },
+    n1:  { x: 160, y: 160, w: 60, label: "[1]" },
+    n2:  { x: 410, y: 160, w: 60, label: "[2]" },
+    n3:  { x: 580, y: 160, w: 60, label: "[3]" },
+    n4:  { x: 700, y: 160, w: 60, label: "[4]" },
+    n5:  { x: 820, y: 160, w: 60, label: "[5]" },
+    sk_r:{ x: 960, y: 160, w: 90, label: "break i=6" },
+    n12: { x:  55, y: 280, w: 70, label: "[1,2]", role: "sizecap" },
+    n13: { x: 125, y: 280, w: 70, label: "[1,3]", role: "sizecap" },
+    n14: { x: 195, y: 280, w: 70, label: "[1,4]" },
+    sk_1:{ x: 265, y: 280, w: 90, label: "break i=5" },
+    n23: { x: 375, y: 280, w: 70, label: "[2,3]" },
+    sk_2:{ x: 445, y: 280, w: 90, label: "break i=4" },
+    sk_3:{ x: 580, y: 280, w: 90, label: "break i=4" },
+    sk_4:{ x: 700, y: 280, w: 90, label: "break i=5" },
+    sk_5:{ x: 820, y: 280, w: 90, label: "break i=6" }
+  };
+  const edges = [
+    ["n0", "n1",   "solid"],
+    ["n0", "n2",   "solid"],
+    ["n0", "n3",   "solid"],
+    ["n0", "n4",   "solid"],
+    ["n0", "n5",   "solid"],
+    ["n0", "sk_r", "break"],
+    ["n1", "n12",  "solid"],
+    ["n1", "n13",  "solid"],
+    ["n1", "n14",  "solid"],
+    ["n1", "sk_1", "break"],
+    ["n2", "n23",  "solid"],
+    ["n2", "sk_2", "break"],
+    ["n3", "sk_3", "break"],
+    ["n4", "sk_4", "break"],
+    ["n5", "sk_5", "break"]
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(([from, to, kind]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 14);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 14);
+    line.setAttribute('class', kind === 'break' ? 'edge break-edge' : 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box');
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 14);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 28);
+    rect.setAttribute('rx', 5);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y + 1);
+    t.textContent = n.label;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    // Break markers are hidden until revealed
+    if (key.startsWith('sk_')) {
+      g.classList.add('break');
+      g.style.display = 'none';
+    }
+  });
+
+  // ============ STEP DATA ============
+  // Each step:
+  //   line: array of code line numbers to highlight
+  //   activeI: index being considered in loop (or null)
+  //   activeIndex: current frame's `index` param
+  //   current: current list snapshot
+  //   target: current target value
+  //   action: text
+  //   kind: action kind
+  //   activeNode: node currently executing
+  //   onPath: nodes in current call stack (exclude active)
+  //   successNodes: nodes whose combo was recorded
+  //   sizecapNodes: nodes returned via size cap
+  //   doneNodes: nodes whose frame returned (not success)
+  //   revealedBreaks: break markers to show so far
+  //   brokenI: the i that triggered the break on the pool cell (or null)
+  //   result: combinations recorded so far
+  const steps = [
+    { line: [3], activeI: null, activeIndex: null, current: [], target: 5,
+      action: "Entry: result = []. Call backtrack(k=2, index=1, [], target=5).",
+      kind: "call", activeNode: null, onPath: [], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [9], activeI: null, activeIndex: 1, current: [], target: 5,
+      action: "Check base 1 in n0: target==0 && size==k? 5==0? No. Skip.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [13], activeI: null, activeIndex: 1, current: [], target: 5,
+      action: "Check base 2 in n0: target<0 || size==k? Both false. Enter loop.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [16], activeI: 1, activeIndex: 1, current: [], target: 5,
+      action: "Loop iteration i=1 (index=1).",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [17], activeI: 1, activeIndex: 1, current: [], target: 5,
+      action: "Break check: i > target? 1 > 5 = false. Continue.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [20], activeI: 1, activeIndex: 1, current: [1], target: 5,
+      action: "current.add(1). current = [1].",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [21], activeI: 1, activeIndex: 2, current: [1], target: 4,
+      action: "Call backtrack(k=2, index=2, [1], target=5−1=4).",
+      kind: "call", activeNode: "n1", onPath: ["n0"], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [9, 13], activeI: null, activeIndex: 2, current: [1], target: 4,
+      action: "Base checks in n1: target≠0, size=1<k. Enter loop.",
+      kind: "check", activeNode: "n1", onPath: ["n0"], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [16, 17], activeI: 2, activeIndex: 2, current: [1], target: 4,
+      action: "Loop i=2: i > target? 2 > 4 = false. Enter.",
+      kind: "check", activeNode: "n1", onPath: ["n0"], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [20], activeI: 2, activeIndex: 2, current: [1, 2], target: 4,
+      action: "current.add(2). current = [1, 2].",
+      kind: "pick", activeNode: "n1", onPath: ["n0"], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [21], activeI: 2, activeIndex: 3, current: [1, 2], target: 2,
+      action: "Call backtrack(k=2, index=3, [1, 2], target=4−2=2).",
+      kind: "call", activeNode: "n12", onPath: ["n0", "n1"], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [9], activeI: null, activeIndex: 3, current: [1, 2], target: 2,
+      action: "Base 1 in n12: target==0? 2==0? No. Skip.",
+      kind: "check", activeNode: "n12", onPath: ["n0", "n1"], successNodes: [], sizecapNodes: [], doneNodes: [], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [13, 14], activeI: null, activeIndex: 3, current: [1, 2], target: 2,
+      action: "Base 2 in n12: size==k? 2==2 ✓. SIZE CAP — return without recording. Sum would need target=0 too.",
+      kind: "sizecap", activeNode: "n12", onPath: ["n0", "n1"], successNodes: [], sizecapNodes: ["n12"], doneNodes: ["n12"], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [22], activeI: 2, activeIndex: 2, current: [1], target: 4,
+      action: "Back in n1. current.remove last → current = [1].",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: [], sizecapNodes: ["n12"], doneNodes: ["n12"], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [16, 17], activeI: 3, activeIndex: 2, current: [1], target: 4,
+      action: "Next iter i=3: i > target? 3 > 4 = false. Enter.",
+      kind: "check", activeNode: "n1", onPath: ["n0"], successNodes: [], sizecapNodes: ["n12"], doneNodes: ["n12"], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [20], activeI: 3, activeIndex: 2, current: [1, 3], target: 4,
+      action: "current.add(3). current = [1, 3].",
+      kind: "pick", activeNode: "n1", onPath: ["n0"], successNodes: [], sizecapNodes: ["n12"], doneNodes: ["n12"], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [21], activeI: 3, activeIndex: 4, current: [1, 3], target: 1,
+      action: "Call backtrack(k=2, index=4, [1, 3], target=1).",
+      kind: "call", activeNode: "n13", onPath: ["n0", "n1"], successNodes: [], sizecapNodes: ["n12"], doneNodes: ["n12"], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [13, 14], activeI: null, activeIndex: 4, current: [1, 3], target: 1,
+      action: "Base 2 in n13: size==k ✓. SIZE CAP — target=1 wasted, no record.",
+      kind: "sizecap", activeNode: "n13", onPath: ["n0", "n1"], successNodes: [], sizecapNodes: ["n12", "n13"], doneNodes: ["n12", "n13"], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [22], activeI: 3, activeIndex: 2, current: [1], target: 4,
+      action: "Back in n1. current.remove last → current = [1].",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: [], sizecapNodes: ["n12", "n13"], doneNodes: ["n12", "n13"], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [16, 17], activeI: 4, activeIndex: 2, current: [1], target: 4,
+      action: "Next iter i=4: i > target? 4 > 4 = false. Enter (just barely — this is the exact hit path).",
+      kind: "check", activeNode: "n1", onPath: ["n0"], successNodes: [], sizecapNodes: ["n12", "n13"], doneNodes: ["n12", "n13"], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [20], activeI: 4, activeIndex: 2, current: [1, 4], target: 4,
+      action: "current.add(4). current = [1, 4].",
+      kind: "pick", activeNode: "n1", onPath: ["n0"], successNodes: [], sizecapNodes: ["n12", "n13"], doneNodes: ["n12", "n13"], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [21], activeI: 4, activeIndex: 5, current: [1, 4], target: 0,
+      action: "Call backtrack(k=2, index=5, [1, 4], target=4−4=0).",
+      kind: "call", activeNode: "n14", onPath: ["n0", "n1"], successNodes: [], sizecapNodes: ["n12", "n13"], doneNodes: ["n12", "n13"], revealedBreaks: [], brokenI: null, result: [] },
+
+    { line: [9, 10], activeI: null, activeIndex: 5, current: [1, 4], target: 0,
+      action: "Base 1 in n14: target==0 ✓ AND size==k ✓. RECORD [1, 4]. ★",
+      kind: "record", activeNode: "n14", onPath: ["n0", "n1"], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n12", "n13"], revealedBreaks: [], brokenI: null, result: [[1, 4]] },
+
+    { line: [11], activeI: null, activeIndex: 5, current: [1, 4], target: 0,
+      action: "Return from n14.",
+      kind: "return", activeNode: "n14", onPath: ["n0", "n1"], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n12", "n13", "n14"], revealedBreaks: [], brokenI: null, result: [[1, 4]] },
+
+    { line: [22], activeI: 4, activeIndex: 2, current: [1], target: 4,
+      action: "Back in n1. current.remove last → current = [1].",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n12", "n13", "n14"], revealedBreaks: [], brokenI: null, result: [[1, 4]] },
+
+    { line: [16, 17, 18], activeI: 5, activeIndex: 2, current: [1], target: 4,
+      action: "Next iter i=5: i > target? 5 > 4 ✓. BREAK — later picks would overshoot.",
+      kind: "break", activeNode: "n1", onPath: ["n0"], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: 5, result: [[1, 4]] },
+
+    { line: [23, 24], activeI: null, activeIndex: 2, current: [1], target: 4,
+      action: "Return from n1.",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4]] },
+
+    { line: [22], activeI: 1, activeIndex: 1, current: [], target: 5,
+      action: "Back in n0. current.remove last → current = [].",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4]] },
+
+    { line: [16, 17], activeI: 2, activeIndex: 1, current: [], target: 5,
+      action: "Next iter i=2 in n0: i > target? 2 > 5 = false. Enter.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4]] },
+
+    { line: [20], activeI: 2, activeIndex: 1, current: [2], target: 5,
+      action: "current.add(2). current = [2].",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4]] },
+
+    { line: [21], activeI: 2, activeIndex: 3, current: [2], target: 3,
+      action: "Call backtrack(k=2, index=3, [2], target=3).",
+      kind: "call", activeNode: "n2", onPath: ["n0"], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4]] },
+
+    { line: [9, 13], activeI: null, activeIndex: 3, current: [2], target: 3,
+      action: "Base checks in n2: target≠0, size=1<k. Enter loop.",
+      kind: "check", activeNode: "n2", onPath: ["n0"], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4]] },
+
+    { line: [16, 17], activeI: 3, activeIndex: 3, current: [2], target: 3,
+      action: "Loop i=3: i > target? 3 > 3 = false. Enter (exact hit).",
+      kind: "check", activeNode: "n2", onPath: ["n0"], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4]] },
+
+    { line: [20], activeI: 3, activeIndex: 3, current: [2, 3], target: 3,
+      action: "current.add(3). current = [2, 3].",
+      kind: "pick", activeNode: "n2", onPath: ["n0"], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4]] },
+
+    { line: [21], activeI: 3, activeIndex: 4, current: [2, 3], target: 0,
+      action: "Call backtrack(k=2, index=4, [2, 3], target=0).",
+      kind: "call", activeNode: "n23", onPath: ["n0", "n2"], successNodes: ["n14"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4]] },
+
+    { line: [9, 10], activeI: null, activeIndex: 4, current: [2, 3], target: 0,
+      action: "Base 1 in n23: target==0 ✓ AND size==k ✓. RECORD [2, 3]. ★",
+      kind: "record", activeNode: "n23", onPath: ["n0", "n2"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [11], activeI: null, activeIndex: 4, current: [2, 3], target: 0,
+      action: "Return from n23.",
+      kind: "return", activeNode: "n23", onPath: ["n0", "n2"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [22], activeI: 3, activeIndex: 3, current: [2], target: 3,
+      action: "Back in n2. current.remove last → current = [2].",
+      kind: "return", activeNode: "n2", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [16, 17, 18], activeI: 4, activeIndex: 3, current: [2], target: 3,
+      action: "Next iter i=4: 4 > 3 ✓. BREAK.",
+      kind: "break", activeNode: "n2", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2"], brokenI: 4, result: [[1, 4], [2, 3]] },
+
+    { line: [23, 24], activeI: null, activeIndex: 3, current: [2], target: 3,
+      action: "Return from n2.",
+      kind: "return", activeNode: "n2", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [22], activeI: 2, activeIndex: 1, current: [], target: 5,
+      action: "Back in n0. current.remove last → current = [].",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [16, 17], activeI: 3, activeIndex: 1, current: [], target: 5,
+      action: "Next iter i=3 in n0: 3 > 5 = false. Enter.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [20, 21], activeI: 3, activeIndex: 4, current: [3], target: 2,
+      action: "Pick 3. current=[3]. Call backtrack(k=2, index=4, [3], target=2).",
+      kind: "call", activeNode: "n3", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [16, 17, 18], activeI: 4, activeIndex: 4, current: [3], target: 2,
+      action: "Loop i=4: 4 > 2 ✓. BREAK immediately — smallest remaining digit already overshoots.",
+      kind: "break", activeNode: "n3", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3"], brokenI: 4, result: [[1, 4], [2, 3]] },
+
+    { line: [23, 24], activeI: null, activeIndex: 4, current: [3], target: 2,
+      action: "Return from n3.",
+      kind: "return", activeNode: "n3", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [22], activeI: 3, activeIndex: 1, current: [], target: 5,
+      action: "Back in n0. current.remove last → current = [].",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [20, 21], activeI: 4, activeIndex: 5, current: [4], target: 1,
+      action: "i=4: 4≤5. Pick 4. current=[4]. Call backtrack(k=2, index=5, [4], target=1).",
+      kind: "call", activeNode: "n4", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [16, 17, 18], activeI: 5, activeIndex: 5, current: [4], target: 1,
+      action: "Loop i=5: 5 > 1 ✓. BREAK — no digit ≥5 fits in target=1.",
+      kind: "break", activeNode: "n4", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3", "sk_4"], brokenI: 5, result: [[1, 4], [2, 3]] },
+
+    { line: [23, 24, 22], activeI: null, activeIndex: 1, current: [], target: 5,
+      action: "Return from n4. Back in n0. Remove 4.",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n4", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3", "sk_4"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [20, 21], activeI: 5, activeIndex: 6, current: [5], target: 0,
+      action: "i=5: 5≤5. Pick 5. current=[5]. Call backtrack(k=2, index=6, [5], target=0). Target is now 0 — but size is only 1.",
+      kind: "call", activeNode: "n5", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n4", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3", "sk_4"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [9], activeI: null, activeIndex: 6, current: [5], target: 0,
+      action: "Base 1 in n5: target==0 ✓ BUT size==k? 1==2? NO. Skip — does NOT record. This is why the size check is essential.",
+      kind: "check", activeNode: "n5", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n4", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3", "sk_4"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [13], activeI: null, activeIndex: 6, current: [5], target: 0,
+      action: "Base 2 in n5: target<0? No. size==k? No. Enter loop.",
+      kind: "check", activeNode: "n5", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n4", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3", "sk_4"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [16, 17, 18], activeI: 6, activeIndex: 6, current: [5], target: 0,
+      action: "Loop i=6: 6 > 0 ✓. BREAK. Nothing more to try.",
+      kind: "break", activeNode: "n5", onPath: ["n0"], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n4", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3", "sk_4", "sk_5"], brokenI: 6, result: [[1, 4], [2, 3]] },
+
+    { line: [23, 24, 22], activeI: null, activeIndex: 1, current: [], target: 5,
+      action: "Return from n5. Back in n0. Remove 5.",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n4", "n5", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3", "sk_4", "sk_5"], brokenI: null, result: [[1, 4], [2, 3]] },
+
+    { line: [16, 17, 18], activeI: 6, activeIndex: 1, current: [], target: 5,
+      action: "Loop i=6 in n0: 6 > 5 ✓. BREAK at the root.",
+      kind: "break", activeNode: "n0", onPath: [], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n1", "n2", "n3", "n4", "n5", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3", "sk_4", "sk_5", "sk_r"], brokenI: 6, result: [[1, 4], [2, 3]] },
+
+    { line: [23, 24], activeI: null, activeIndex: 1, current: [], target: 5,
+      action: "Return from n0. DONE — 2 combinations: [1, 4] and [2, 3].",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n14", "n23"], sizecapNodes: ["n12", "n13"], doneNodes: ["n0", "n1", "n2", "n3", "n4", "n5", "n12", "n13", "n14", "n23"], revealedBreaks: ["sk_1", "sk_2", "sk_3", "sk_4", "sk_5", "sk_r"], brokenI: null, result: [[1, 4], [2, 3]] }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const currentCellsEl = document.getElementById('currentCells');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const targetValEl = document.getElementById('targetVal');
+  const sizeValEl = document.getElementById('sizeVal');
+  const pillTargetEl = document.getElementById('pillTarget');
+  const pillSizeEl = document.getElementById('pillSize');
+  const K = 2;
+
+  function render(idx, animateAdd = false) {
+    const s = steps[idx];
+    // Code lines
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pool cells
+    poolCells.forEach((el, i) => {
+      el.classList.remove('i-cursor', 'index-mark', 'broken', 'dim');
+      const digit = i + 1;
+      // Dim digits already used in current (can't reuse)
+      if (s.current.includes(digit)) {
+        el.classList.add('dim');
+      }
+      if (s.activeIndex && digit === s.activeIndex && digit !== s.activeI) {
+        el.classList.add('index-mark');
+      }
+      if (s.activeI !== null && digit === s.activeI) {
+        el.classList.add('i-cursor');
+        if (s.brokenI === digit) {
+          el.classList.add('broken');
+        }
+      }
+    });
+    // Target pill
+    targetValEl.textContent = s.target;
+    pillTargetEl.classList.toggle('hit', s.target === 0);
+    // Size pill
+    sizeValEl.textContent = `${s.current.length} / ${K}`;
+    pillSizeEl.classList.toggle('full', s.current.length === K);
+    // Current
+    currentCellsEl.innerHTML = '';
+    s.current.forEach((v, i) => {
+      const c = document.createElement('div');
+      c.className = 'cell';
+      if (animateAdd && i === s.current.length - 1 && s.kind === 'pick') {
+        c.classList.add('just-added');
+      }
+      c.textContent = v;
+      currentCellsEl.appendChild(c);
+    });
+    // Tree nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-path', 'success', 'done', 'sizecap');
+      if (key.startsWith('sk_')) {
+        el.style.display = s.revealedBreaks.includes(key) ? '' : 'none';
+      } else {
+        if (s.successNodes.includes(key)) {
+          el.classList.add('success');
+        } else if (s.sizecapNodes.includes(key)) {
+          el.classList.add('sizecap');
+        } else if (s.doneNodes.includes(key)) {
+          el.classList.add('done');
+        } else if (s.activeNode === key) {
+          el.classList.add('active');
+        } else if (s.onPath.includes(key)) {
+          el.classList.add('on-path');
+        }
+      }
+    });
+    // Edges
+    edges.forEach(([from, to, kind]) => {
+      const e = edgeEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      if (kind === 'break') {
+        e.style.display = s.revealedBreaks.includes(to) ? '' : 'none';
+      } else {
+        const pathSet = new Set([...s.onPath, s.activeNode]);
+        if (pathSet.has(from) && pathSet.has(to)) {
+          e.classList.add('on-path');
+        }
+      }
+    });
+    // Result list
+    resultEl.innerHTML = '';
+    s.result.forEach((combo, i) => {
+      const li = document.createElement('li');
+      li.textContent = JSON.stringify(combo).replace(/,/g, ', ');
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    // Action card
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    // Step info
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+
+  function goTo(idx, animate = false) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx, animate);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1, false);
+  });
+  nextBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(stepIdx + 1, true);
+  });
+  resetBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(0, false);
+  });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1, true);
+    }, 1100);
+  });
+
+  goTo(0, false);
+</script>
+</body>
+</html>
