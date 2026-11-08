@@ -24,6 +24,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [216](https://kinny94.github.io/dsa-visualizations/lc216-combination-sum-iii.html) | Combination Sum III | Recursion · Backtracking |
 | [77](https://kinny94.github.io/dsa-visualizations/lc77-combinations.html) | Combinations | Recursion · Backtracking |
 | [46](https://kinny94.github.io/dsa-visualizations/lc46-permutations.html) | Permutations | Recursion · Backtracking |
+| [17](https://kinny94.github.io/dsa-visualizations/lc17-letter-combinations-of-phone-number.html) | Letter Combinations of a Phone Number | Recursion · Backtracking |
 
 ## Adding a new animation
 

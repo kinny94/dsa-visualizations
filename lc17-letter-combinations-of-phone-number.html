@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 17 — Letter Combinations of a Phone Number</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 310px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    transition: all 0.25s;
+  }
+  .pill .pill-k {
+    color: #888;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pill .pill-v {
+    font-weight: bold;
+    color: #ffa500;
+  }
+  .pill.size.full .pill-v { color: #4de88c; }
+  .pill.size.full { background: #0f6b3a; border-color: #0f9950; }
+  .label {
+    width: 72px;
+    font-size: 11px;
+    color: #aaa;
+    text-align: right;
+  }
+  .pool { display: flex; gap: 6px; align-items: center; }
+  .digit-cell {
+    width: 38px;
+    height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    transition: all 0.25s;
+    font-family: 'Monaco', monospace;
+  }
+  .digit-cell .digit { font-weight: bold; font-size: 15px; color: #fff; }
+  .digit-cell .letters { font-size: 9px; color: #6a7a9a; margin-top: 2px; }
+  .digit-cell.active-digit {
+    border-color: #ffa500;
+    background: #3a2a0a;
+  }
+  .digit-cell.active-digit .digit { color: #ffd87a; }
+  .digit-cell.active-digit .letters { color: #ffcf7a; }
+  .digit-cell.done-digit {
+    opacity: 0.35;
+  }
+  .letter-cell {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.25s;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+  }
+  .letter-cell.i-cursor {
+    border-color: #e94560;
+    background: #e94560;
+    transform: scale(1.1);
+    color: #fff;
+  }
+  .letter-cell.dim { opacity: 0.35; }
+  .current-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+  }
+  .current-str {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #0f6b3a;
+    border: 2px solid #0f9950;
+    border-radius: 6px;
+    font-family: 'Monaco', monospace;
+    font-size: 15px;
+    font-weight: bold;
+    color: #fff;
+    min-width: 60px;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .current-str.empty { color: #6a7a9a; background: #0f3460; border-color: #1a4a7a; }
+  .current-str .just-added { animation: pop 0.3s ease-out; display: inline-block; }
+  @keyframes pop {
+    0% { transform: scale(0.3); opacity: 0; }
+    60% { transform: scale(1.3); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #888;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.success rect { fill: #0f9950; stroke: #4de88c; stroke-width: 3; }
+  .node-box.success text { fill: #fff; font-weight: bold; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-record { background: #0f9950; color: white; }
+  .kind-pick { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #1a4a7a; color: white; }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    list-style: none;
+  }
+  .result-list li {
+    padding: 4px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #0f9950;
+    font-weight: bold;
+  }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 2px; }
+  .chip-active { background: #e94560; }
+  .chip-success { background: #0f9950; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 17 — Letter Combinations of a Phone Number</h1>
+    <div class="subtitle">Backtracking over per-level pools &nbsp;·&nbsp; digits = "23"</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill"><span class="pill-k">index</span><span class="pill-v" id="indexVal">0</span></span>
+      <span class="pill size" id="pillSize"><span class="pill-k">size</span><span class="pill-v" id="sizeVal">0 / 2</span></span>
+    </div>
+    <div class="row">
+      <span class="label">digits:</span>
+      <div class="pool" id="digits"></div>
+    </div>
+    <div class="row">
+      <span class="label">letters:</span>
+      <div class="pool" id="lettersPool"></div>
+    </div>
+    <div class="row current-wrap">
+      <span class="label">current:</span>
+      <div class="current-str empty" id="currentStr">""</div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 920 390" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result (letter combinations)</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-success"></div>recorded combination</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const DIGITS = "23";
+  const MAP = {
+    '2': 'abc', '3': 'def', '4': 'ghi', '5': 'jkl',
+    '6': 'mno', '7': 'pqrs', '8': 'tuv', '9': 'wxyz'
+  };
+
+  // ============ DIGITS DISPLAY ============
+  const digitsEl = document.getElementById('digits');
+  const digitCells = [];
+  for (const d of DIGITS) {
+    const c = document.createElement('div');
+    c.className = 'digit-cell';
+    const digitEl = document.createElement('div');
+    digitEl.className = 'digit';
+    digitEl.textContent = d;
+    const lettersEl = document.createElement('div');
+    lettersEl.className = 'letters';
+    lettersEl.textContent = MAP[d];
+    c.appendChild(digitEl);
+    c.appendChild(lettersEl);
+    digitsEl.appendChild(c);
+    digitCells.push(c);
+  }
+
+  // ============ LETTERS POOL ============
+  const lettersPoolEl = document.getElementById('lettersPool');
+  // We'll re-render this on each step based on which digit is active.
+
+  // ============ CODE ============
+  const codeText = [
+    "private static final String[] MAP = {",
+    "    \"\", \"\", \"abc\", \"def\", \"ghi\", \"jkl\",",
+    "    \"mno\", \"pqrs\", \"tuv\", \"wxyz\"",
+    "};",
+    "",
+    "public List<String> letterCombinations(String digits) {",
+    "    List<String> result = new ArrayList<>();",
+    "    if (digits.isEmpty()) {",
+    "        return result;",
+    "    }",
+    "    backtrack(digits, 0, new StringBuilder(), result);",
+    "    return result;",
+    "}",
+    "",
+    "private void backtrack(String digits, int index,",
+    "                       StringBuilder current, List<String> result) {",
+    "    if (index == digits.length()) {",
+    "        result.add(current.toString());",
+    "        return;",
+    "    }",
+    "    String letters = MAP[digits.charAt(index) - '0'];",
+    "    for (int i = 0; i < letters.length(); i++) {",
+    "        current.append(letters.charAt(i));",
+    "        backtrack(digits, index + 1, current, result);",
+    "        current.deleteCharAt(current.length() - 1);",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  const nodes = {
+    n0:    { x: 460, y:  50, w:  50, label: '""' },
+    n_a:   { x: 175, y: 200, w:  50, label: '"a"' },
+    n_b:   { x: 460, y: 200, w:  50, label: '"b"' },
+    n_c:   { x: 745, y: 200, w:  50, label: '"c"' },
+    n_ad:  { x:  80, y: 340, w:  60, label: '"ad"' },
+    n_ae:  { x: 175, y: 340, w:  60, label: '"ae"' },
+    n_af:  { x: 270, y: 340, w:  60, label: '"af"' },
+    n_bd:  { x: 365, y: 340, w:  60, label: '"bd"' },
+    n_be:  { x: 460, y: 340, w:  60, label: '"be"' },
+    n_bf:  { x: 555, y: 340, w:  60, label: '"bf"' },
+    n_cd:  { x: 650, y: 340, w:  60, label: '"cd"' },
+    n_ce:  { x: 745, y: 340, w:  60, label: '"ce"' },
+    n_cf:  { x: 840, y: 340, w:  60, label: '"cf"' }
+  };
+  const edges = [
+    ["n0", "n_a"], ["n0", "n_b"], ["n0", "n_c"],
+    ["n_a", "n_ad"], ["n_a", "n_ae"], ["n_a", "n_af"],
+    ["n_b", "n_bd"], ["n_b", "n_be"], ["n_b", "n_bf"],
+    ["n_c", "n_cd"], ["n_c", "n_ce"], ["n_c", "n_cf"]
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(([from, to]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 14);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 14);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box');
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 14);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 28);
+    rect.setAttribute('rx', 5);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y + 1);
+    t.textContent = n.label;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // Each step:
+  //   line: code line nums to highlight
+  //   activeIndex: index param of current frame (digit being expanded)
+  //   activeI: loop variable i (which letter within the digit's pool)
+  //   activeDigit: '2' or '3' or null (which digit's letters are shown)
+  //   letters: the letter-pool string for the active frame ("" if base-case)
+  //   current: current string so far
+  //   action, kind
+  //   activeNode, onPath, successNodes, doneNodes
+  //   result
+  const steps = [
+    { line: [11], activeIndex: 0, activeI: null, activeDigit: null, letters: "", current: "",
+      action: "Entry. digits=\"23\" is non-empty. Call backtrack(digits, 0, \"\", result).",
+      kind: "call", activeNode: null, onPath: [], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [17, 21], activeIndex: 0, activeI: null, activeDigit: '2', letters: "abc", current: "",
+      action: "n0 base: index=0 ≠ 2. letters = MAP['2'] = \"abc\". Enter loop.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [22, 23], activeIndex: 0, activeI: 0, activeDigit: '2', letters: "abc", current: "a",
+      action: "i=0 in \"abc\": current.append('a'). current = \"a\".",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [24], activeIndex: 1, activeI: 0, activeDigit: '3', letters: "def", current: "a",
+      action: "Call backtrack(digits, 1, \"a\", result). Descend to n_a. New letter pool = \"def\".",
+      kind: "call", activeNode: "n_a", onPath: ["n0"], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [17, 21, 22, 23], activeIndex: 1, activeI: 0, activeDigit: '3', letters: "def", current: "ad",
+      action: "n_a base: index=1 ≠ 2. Loop i=0 in \"def\": append('d'). current = \"ad\".",
+      kind: "pick", activeNode: "n_a", onPath: ["n0"], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [24], activeIndex: 2, activeI: 0, activeDigit: null, letters: "", current: "ad",
+      action: "Call backtrack(digits, 2, \"ad\", result). Descend to n_ad.",
+      kind: "call", activeNode: "n_ad", onPath: ["n0", "n_a"], successNodes: [], doneNodes: [], result: [] },
+
+    { line: [17, 18, 19], activeIndex: 2, activeI: null, activeDigit: null, letters: "", current: "ad",
+      action: "n_ad base: index == digits.length() ✓. RECORD \"ad\". ★",
+      kind: "record", activeNode: "n_ad", onPath: ["n0", "n_a"], successNodes: ["n_ad"], doneNodes: [], result: ["ad"] },
+
+    { line: [25], activeIndex: 1, activeI: 0, activeDigit: '3', letters: "def", current: "a",
+      action: "Return n_ad. Back in n_a: deleteCharAt. current = \"a\".",
+      kind: "return", activeNode: "n_a", onPath: ["n0"], successNodes: ["n_ad"], doneNodes: ["n_ad"], result: ["ad"] },
+
+    { line: [22, 23, 24], activeIndex: 2, activeI: 1, activeDigit: null, letters: "", current: "ae",
+      action: "i=1: append('e'). current = \"ae\". Call → n_ae.",
+      kind: "pick", activeNode: "n_ae", onPath: ["n0", "n_a"], successNodes: ["n_ad"], doneNodes: ["n_ad"], result: ["ad"] },
+
+    { line: [17, 18, 19], activeIndex: 2, activeI: null, activeDigit: null, letters: "", current: "ae",
+      action: "RECORD \"ae\". ★",
+      kind: "record", activeNode: "n_ae", onPath: ["n0", "n_a"], successNodes: ["n_ad", "n_ae"], doneNodes: ["n_ad"], result: ["ad", "ae"] },
+
+    { line: [25, 22, 23, 24], activeIndex: 2, activeI: 2, activeDigit: null, letters: "", current: "af",
+      action: "Return. deleteCharAt → \"a\". i=2: append('f'). current = \"af\". Call → n_af.",
+      kind: "pick", activeNode: "n_af", onPath: ["n0", "n_a"], successNodes: ["n_ad", "n_ae"], doneNodes: ["n_ad", "n_ae"], result: ["ad", "ae"] },
+
+    { line: [17, 18, 19], activeIndex: 2, activeI: null, activeDigit: null, letters: "", current: "af",
+      action: "RECORD \"af\". ★",
+      kind: "record", activeNode: "n_af", onPath: ["n0", "n_a"], successNodes: ["n_ad", "n_ae", "n_af"], doneNodes: ["n_ad", "n_ae"], result: ["ad", "ae", "af"] },
+
+    { line: [25, 22, 26], activeIndex: 1, activeI: null, activeDigit: '3', letters: "def", current: "a",
+      action: "Return n_af. Loop in n_a exhausted (i=3). Return from n_a.",
+      kind: "return", activeNode: "n_a", onPath: ["n0"], successNodes: ["n_ad", "n_ae", "n_af"], doneNodes: ["n_ad", "n_ae", "n_af"], result: ["ad", "ae", "af"] },
+
+    { line: [25], activeIndex: 0, activeI: 0, activeDigit: '2', letters: "abc", current: "",
+      action: "Back in n0: deleteCharAt. current = \"\".",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n_ad", "n_ae", "n_af"], doneNodes: ["n_a", "n_ad", "n_ae", "n_af"], result: ["ad", "ae", "af"] },
+
+    { line: [22, 23, 24], activeIndex: 0, activeI: 1, activeDigit: '2', letters: "abc", current: "b",
+      action: "i=1 in \"abc\": append('b'). current = \"b\". Call → n_b.",
+      kind: "pick", activeNode: "n_b", onPath: ["n0"], successNodes: ["n_ad", "n_ae", "n_af"], doneNodes: ["n_a", "n_ad", "n_ae", "n_af"], result: ["ad", "ae", "af"] },
+
+    { line: [21, 22, 23, 24], activeIndex: 1, activeI: 0, activeDigit: '3', letters: "def", current: "bd",
+      action: "n_b letters=\"def\". i=0: append('d'). current = \"bd\". Call → n_bd.",
+      kind: "pick", activeNode: "n_bd", onPath: ["n0", "n_b"], successNodes: ["n_ad", "n_ae", "n_af"], doneNodes: ["n_a", "n_ad", "n_ae", "n_af"], result: ["ad", "ae", "af"] },
+
+    { line: [17, 18, 19], activeIndex: 2, activeI: null, activeDigit: null, letters: "", current: "bd",
+      action: "RECORD \"bd\". ★",
+      kind: "record", activeNode: "n_bd", onPath: ["n0", "n_b"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd"], doneNodes: ["n_a", "n_ad", "n_ae", "n_af"], result: ["ad", "ae", "af", "bd"] },
+
+    { line: [25, 22, 23, 24], activeIndex: 1, activeI: 1, activeDigit: '3', letters: "def", current: "be",
+      action: "Return. current → \"b\". i=1: append('e'). current = \"be\". Call → n_be.",
+      kind: "pick", activeNode: "n_be", onPath: ["n0", "n_b"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd"], doneNodes: ["n_a", "n_ad", "n_ae", "n_af", "n_bd"], result: ["ad", "ae", "af", "bd"] },
+
+    { line: [17, 18, 19], activeIndex: 2, activeI: null, activeDigit: null, letters: "", current: "be",
+      action: "RECORD \"be\". ★",
+      kind: "record", activeNode: "n_be", onPath: ["n0", "n_b"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be"], doneNodes: ["n_a", "n_ad", "n_ae", "n_af", "n_bd"], result: ["ad", "ae", "af", "bd", "be"] },
+
+    { line: [25, 22, 23, 24], activeIndex: 1, activeI: 2, activeDigit: '3', letters: "def", current: "bf",
+      action: "Return. current → \"b\". i=2: append('f'). current = \"bf\". Call → n_bf.",
+      kind: "pick", activeNode: "n_bf", onPath: ["n0", "n_b"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be"], doneNodes: ["n_a", "n_ad", "n_ae", "n_af", "n_bd", "n_be"], result: ["ad", "ae", "af", "bd", "be"] },
+
+    { line: [17, 18, 19], activeIndex: 2, activeI: null, activeDigit: null, letters: "", current: "bf",
+      action: "RECORD \"bf\". ★",
+      kind: "record", activeNode: "n_bf", onPath: ["n0", "n_b"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf"], doneNodes: ["n_a", "n_ad", "n_ae", "n_af", "n_bd", "n_be"], result: ["ad", "ae", "af", "bd", "be", "bf"] },
+
+    { line: [25, 22, 26], activeIndex: 0, activeI: 1, activeDigit: '2', letters: "abc", current: "",
+      action: "Return n_bf. Loop in n_b exhausted. Return n_b. Back in n0: deleteCharAt → \"\".",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf"], doneNodes: ["n_a", "n_b", "n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf"], result: ["ad", "ae", "af", "bd", "be", "bf"] },
+
+    { line: [22, 23, 24], activeIndex: 0, activeI: 2, activeDigit: '2', letters: "abc", current: "c",
+      action: "i=2 in \"abc\": append('c'). current = \"c\". Call → n_c.",
+      kind: "pick", activeNode: "n_c", onPath: ["n0"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf"], doneNodes: ["n_a", "n_b", "n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf"], result: ["ad", "ae", "af", "bd", "be", "bf"] },
+
+    { line: [21, 22, 23, 24], activeIndex: 1, activeI: 0, activeDigit: '3', letters: "def", current: "cd",
+      action: "n_c letters=\"def\". i=0: append('d'). current = \"cd\". Call → n_cd.",
+      kind: "pick", activeNode: "n_cd", onPath: ["n0", "n_c"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf"], doneNodes: ["n_a", "n_b", "n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf"], result: ["ad", "ae", "af", "bd", "be", "bf"] },
+
+    { line: [17, 18, 19], activeIndex: 2, activeI: null, activeDigit: null, letters: "", current: "cd",
+      action: "RECORD \"cd\". ★",
+      kind: "record", activeNode: "n_cd", onPath: ["n0", "n_c"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd"], doneNodes: ["n_a", "n_b", "n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf"], result: ["ad", "ae", "af", "bd", "be", "bf", "cd"] },
+
+    { line: [25, 22, 23, 24], activeIndex: 1, activeI: 1, activeDigit: '3', letters: "def", current: "ce",
+      action: "Return. i=1: append('e'). current = \"ce\". Call → n_ce.",
+      kind: "pick", activeNode: "n_ce", onPath: ["n0", "n_c"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd"], doneNodes: ["n_a", "n_b", "n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd"], result: ["ad", "ae", "af", "bd", "be", "bf", "cd"] },
+
+    { line: [17, 18, 19], activeIndex: 2, activeI: null, activeDigit: null, letters: "", current: "ce",
+      action: "RECORD \"ce\". ★",
+      kind: "record", activeNode: "n_ce", onPath: ["n0", "n_c"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd", "n_ce"], doneNodes: ["n_a", "n_b", "n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd"], result: ["ad", "ae", "af", "bd", "be", "bf", "cd", "ce"] },
+
+    { line: [25, 22, 23, 24], activeIndex: 1, activeI: 2, activeDigit: '3', letters: "def", current: "cf",
+      action: "Return. i=2: append('f'). current = \"cf\". Call → n_cf.",
+      kind: "pick", activeNode: "n_cf", onPath: ["n0", "n_c"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd", "n_ce"], doneNodes: ["n_a", "n_b", "n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd", "n_ce"], result: ["ad", "ae", "af", "bd", "be", "bf", "cd", "ce"] },
+
+    { line: [17, 18, 19], activeIndex: 2, activeI: null, activeDigit: null, letters: "", current: "cf",
+      action: "RECORD \"cf\". ★",
+      kind: "record", activeNode: "n_cf", onPath: ["n0", "n_c"], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd", "n_ce", "n_cf"], doneNodes: ["n_a", "n_b", "n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd", "n_ce"], result: ["ad", "ae", "af", "bd", "be", "bf", "cd", "ce", "cf"] },
+
+    { line: [25, 22, 26], activeIndex: null, activeI: null, activeDigit: null, letters: "", current: "",
+      action: "Unwind all: return n_cf → return n_c → loop in n0 exhausted → return from n0. DONE — 9 combinations = 3 × 3.",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd", "n_ce", "n_cf"], doneNodes: ["n0", "n_a", "n_b", "n_c", "n_ad", "n_ae", "n_af", "n_bd", "n_be", "n_bf", "n_cd", "n_ce", "n_cf"], result: ["ad", "ae", "af", "bd", "be", "bf", "cd", "ce", "cf"] }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const currentStrEl = document.getElementById('currentStr');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const indexValEl = document.getElementById('indexVal');
+  const sizeValEl = document.getElementById('sizeVal');
+  const pillSizeEl = document.getElementById('pillSize');
+
+  function render(idx, animate = false) {
+    const s = steps[idx];
+    // Code
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Digits
+    digitCells.forEach((el, i) => {
+      el.classList.remove('active-digit', 'done-digit');
+      if (s.activeIndex !== null && i < s.activeIndex) {
+        el.classList.add('done-digit');
+      }
+      if (s.activeIndex === i && s.activeDigit !== null) {
+        el.classList.add('active-digit');
+      }
+    });
+    // Letters pool
+    lettersPoolEl.innerHTML = '';
+    if (s.letters) {
+      for (let i = 0; i < s.letters.length; i++) {
+        const c = document.createElement('div');
+        c.className = 'letter-cell';
+        c.textContent = s.letters[i];
+        if (s.activeI === i) {
+          c.classList.add('i-cursor');
+        } else if (s.activeI !== null && i < s.activeI) {
+          c.classList.add('dim');
+        }
+        lettersPoolEl.appendChild(c);
+      }
+    } else {
+      const span = document.createElement('span');
+      span.style.color = '#555';
+      span.style.fontSize = '11px';
+      span.style.fontStyle = 'italic';
+      span.textContent = '(no pool — base case)';
+      lettersPoolEl.appendChild(span);
+    }
+    // Current string
+    currentStrEl.classList.toggle('empty', s.current === '');
+    if (s.current === '') {
+      currentStrEl.textContent = '""';
+    } else {
+      currentStrEl.innerHTML = '';
+      for (let i = 0; i < s.current.length; i++) {
+        const span = document.createElement('span');
+        span.textContent = s.current[i];
+        if (animate && i === s.current.length - 1 && s.kind === 'pick') {
+          span.classList.add('just-added');
+        }
+        currentStrEl.appendChild(span);
+      }
+    }
+    // Pills
+    indexValEl.textContent = s.activeIndex !== null ? s.activeIndex : '—';
+    sizeValEl.textContent = `${s.current.length} / ${DIGITS.length}`;
+    pillSizeEl.classList.toggle('full', s.current.length === DIGITS.length);
+    // Tree
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-path', 'success', 'done');
+      if (s.successNodes.includes(key)) {
+        el.classList.add('success');
+      } else if (s.doneNodes.includes(key)) {
+        el.classList.add('done');
+      } else if (s.activeNode === key) {
+        el.classList.add('active');
+      } else if (s.onPath.includes(key)) {
+        el.classList.add('on-path');
+      }
+    });
+    edges.forEach(([from, to]) => {
+      const e = edgeEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      const pathSet = new Set([...s.onPath, s.activeNode]);
+      if (pathSet.has(from) && pathSet.has(to)) {
+        e.classList.add('on-path');
+      }
+    });
+    // Result
+    resultEl.innerHTML = '';
+    s.result.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.textContent = `"${r}"`;
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+
+  function goTo(idx, animate = false) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx, animate);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1, false);
+  });
+  nextBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(stepIdx + 1, true);
+  });
+  resetBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(0, false);
+  });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1, true);
+    }, 1100);
+  });
+
+  goTo(0, false);
+</script>
+</body>
+</html>
