@@ -26,6 +26,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [46](https://kinny94.github.io/dsa-visualizations/lc46-permutations.html) | Permutations | Recursion · Backtracking |
 | [17](https://kinny94.github.io/dsa-visualizations/lc17-letter-combinations-of-phone-number.html) | Letter Combinations of a Phone Number | Recursion · Backtracking |
 | [47](https://kinny94.github.io/dsa-visualizations/lc47-permutations-ii.html) | Permutations II | Recursion · Backtracking |
+| [22](https://kinny94.github.io/dsa-visualizations/lc22-generate-parentheses.html) | Generate Parentheses | Recursion · Backtracking |
 
 ## Adding a new animation
 

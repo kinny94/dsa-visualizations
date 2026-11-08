@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 22 — Generate Parentheses</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 460px 1fr 300px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    transition: all 0.25s;
+  }
+  .pill .pill-k {
+    color: #888;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pill .pill-v {
+    font-weight: bold;
+    color: #ffa500;
+  }
+  .pill.len.full .pill-v { color: #4de88c; }
+  .pill.len.full { background: #0f6b3a; border-color: #0f9950; }
+  .label {
+    width: 72px;
+    font-size: 11px;
+    color: #aaa;
+    text-align: right;
+  }
+  .rule-wrap {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .rule {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    background: #2a1a2a;
+    border: 1px solid #3a2a4a;
+    color: #888;
+    transition: all 0.25s;
+  }
+  .rule.ok {
+    background: #0f6b3a;
+    border-color: #0f9950;
+    color: #fff;
+  }
+  .rule.blocked {
+    background: #4a1a2a;
+    border-color: #6a2a3a;
+    color: #e99;
+  }
+  .rule .mark { font-weight: bold; }
+  .current-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+  }
+  .current-str {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #0f6b3a;
+    border: 2px solid #0f9950;
+    border-radius: 6px;
+    font-family: 'Monaco', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    min-width: 72px;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .current-str.empty { color: #6a7a9a; background: #0f3460; border-color: #1a4a7a; }
+  .current-str .just-added { animation: pop 0.3s ease-out; display: inline-block; }
+  .current-str .open-char { color: #ffd87a; }
+  .current-str .close-char { color: #7ad9ff; }
+  @keyframes pop {
+    0% { transform: scale(0.3); opacity: 0; }
+    60% { transform: scale(1.3); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #bbb;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box .state-text {
+    fill: #888;
+    font-size: 9px;
+  }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.on-path .state-text { fill: #ffd87a; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.active .state-text { fill: #ffdce1; }
+  .node-box.success rect { fill: #0f9950; stroke: #4de88c; stroke-width: 3; }
+  .node-box.success text { fill: #fff; font-weight: bold; }
+  .node-box.success .state-text { fill: #cff8d9; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .node-box.done .state-text { fill: #555; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .edge-label {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+  }
+  .edge-label.on-path { fill: #ffd87a; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 72px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-record { background: #0f9950; color: white; }
+  .kind-pick { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #1a4a7a; color: white; }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+  }
+  .result-list li {
+    padding: 4px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #0f9950;
+    font-weight: bold;
+  }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 2px; }
+  .chip-active { background: #e94560; }
+  .chip-success { background: #0f9950; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 22 — Generate Parentheses</h1>
+    <div class="subtitle">Backtracking with state-derived pool &nbsp;·&nbsp; n = 2</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill"><span class="pill-k">open</span><span class="pill-v" id="openVal">0 / 2</span></span>
+      <span class="pill"><span class="pill-k">close</span><span class="pill-v" id="closeVal">0 / 2</span></span>
+      <span class="pill len" id="pillLen"><span class="pill-k">len</span><span class="pill-v" id="lenVal">0 / 4</span></span>
+    </div>
+    <div class="row rule-wrap">
+      <span class="label">rules:</span>
+      <span class="rule" id="rule1"><span class="mark">?</span>&nbsp;open &lt; n</span>
+      <span class="rule" id="rule2"><span class="mark">?</span>&nbsp;close &lt; open</span>
+    </div>
+    <div class="row current-wrap">
+      <span class="label">current:</span>
+      <div class="current-str empty" id="currentStr">""</div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 920 390" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result (valid strings)</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-success"></div>recorded string</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const N = 2;
+
+  // ============ CODE ============
+  const codeText = [
+    "public List<String> generateParenthesis(int n) {",
+    "    List<String> result = new ArrayList<>();",
+    "    backtrack(result, new StringBuilder(), 0, 0, n);",
+    "    return result;",
+    "}",
+    "",
+    "private void backtrack(List<String> result, StringBuilder current,",
+    "                       int open, int close, int n) {",
+    "    if (open == n && close == n) {",
+    "        result.add(current.toString());",
+    "        return;",
+    "    }",
+    "    if (open < n) {",
+    "        current.append('(');",
+    "        backtrack(result, current, open + 1, close, n);",
+    "        current.deleteCharAt(current.length() - 1);",
+    "    }",
+    "    if (close < open) {",
+    "        current.append(')');",
+    "        backtrack(result, current, open, close + 1, n);",
+    "        current.deleteCharAt(current.length() - 1);",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // n=2 tree:
+  //                     "" (0,0)
+  //                        |
+  //                     "(" (1,0)
+  //                    /       \
+  //              "()" (1,1)   "((" (2,0)
+  //                 |            |
+  //              "()(" (2,1)   "(()" (2,1)
+  //                 |            |
+  //              "()()" (2,2)  "(())" (2,2)  ★
+  const nodes = {
+    n_root:  { x: 460, y:  38, w:  54, label: '""',     sub: 'o=0 c=0' },
+    n_1_0:   { x: 460, y: 108, w:  54, label: '"("',    sub: 'o=1 c=0' },
+    n_1_1:   { x: 260, y: 180, w:  60, label: '"()"',   sub: 'o=1 c=1' },
+    n_2_0:   { x: 660, y: 180, w:  60, label: '"(("',   sub: 'o=2 c=0' },
+    n_2_1_b: { x: 260, y: 254, w:  70, label: '"()("',  sub: 'o=2 c=1' },
+    n_2_1_a: { x: 660, y: 254, w:  70, label: '"(()"',  sub: 'o=2 c=1' },
+    n_2_2_b: { x: 260, y: 332, w:  80, label: '"()()"', sub: 'o=2 c=2' },
+    n_2_2_a: { x: 660, y: 332, w:  80, label: '"(())"', sub: 'o=2 c=2' }
+  };
+  // edge format: [from, to, labelChar]
+  const edges = [
+    ["n_root", "n_1_0",   "("],
+    ["n_1_0",  "n_1_1",   ")"],
+    ["n_1_0",  "n_2_0",   "("],
+    ["n_1_1",  "n_2_1_b", "("],
+    ["n_2_0",  "n_2_1_a", ")"],
+    ["n_2_1_b","n_2_2_b", ")"],
+    ["n_2_1_a","n_2_2_a", ")"]
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  const edgeLabelEls = {};
+  edges.forEach(([from, to, ch]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 18);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 18);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+
+    const lbl = document.createElementNS(SVGNS, 'text');
+    const mx = (a.x + b.x) / 2 + (b.x < a.x ? -10 : (b.x > a.x ? 10 : 0));
+    const my = (a.y + b.y) / 2 + 3;
+    lbl.setAttribute('x', mx);
+    lbl.setAttribute('y', my);
+    lbl.setAttribute('class', 'edge-label');
+    lbl.textContent = ch;
+    svg.appendChild(lbl);
+    edgeLabelEls[`${from}-${to}`] = lbl;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box');
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 18);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 36);
+    rect.setAttribute('rx', 5);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y - 4);
+    t.textContent = n.label;
+    g.appendChild(t);
+    const s = document.createElementNS(SVGNS, 'text');
+    s.setAttribute('x', n.x);
+    s.setAttribute('y', n.y + 10);
+    s.setAttribute('class', 'state-text');
+    s.textContent = n.sub;
+    g.appendChild(s);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // Each step:
+  //   line: code line nums to highlight
+  //   open, close, current
+  //   rule1, rule2: null (not yet evaluated) / "ok" / "blocked"
+  //   action, kind
+  //   activeNode, onPath, successNodes, doneNodes
+  //   result
+  const steps = [
+    // 1. Entry
+    { line: [3], open: 0, close: 0, current: "", rule1: null, rule2: null,
+      action: "Entry. Call backtrack(result, \"\", open=0, close=0, n=2).",
+      kind: "call", activeNode: "n_root", onPath: [], successNodes: [], doneNodes: [], result: [] },
+
+    // 2. n_root base check
+    { line: [9], open: 0, close: 0, current: "", rule1: null, rule2: null,
+      action: "n_root: check base. open==n? 0==2 → no. Not done.",
+      kind: "check", activeNode: "n_root", onPath: [], successNodes: [], doneNodes: [], result: [] },
+
+    // 3. n_root rule1 ok, append '('
+    { line: [13, 14], open: 0, close: 0, current: "(", rule1: "ok", rule2: null,
+      action: "n_root rule 1: open<n → 0<2 ✓. current.append('(') → \"(\".",
+      kind: "pick", activeNode: "n_root", onPath: [], successNodes: [], doneNodes: [], result: [] },
+
+    // 4. call → n_1_0
+    { line: [15], open: 1, close: 0, current: "(", rule1: "ok", rule2: null,
+      action: "Call backtrack(..., open=1, close=0). Descend to n_1_0.",
+      kind: "call", activeNode: "n_1_0", onPath: ["n_root"], successNodes: [], doneNodes: [], result: [] },
+
+    // 5. n_1_0 base check
+    { line: [9], open: 1, close: 0, current: "(", rule1: null, rule2: null,
+      action: "n_1_0: base check. open==n? 1==2 → no.",
+      kind: "check", activeNode: "n_1_0", onPath: ["n_root"], successNodes: [], doneNodes: [], result: [] },
+
+    // 6. n_1_0 rule1 ok, append '('
+    { line: [13, 14], open: 1, close: 0, current: "((", rule1: "ok", rule2: null,
+      action: "n_1_0 rule 1: open<n → 1<2 ✓. append('(') → \"((\".",
+      kind: "pick", activeNode: "n_1_0", onPath: ["n_root"], successNodes: [], doneNodes: [], result: [] },
+
+    // 7. call → n_2_0
+    { line: [15], open: 2, close: 0, current: "((", rule1: "ok", rule2: null,
+      action: "Call backtrack(..., open=2, close=0). Descend to n_2_0.",
+      kind: "call", activeNode: "n_2_0", onPath: ["n_root", "n_1_0"], successNodes: [], doneNodes: [], result: [] },
+
+    // 8. n_2_0 base check
+    { line: [9], open: 2, close: 0, current: "((", rule1: null, rule2: null,
+      action: "n_2_0: base check. open==n ✓ AND close==n? close=0 → no.",
+      kind: "check", activeNode: "n_2_0", onPath: ["n_root", "n_1_0"], successNodes: [], doneNodes: [], result: [] },
+
+    // 9. n_2_0 rule1 blocked, rule2 ok, append ')'
+    { line: [13, 18, 19], open: 2, close: 0, current: "(()", rule1: "blocked", rule2: "ok",
+      action: "n_2_0 rule 1: open<n → 2<2 ✗ (cap reached). rule 2: close<open → 0<2 ✓. append(')') → \"(()\".",
+      kind: "pick", activeNode: "n_2_0", onPath: ["n_root", "n_1_0"], successNodes: [], doneNodes: [], result: [] },
+
+    // 10. call → n_2_1_a
+    { line: [20], open: 2, close: 1, current: "(()", rule1: "blocked", rule2: "ok",
+      action: "Call backtrack(..., open=2, close=1). Descend to n_2_1_a.",
+      kind: "call", activeNode: "n_2_1_a", onPath: ["n_root", "n_1_0", "n_2_0"], successNodes: [], doneNodes: [], result: [] },
+
+    // 11. n_2_1_a base check
+    { line: [9], open: 2, close: 1, current: "(()", rule1: null, rule2: null,
+      action: "n_2_1_a: base check. open==n ✓ AND close==n? close=1 → no.",
+      kind: "check", activeNode: "n_2_1_a", onPath: ["n_root", "n_1_0", "n_2_0"], successNodes: [], doneNodes: [], result: [] },
+
+    // 12. n_2_1_a rule1 blocked, rule2 ok, append ')'
+    { line: [13, 18, 19], open: 2, close: 1, current: "(())", rule1: "blocked", rule2: "ok",
+      action: "n_2_1_a rule 1: 2<2 ✗. rule 2: close<open → 1<2 ✓. append(')') → \"(())\".",
+      kind: "pick", activeNode: "n_2_1_a", onPath: ["n_root", "n_1_0", "n_2_0"], successNodes: [], doneNodes: [], result: [] },
+
+    // 13. call → n_2_2_a
+    { line: [20], open: 2, close: 2, current: "(())", rule1: "blocked", rule2: "ok",
+      action: "Call backtrack(..., open=2, close=2). Descend to n_2_2_a.",
+      kind: "call", activeNode: "n_2_2_a", onPath: ["n_root", "n_1_0", "n_2_0", "n_2_1_a"], successNodes: [], doneNodes: [], result: [] },
+
+    // 14. RECORD "(())"
+    { line: [9, 10, 11], open: 2, close: 2, current: "(())", rule1: null, rule2: null,
+      action: "n_2_2_a: open==n ✓ AND close==n ✓. RECORD \"(())\". ★",
+      kind: "record", activeNode: "n_2_2_a", onPath: ["n_root", "n_1_0", "n_2_0", "n_2_1_a"], successNodes: ["n_2_2_a"], doneNodes: [], result: ["(())"] },
+
+    // 15. return to n_2_1_a, deleteCharAt
+    { line: [21], open: 2, close: 1, current: "(()", rule1: null, rule2: null,
+      action: "Return. Back in n_2_1_a line 21: deleteCharAt → \"(()\".",
+      kind: "return", activeNode: "n_2_1_a", onPath: ["n_root", "n_1_0", "n_2_0"], successNodes: ["n_2_2_a"], doneNodes: ["n_2_2_a"], result: ["(())"] },
+
+    // 16. n_2_1_a no more branches, return. deleteCharAt in n_2_0
+    { line: [21], open: 2, close: 0, current: "((", rule1: null, rule2: null,
+      action: "n_2_1_a: no more branches (both rules exhausted). Return → n_2_0 line 21 deleteCharAt → \"((\".",
+      kind: "return", activeNode: "n_2_0", onPath: ["n_root", "n_1_0"], successNodes: ["n_2_2_a"], doneNodes: ["n_2_2_a", "n_2_1_a"], result: ["(())"] },
+
+    // 17. n_2_0 no more branches, return. deleteCharAt in n_1_0 line 16
+    { line: [16], open: 1, close: 0, current: "(", rule1: null, rule2: null,
+      action: "n_2_0: no more branches. Return → n_1_0 line 16 deleteCharAt → \"(\".",
+      kind: "return", activeNode: "n_1_0", onPath: ["n_root"], successNodes: ["n_2_2_a"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0"], result: ["(())"] },
+
+    // 18. n_1_0 rule2 ok, append ')'
+    { line: [18, 19], open: 1, close: 0, current: "()", rule1: null, rule2: "ok",
+      action: "n_1_0 rule 2: close<open → 0<1 ✓. append(')') → \"()\".",
+      kind: "pick", activeNode: "n_1_0", onPath: ["n_root"], successNodes: ["n_2_2_a"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0"], result: ["(())"] },
+
+    // 19. call → n_1_1
+    { line: [20], open: 1, close: 1, current: "()", rule1: null, rule2: "ok",
+      action: "Call backtrack(..., open=1, close=1). Descend to n_1_1.",
+      kind: "call", activeNode: "n_1_1", onPath: ["n_root", "n_1_0"], successNodes: ["n_2_2_a"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0"], result: ["(())"] },
+
+    // 20. n_1_1 base check
+    { line: [9], open: 1, close: 1, current: "()", rule1: null, rule2: null,
+      action: "n_1_1: base check. open==n? 1==2 → no.",
+      kind: "check", activeNode: "n_1_1", onPath: ["n_root", "n_1_0"], successNodes: ["n_2_2_a"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0"], result: ["(())"] },
+
+    // 21. n_1_1 rule1 ok, append '('
+    { line: [13, 14], open: 1, close: 1, current: "()(", rule1: "ok", rule2: null,
+      action: "n_1_1 rule 1: open<n → 1<2 ✓. append('(') → \"()(\".",
+      kind: "pick", activeNode: "n_1_1", onPath: ["n_root", "n_1_0"], successNodes: ["n_2_2_a"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0"], result: ["(())"] },
+
+    // 22. call → n_2_1_b
+    { line: [15], open: 2, close: 1, current: "()(", rule1: "ok", rule2: null,
+      action: "Call backtrack(..., open=2, close=1). Descend to n_2_1_b.",
+      kind: "call", activeNode: "n_2_1_b", onPath: ["n_root", "n_1_0", "n_1_1"], successNodes: ["n_2_2_a"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0"], result: ["(())"] },
+
+    // 23. n_2_1_b: base no, rule1 blocked, rule2 ok, append ')'
+    { line: [9, 13, 18, 19], open: 2, close: 1, current: "()()", rule1: "blocked", rule2: "ok",
+      action: "n_2_1_b: base? no. rule 1: 2<2 ✗. rule 2: close<open → 1<2 ✓. append(')') → \"()()\".",
+      kind: "pick", activeNode: "n_2_1_b", onPath: ["n_root", "n_1_0", "n_1_1"], successNodes: ["n_2_2_a"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0"], result: ["(())"] },
+
+    // 24. call → n_2_2_b
+    { line: [20], open: 2, close: 2, current: "()()", rule1: "blocked", rule2: "ok",
+      action: "Call backtrack(..., open=2, close=2). Descend to n_2_2_b.",
+      kind: "call", activeNode: "n_2_2_b", onPath: ["n_root", "n_1_0", "n_1_1", "n_2_1_b"], successNodes: ["n_2_2_a"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0"], result: ["(())"] },
+
+    // 25. RECORD "()()"
+    { line: [9, 10, 11], open: 2, close: 2, current: "()()", rule1: null, rule2: null,
+      action: "n_2_2_b: open==n ✓ AND close==n ✓. RECORD \"()()\". ★",
+      kind: "record", activeNode: "n_2_2_b", onPath: ["n_root", "n_1_0", "n_1_1", "n_2_1_b"], successNodes: ["n_2_2_a", "n_2_2_b"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0"], result: ["(())", "()()"] },
+
+    // 26. return, deleteCharAt in n_2_1_b
+    { line: [21], open: 2, close: 1, current: "()(", rule1: null, rule2: null,
+      action: "Return. Back in n_2_1_b line 21: deleteCharAt → \"()(\".",
+      kind: "return", activeNode: "n_2_1_b", onPath: ["n_root", "n_1_0", "n_1_1"], successNodes: ["n_2_2_a", "n_2_2_b"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0", "n_2_2_b"], result: ["(())", "()()"] },
+
+    // 27. n_2_1_b no more branches, return. deleteCharAt in n_1_1 line 16
+    { line: [16], open: 1, close: 1, current: "()", rule1: null, rule2: null,
+      action: "n_2_1_b: no more branches. Return → n_1_1 line 16 deleteCharAt → \"()\".",
+      kind: "return", activeNode: "n_1_1", onPath: ["n_root", "n_1_0"], successNodes: ["n_2_2_a", "n_2_2_b"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0", "n_2_2_b", "n_2_1_b"], result: ["(())", "()()"] },
+
+    // 28. n_1_1 rule2 blocked (close<open: 1<1 false). Return. deleteCharAt in n_1_0 line 21.
+    { line: [18, 21], open: 1, close: 0, current: "(", rule1: null, rule2: "blocked",
+      action: "n_1_1 rule 2: close<open → 1<1 ✗. No branches left. Return → n_1_0 line 21 deleteCharAt → \"(\".",
+      kind: "return", activeNode: "n_1_0", onPath: ["n_root"], successNodes: ["n_2_2_a", "n_2_2_b"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0", "n_2_2_b", "n_2_1_b", "n_1_1"], result: ["(())", "()()"] },
+
+    // 29. n_1_0 no more branches (rule2 was the last). Return. deleteCharAt in n_root line 16
+    { line: [16], open: 0, close: 0, current: "", rule1: null, rule2: null,
+      action: "n_1_0: no more branches. Return → n_root line 16 deleteCharAt → \"\".",
+      kind: "return", activeNode: "n_root", onPath: [], successNodes: ["n_2_2_a", "n_2_2_b"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0", "n_2_2_b", "n_2_1_b", "n_1_1", "n_1_0"], result: ["(())", "()()"] },
+
+    // 30. n_root rule2 blocked. DONE.
+    { line: [18, 23], open: 0, close: 0, current: "", rule1: null, rule2: "blocked",
+      action: "n_root rule 2: close<open → 0<0 ✗. Return. DONE — 2 valid strings for n=2 = Catalan(2).",
+      kind: "return", activeNode: "n_root", onPath: [], successNodes: ["n_2_2_a", "n_2_2_b"], doneNodes: ["n_2_2_a", "n_2_1_a", "n_2_0", "n_2_2_b", "n_2_1_b", "n_1_1", "n_1_0", "n_root"], result: ["(())", "()()"] }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const currentStrEl = document.getElementById('currentStr');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const openValEl = document.getElementById('openVal');
+  const closeValEl = document.getElementById('closeVal');
+  const lenValEl = document.getElementById('lenVal');
+  const pillLenEl = document.getElementById('pillLen');
+  const rule1El = document.getElementById('rule1');
+  const rule2El = document.getElementById('rule2');
+
+  function applyRule(el, baseText, state) {
+    el.className = 'rule';
+    let mark = '?';
+    if (state === 'ok') { el.classList.add('ok'); mark = '✓'; }
+    else if (state === 'blocked') { el.classList.add('blocked'); mark = '✗'; }
+    el.innerHTML = '<span class="mark">' + mark + '</span>&nbsp;' + baseText;
+  }
+
+  function renderCurrent(current, animate, kind) {
+    currentStrEl.classList.toggle('empty', current === '');
+    if (current === '') {
+      currentStrEl.textContent = '""';
+      return;
+    }
+    currentStrEl.innerHTML = '';
+    for (let i = 0; i < current.length; i++) {
+      const span = document.createElement('span');
+      span.textContent = current[i];
+      span.className = current[i] === '(' ? 'open-char' : 'close-char';
+      if (animate && i === current.length - 1 && kind === 'pick') {
+        span.classList.add('just-added');
+      }
+      currentStrEl.appendChild(span);
+    }
+  }
+
+  function render(idx, animate = false) {
+    const s = steps[idx];
+    // Code
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    openValEl.textContent = `${s.open} / ${N}`;
+    closeValEl.textContent = `${s.close} / ${N}`;
+    const total = s.current.length;
+    lenValEl.textContent = `${total} / ${2 * N}`;
+    pillLenEl.classList.toggle('full', total === 2 * N);
+    // Rules
+    applyRule(rule1El, 'open &lt; n', s.rule1);
+    applyRule(rule2El, 'close &lt; open', s.rule2);
+    // Current string
+    renderCurrent(s.current, animate, s.kind);
+    // Tree
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-path', 'success', 'done');
+      if (s.successNodes.includes(key)) {
+        el.classList.add('success');
+      } else if (s.doneNodes.includes(key)) {
+        el.classList.add('done');
+      } else if (s.activeNode === key) {
+        el.classList.add('active');
+      } else if (s.onPath.includes(key)) {
+        el.classList.add('on-path');
+      }
+    });
+    edges.forEach(([from, to]) => {
+      const e = edgeEls[`${from}-${to}`];
+      const lbl = edgeLabelEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      lbl.classList.remove('on-path');
+      const pathSet = new Set([...s.onPath, s.activeNode]);
+      if (pathSet.has(from) && pathSet.has(to)) {
+        e.classList.add('on-path');
+        lbl.classList.add('on-path');
+      }
+    });
+    // Result
+    resultEl.innerHTML = '';
+    s.result.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.textContent = `"${r}"`;
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+
+  function goTo(idx, animate = false) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx, animate);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1, false);
+  });
+  nextBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(stepIdx + 1, true);
+  });
+  resetBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(0, false);
+  });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1, true);
+    }, 1100);
+  });
+
+  goTo(0, false);
+</script>
+</body>
+</html>
