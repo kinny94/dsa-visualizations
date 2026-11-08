@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 90 — Subsets II</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 310px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .label {
+    width: 62px;
+    font-size: 11px;
+    color: #aaa;
+    text-align: right;
+  }
+  .cell {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.2s;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+  }
+  .cell.i-cursor {
+    border-color: #e94560;
+    background: #e94560;
+    transform: scale(1.1);
+  }
+  .cell.index-cursor {
+    border-color: #ffa500;
+    box-shadow: inset 0 0 0 1px #ffa500;
+  }
+  .idx-labels {
+    display: flex;
+    gap: 6px;
+    margin-left: 68px;
+    font-size: 10px;
+    color: #666;
+  }
+  .idx-labels span {
+    width: 34px;
+    text-align: center;
+  }
+  .current-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 38px;
+  }
+  #currentCells { display: flex; gap: 6px; }
+  #currentCells .cell {
+    background: #0f6b3a;
+    border-color: #0f9950;
+  }
+  #currentCells .cell.just-added {
+    animation: pop 0.3s ease-out;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #888;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.success rect { fill: #0f9950; stroke: #4de88c; stroke-width: 3; }
+  .node-box.success text { fill: #fff; font-weight: bold; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .node-box.skip rect { fill: #4a1a6b; stroke: #a855f7; stroke-width: 2; stroke-dasharray: 4,3; }
+  .node-box.skip text { fill: #e0b0ff; font-style: italic; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.skip-edge { stroke: #a855f7; stroke-dasharray: 4,3; stroke-width: 1.5; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-record { background: #0f9950; color: white; }
+  .kind-pick { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .kind-skip { background: #a855f7; color: white; }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #1a4a7a; color: white; }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    list-style: none;
+  }
+  .result-list li {
+    padding: 4px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #0f9950;
+  }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #aaa;
+  }
+  .chip {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+  .chip-active { background: #e94560; }
+  .chip-success { background: #0f9950; }
+  .chip-skip { background: #4a1a6b; border: 1px dashed #a855f7; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 90 — Subsets II</h1>
+    <div class="subtitle">Backtracking with sort + dup-skip &nbsp;·&nbsp; nums = [1, 2, 2]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row">
+      <span class="label">nums:</span>
+      <div class="cell" id="arr0">1</div>
+      <div class="cell" id="arr1">2</div>
+      <div class="cell" id="arr2">2</div>
+    </div>
+    <div class="idx-labels"><span>0</span><span>1</span><span>2</span></div>
+    <div class="row current-wrap">
+      <span class="label">current:</span>
+      <div id="currentCells"></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 900 440" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result (subsets recorded)</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-success"></div>recorded subset</div>
+      <div class="legend-item"><div class="chip chip-skip"></div>skipped (dup sibling)</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public List<List<Integer>> subsetsWithDup(int[] nums) {",
+    "    List<List<Integer>> result = new ArrayList<>();",
+    "    Arrays.sort(nums);",
+    "    backtrack(nums, 0, new ArrayList<>(), result);",
+    "    return result;",
+    "}",
+    "",
+    "private void backtrack(int[] nums, int index,",
+    "                       List<Integer> current,",
+    "                       List<List<Integer>> result) {",
+    "    result.add(new ArrayList<>(current));",
+    "    for (int i = index; i < nums.length; i++) {",
+    "        if (i > index && nums[i] == nums[i - 1]) {",
+    "            continue;",
+    "        }",
+    "        current.add(nums[i]);",
+    "        backtrack(nums, i + 1, current, result);",
+    "        current.remove(current.size() - 1);",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE DEFINITION ============
+  const nodes = {
+    n0:  { x: 450, y: 44,  w: 70, label: "[]" },
+    n1:  { x: 180, y: 150, w: 70, label: "[1]" },
+    sk1: { x: 290, y: 258, w: 92, label: "skip i=2" },
+    n2:  { x: 110, y: 258, w: 90, label: "[1, 2]" },
+    n3:  { x: 110, y: 366, w: 110, label: "[1, 2, 2]" },
+    n5:  { x: 530, y: 150, w: 70, label: "[2]" },
+    n6:  { x: 530, y: 258, w: 90, label: "[2, 2]" },
+    sk0: { x: 780, y: 150, w: 92, label: "skip i=2" },
+  };
+  const edges = [
+    ["n0", "n1",  "solid"],
+    ["n0", "n5",  "solid"],
+    ["n0", "sk0", "skip"],
+    ["n1", "n2",  "solid"],
+    ["n1", "sk1", "skip"],
+    ["n2", "n3",  "solid"],
+    ["n5", "n6",  "solid"],
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  // Edges first (so under boxes)
+  const edgeEls = {};
+  edges.forEach(([from, to, kind]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 16);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 16);
+    line.setAttribute('class', kind === 'skip' ? 'edge skip-edge' : 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+  });
+  // Nodes
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box');
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 16);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 32);
+    rect.setAttribute('rx', 6);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y + 1);
+    t.textContent = n.label;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    // skip markers get skip class permanently
+    if (key.startsWith('sk')) {
+      g.classList.add('skip');
+    }
+  });
+
+  // ============ STEP DATA ============
+  // Each step:
+  //   line: array of code line numbers to highlight
+  //   activeI: index being considered in loop (or null)
+  //   activeIndex: current frame's `index` param
+  //   current: current list snapshot
+  //   action: text
+  //   kind: action kind (record|pick|return|skip|call|check)
+  //   activeNode: node currently executing
+  //   onPath: nodes in current call stack (exclude active)
+  //   successNodes: nodes whose subset was recorded
+  //   doneNodes: nodes whose frame returned
+  //   revealedSkips: skip markers to show so far
+  //   result: subsets recorded so far
+  const steps = [
+    { line: [3], activeI: null, activeIndex: null, current: [],
+      action: "Arrays.sort(nums) → [1, 2, 2]. Sorted so duplicates are adjacent.",
+      kind: "call", activeNode: null, onPath: [], successNodes: [], doneNodes: [], revealedSkips: [], result: [] },
+
+    { line: [4, 11], activeI: null, activeIndex: 0, current: [],
+      action: "Call backtrack(index=0, current=[]).",
+      kind: "call", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], revealedSkips: [], result: [] },
+
+    { line: [11], activeI: null, activeIndex: 0, current: [],
+      action: "result.add(copy of current). Record [].",
+      kind: "record", activeNode: "n0", onPath: [], successNodes: ["n0"], doneNodes: [], revealedSkips: [], result: [[]] },
+
+    { line: [12], activeI: 0, activeIndex: 0, current: [],
+      action: "Loop iteration i=0 (index=0).",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: ["n0"], doneNodes: [], revealedSkips: [], result: [[]] },
+
+    { line: [13], activeI: 0, activeIndex: 0, current: [],
+      action: "Skip check: i > index? 0 > 0 = false. Enter.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: ["n0"], doneNodes: [], revealedSkips: [], result: [[]] },
+
+    { line: [16], activeI: 0, activeIndex: 0, current: [1],
+      action: "current.add(nums[0]=1). current = [1].",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: ["n0"], doneNodes: [], revealedSkips: [], result: [[]] },
+
+    { line: [17], activeI: 0, activeIndex: 1, current: [1],
+      action: "Call backtrack(index = i+1 = 1, current=[1]).",
+      kind: "call", activeNode: "n1", onPath: ["n0"], successNodes: ["n0"], doneNodes: [], revealedSkips: [], result: [[]] },
+
+    { line: [11], activeI: null, activeIndex: 1, current: [1],
+      action: "result.add(copy of current). Record [1].",
+      kind: "record", activeNode: "n1", onPath: ["n0"], successNodes: ["n0", "n1"], doneNodes: [], revealedSkips: [], result: [[], [1]] },
+
+    { line: [12], activeI: 1, activeIndex: 1, current: [1],
+      action: "Loop iteration i=1 (index=1).",
+      kind: "check", activeNode: "n1", onPath: ["n0"], successNodes: ["n0", "n1"], doneNodes: [], revealedSkips: [], result: [[], [1]] },
+
+    { line: [13], activeI: 1, activeIndex: 1, current: [1],
+      action: "Skip check: i > index? 1 > 1 = false. Enter.",
+      kind: "check", activeNode: "n1", onPath: ["n0"], successNodes: ["n0", "n1"], doneNodes: [], revealedSkips: [], result: [[], [1]] },
+
+    { line: [16], activeI: 1, activeIndex: 1, current: [1, 2],
+      action: "current.add(nums[1]=2). current = [1, 2].",
+      kind: "pick", activeNode: "n1", onPath: ["n0"], successNodes: ["n0", "n1"], doneNodes: [], revealedSkips: [], result: [[], [1]] },
+
+    { line: [17], activeI: 1, activeIndex: 2, current: [1, 2],
+      action: "Call backtrack(index = i+1 = 2, current=[1, 2]).",
+      kind: "call", activeNode: "n2", onPath: ["n0", "n1"], successNodes: ["n0", "n1"], doneNodes: [], revealedSkips: [], result: [[], [1]] },
+
+    { line: [11], activeI: null, activeIndex: 2, current: [1, 2],
+      action: "result.add(copy of current). Record [1, 2].",
+      kind: "record", activeNode: "n2", onPath: ["n0", "n1"], successNodes: ["n0", "n1", "n2"], doneNodes: [], revealedSkips: [], result: [[], [1], [1, 2]] },
+
+    { line: [12], activeI: 2, activeIndex: 2, current: [1, 2],
+      action: "Loop iteration i=2 (index=2).",
+      kind: "check", activeNode: "n2", onPath: ["n0", "n1"], successNodes: ["n0", "n1", "n2"], doneNodes: [], revealedSkips: [], result: [[], [1], [1, 2]] },
+
+    { line: [13], activeI: 2, activeIndex: 2, current: [1, 2],
+      action: "Skip check: i > index? 2 > 2 = false. NO skip — the duplicate 2 is allowed on descent (different position, extends the multiset).",
+      kind: "check", activeNode: "n2", onPath: ["n0", "n1"], successNodes: ["n0", "n1", "n2"], doneNodes: [], revealedSkips: [], result: [[], [1], [1, 2]] },
+
+    { line: [16], activeI: 2, activeIndex: 2, current: [1, 2, 2],
+      action: "current.add(nums[2]=2). current = [1, 2, 2].",
+      kind: "pick", activeNode: "n2", onPath: ["n0", "n1"], successNodes: ["n0", "n1", "n2"], doneNodes: [], revealedSkips: [], result: [[], [1], [1, 2]] },
+
+    { line: [17], activeI: 2, activeIndex: 3, current: [1, 2, 2],
+      action: "Call backtrack(index = i+1 = 3, current=[1, 2, 2]).",
+      kind: "call", activeNode: "n3", onPath: ["n0", "n1", "n2"], successNodes: ["n0", "n1", "n2"], doneNodes: [], revealedSkips: [], result: [[], [1], [1, 2]] },
+
+    { line: [11], activeI: null, activeIndex: 3, current: [1, 2, 2],
+      action: "result.add(copy of current). Record [1, 2, 2].",
+      kind: "record", activeNode: "n3", onPath: ["n0", "n1", "n2"], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: [], revealedSkips: [], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [12, 20], activeI: null, activeIndex: 3, current: [1, 2, 2],
+      action: "Loop over nums[3..] is empty. Return from backtrack(3, [1, 2, 2]).",
+      kind: "return", activeNode: "n3", onPath: ["n0", "n1", "n2"], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n3"], revealedSkips: [], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [18], activeI: 2, activeIndex: 2, current: [1, 2],
+      action: "Back in backtrack(2, [1, 2]). current.remove last → current = [1, 2].",
+      kind: "return", activeNode: "n2", onPath: ["n0", "n1"], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n3"], revealedSkips: [], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [12, 20], activeI: null, activeIndex: 2, current: [1, 2],
+      action: "Loop in backtrack(2) exhausted. Return.",
+      kind: "return", activeNode: "n2", onPath: ["n0", "n1"], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n2", "n3"], revealedSkips: [], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [18], activeI: 1, activeIndex: 1, current: [1],
+      action: "Back in backtrack(1, [1]). current.remove last → current = [1].",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n2", "n3"], revealedSkips: [], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [12], activeI: 2, activeIndex: 1, current: [1],
+      action: "Next loop iteration in backtrack(1): i=2 (index=1).",
+      kind: "check", activeNode: "n1", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n2", "n3"], revealedSkips: [], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [13, 14], activeI: 2, activeIndex: 1, current: [1],
+      action: "Skip check: i>index (2>1) ✓ AND nums[2]==nums[1] (2==2) ✓. SKIP — sibling duplicate. Avoids rebuilding [1, 2].",
+      kind: "skip", activeNode: "n1", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [12, 20], activeI: null, activeIndex: 1, current: [1],
+      action: "Loop in backtrack(1) exhausted. Return.",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [18], activeI: 0, activeIndex: 0, current: [],
+      action: "Back in backtrack(0, []). current.remove last → current = [].",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [12], activeI: 1, activeIndex: 0, current: [],
+      action: "Next loop iteration in backtrack(0): i=1 (index=0).",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [13], activeI: 1, activeIndex: 0, current: [],
+      action: "Skip check: i>index (1>0) ✓ AND nums[1]==nums[0]? 2==1 = false. Enter.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [16], activeI: 1, activeIndex: 0, current: [2],
+      action: "current.add(nums[1]=2). current = [2].",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [17], activeI: 1, activeIndex: 2, current: [2],
+      action: "Call backtrack(index = i+1 = 2, current=[2]).",
+      kind: "call", activeNode: "n5", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2]] },
+
+    { line: [11], activeI: null, activeIndex: 2, current: [2],
+      action: "result.add(copy of current). Record [2].",
+      kind: "record", activeNode: "n5", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3", "n5"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2]] },
+
+    { line: [12], activeI: 2, activeIndex: 2, current: [2],
+      action: "Loop iteration i=2 (index=2).",
+      kind: "check", activeNode: "n5", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3", "n5"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2]] },
+
+    { line: [13], activeI: 2, activeIndex: 2, current: [2],
+      action: "Skip check: i > index? 2 > 2 = false. NO skip — descent allows duplicate value.",
+      kind: "check", activeNode: "n5", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3", "n5"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2]] },
+
+    { line: [16], activeI: 2, activeIndex: 2, current: [2, 2],
+      action: "current.add(nums[2]=2). current = [2, 2].",
+      kind: "pick", activeNode: "n5", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3", "n5"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2]] },
+
+    { line: [17], activeI: 2, activeIndex: 3, current: [2, 2],
+      action: "Call backtrack(index = i+1 = 3, current=[2, 2]).",
+      kind: "call", activeNode: "n6", onPath: ["n0", "n5"], successNodes: ["n0", "n1", "n2", "n3", "n5"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2]] },
+
+    { line: [11], activeI: null, activeIndex: 3, current: [2, 2],
+      action: "result.add(copy of current). Record [2, 2].",
+      kind: "record", activeNode: "n6", onPath: ["n0", "n5"], successNodes: ["n0", "n1", "n2", "n3", "n5", "n6"], doneNodes: ["n1", "n2", "n3"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2], [2, 2]] },
+
+    { line: [12, 20], activeI: null, activeIndex: 3, current: [2, 2],
+      action: "Loop empty. Return from backtrack(3, [2, 2]).",
+      kind: "return", activeNode: "n6", onPath: ["n0", "n5"], successNodes: ["n0", "n1", "n2", "n3", "n5", "n6"], doneNodes: ["n1", "n2", "n3", "n6"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2], [2, 2]] },
+
+    { line: [18], activeI: 2, activeIndex: 2, current: [2],
+      action: "Back in backtrack(2, [2]). current.remove last → current = [2].",
+      kind: "return", activeNode: "n5", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3", "n5", "n6"], doneNodes: ["n1", "n2", "n3", "n6"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2], [2, 2]] },
+
+    { line: [12, 20], activeI: null, activeIndex: 2, current: [2],
+      action: "Loop in backtrack(2, [2]) exhausted. Return.",
+      kind: "return", activeNode: "n5", onPath: ["n0"], successNodes: ["n0", "n1", "n2", "n3", "n5", "n6"], doneNodes: ["n1", "n2", "n3", "n5", "n6"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2], [2, 2]] },
+
+    { line: [18], activeI: 1, activeIndex: 0, current: [],
+      action: "Back in backtrack(0, []). current.remove last → current = [].",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n0", "n1", "n2", "n3", "n5", "n6"], doneNodes: ["n1", "n2", "n3", "n5", "n6"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2], [2, 2]] },
+
+    { line: [12], activeI: 2, activeIndex: 0, current: [],
+      action: "Next loop iteration in backtrack(0): i=2 (index=0).",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: ["n0", "n1", "n2", "n3", "n5", "n6"], doneNodes: ["n1", "n2", "n3", "n5", "n6"], revealedSkips: ["sk1"], result: [[], [1], [1, 2], [1, 2, 2], [2], [2, 2]] },
+
+    { line: [13, 14], activeI: 2, activeIndex: 0, current: [],
+      action: "Skip check: i>index (2>0) ✓ AND nums[2]==nums[1] (2==2) ✓. SKIP — sibling duplicate. Avoids rebuilding [2], [2, 2].",
+      kind: "skip", activeNode: "n0", onPath: [], successNodes: ["n0", "n1", "n2", "n3", "n5", "n6"], doneNodes: ["n1", "n2", "n3", "n5", "n6"], revealedSkips: ["sk1", "sk0"], result: [[], [1], [1, 2], [1, 2, 2], [2], [2, 2]] },
+
+    { line: [12, 20], activeI: null, activeIndex: 0, current: [],
+      action: "Loop in backtrack(0, []) exhausted. Return. DONE — 6 unique subsets.",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n0", "n1", "n2", "n3", "n5", "n6"], doneNodes: ["n0", "n1", "n2", "n3", "n5", "n6"], revealedSkips: ["sk1", "sk0"], result: [[], [1], [1, 2], [1, 2, 2], [2], [2, 2]] },
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const arrEls = [document.getElementById('arr0'), document.getElementById('arr1'), document.getElementById('arr2')];
+  const currentCellsEl = document.getElementById('currentCells');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx, animateAdd = false) {
+    const s = steps[idx];
+    // Code lines
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Array cells
+    arrEls.forEach((el, i) => {
+      el.classList.remove('i-cursor', 'index-cursor');
+      if (s.activeI === i) { el.classList.add('i-cursor'); }
+      if (s.activeIndex === i && s.activeI !== i) { el.classList.add('index-cursor'); }
+    });
+    // Current
+    currentCellsEl.innerHTML = '';
+    s.current.forEach((v, i) => {
+      const c = document.createElement('div');
+      c.className = 'cell';
+      if (animateAdd && i === s.current.length - 1 && s.kind === 'pick') {
+        c.classList.add('just-added');
+      }
+      c.textContent = v;
+      currentCellsEl.appendChild(c);
+    });
+    // Tree nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-path', 'success', 'done');
+      if (key.startsWith('sk')) {
+        el.style.display = s.revealedSkips.includes(key) ? '' : 'none';
+      } else {
+        if (s.doneNodes.includes(key)) {
+          el.classList.add('done');
+          if (s.successNodes.includes(key)) {
+            el.classList.add('success');
+          }
+        } else if (s.activeNode === key) {
+          el.classList.add('active');
+        } else if (s.onPath.includes(key)) {
+          el.classList.add('on-path');
+        } else if (s.successNodes.includes(key)) {
+          el.classList.add('success');
+        }
+      }
+    });
+    // Edges: on-path edges highlighted
+    edges.forEach(([from, to, kind]) => {
+      const e = edgeEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      if (kind === 'skip') {
+        e.style.display = s.revealedSkips.includes(to) ? '' : 'none';
+      } else {
+        // highlight edges along current path
+        const pathSet = new Set([...s.onPath, s.activeNode]);
+        if (pathSet.has(from) && pathSet.has(to)) {
+          e.classList.add('on-path');
+        }
+      }
+    });
+    // Result list
+    resultEl.innerHTML = '';
+    s.result.forEach((subset, i) => {
+      const li = document.createElement('li');
+      li.textContent = JSON.stringify(subset).replace(/,/g, ', ');
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    // Action card
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    // Step info
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+
+  function goTo(idx, animate = false) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx, animate);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1, false);
+  });
+  nextBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(stepIdx + 1, true);
+  });
+  resetBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(0, false);
+  });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1, true);
+    }, 1100);
+  });
+
+  // Initialize
+  goTo(0, false);
+</script>
+</body>
+</html>
