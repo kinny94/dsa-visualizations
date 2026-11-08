@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 77 — Combinations</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 310px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    transition: all 0.25s;
+  }
+  .pill .pill-k {
+    color: #888;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pill .pill-v {
+    font-weight: bold;
+    color: #ffa500;
+  }
+  .pill.size.full .pill-v { color: #4de88c; }
+  .pill.size.full { background: #0f6b3a; border-color: #0f9950; }
+  .pill.bound .pill-v { color: #8ab4ff; }
+  .label {
+    width: 62px;
+    font-size: 11px;
+    color: #aaa;
+    text-align: right;
+  }
+  .pool {
+    display: flex;
+    gap: 6px;
+    position: relative;
+  }
+  .cell {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.2s;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+  }
+  .cell.i-cursor {
+    border-color: #e94560;
+    background: #e94560;
+    transform: scale(1.1);
+  }
+  .cell.index-mark {
+    border-color: #ffa500;
+    box-shadow: inset 0 0 0 1px #ffa500;
+  }
+  .cell.dim {
+    opacity: 0.3;
+  }
+  .cell.beyond-bound {
+    opacity: 0.5;
+    border-color: #6366f1;
+    border-style: dashed;
+    color: #a5a7f5;
+  }
+  .current-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+  }
+  #currentCells { display: flex; gap: 6px; }
+  #currentCells .cell {
+    background: #0f6b3a;
+    border-color: #0f9950;
+  }
+  #currentCells .cell.just-added {
+    animation: pop 0.3s ease-out;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.4); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.success rect { fill: #0f9950; stroke: #4de88c; stroke-width: 3; }
+  .node-box.success text { fill: #fff; font-weight: bold; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .node-box.prune rect { fill: #1e1b4b; stroke: #6366f1; stroke-width: 2; stroke-dasharray: 4,3; }
+  .node-box.prune text { fill: #a5a7f5; font-style: italic; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.prune-edge { stroke: #6366f1; stroke-dasharray: 4,3; stroke-width: 1.5; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-record { background: #0f9950; color: white; }
+  .kind-pick { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .kind-prune { background: #6366f1; color: white; }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #1a4a7a; color: white; }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    list-style: none;
+  }
+  .result-list li {
+    padding: 4px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #0f9950;
+  }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #aaa;
+  }
+  .chip {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+  .chip-active { background: #e94560; }
+  .chip-success { background: #0f9950; }
+  .chip-prune { background: #1e1b4b; border: 1px dashed #6366f1; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 77 — Combinations</h1>
+    <div class="subtitle">Backtracking with loop-bound prune &nbsp;·&nbsp; n = 4, k = 2</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill"><span class="pill-k">n</span><span class="pill-v">4</span></span>
+      <span class="pill"><span class="pill-k">k</span><span class="pill-v">2</span></span>
+      <span class="pill size" id="pillSize"><span class="pill-k">size</span><span class="pill-v" id="sizeVal">0 / 2</span></span>
+      <span class="pill"><span class="pill-k">need</span><span class="pill-v" id="needVal">2</span></span>
+      <span class="pill bound"><span class="pill-k">max&nbsp;i</span><span class="pill-v" id="boundVal">3</span></span>
+    </div>
+    <div class="row">
+      <span class="label">pool:</span>
+      <div class="pool" id="pool"></div>
+    </div>
+    <div class="row current-wrap">
+      <span class="label">current:</span>
+      <div id="currentCells"></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 900 350" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result (combinations recorded)</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-success"></div>recorded (size=k)</div>
+      <div class="legend-item"><div class="chip chip-prune"></div>pruned by loop bound</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const N = 4;
+  const K = 2;
+
+  // ============ POOL ============
+  const poolEl = document.getElementById('pool');
+  const poolCells = [];
+  for (let d = 1; d <= N; d++) {
+    const c = document.createElement('div');
+    c.className = 'cell';
+    c.textContent = d;
+    poolEl.appendChild(c);
+    poolCells.push(c);
+  }
+
+  // ============ CODE ============
+  const codeText = [
+    "public List<List<Integer>> combine(int n, int k) {",
+    "    List<List<Integer>> result = new ArrayList<>();",
+    "    backtrack(n, 1, new ArrayList<>(), result, k);",
+    "    return result;",
+    "}",
+    "",
+    "private void backtrack(int n, int index, List<Integer> current,",
+    "                       List<List<Integer>> result, int k) {",
+    "    if (current.size() == k) {",
+    "        result.add(new ArrayList<>(current));",
+    "        return;",
+    "    }",
+    "    int need = k - current.size();",
+    "    for (int i = index; i <= n - need + 1; i++) {",
+    "        current.add(i);",
+    "        backtrack(n, i + 1, current, result, k);",
+    "        current.remove(current.size() - 1);",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE DEFINITION ============
+  const nodes = {
+    n0:   { x: 400, y:  40, w:  60, label: "[]" },
+    n1:   { x: 150, y: 160, w:  60, label: "[1]" },
+    n2:   { x: 380, y: 160, w:  60, label: "[2]" },
+    n3:   { x: 580, y: 160, w:  60, label: "[3]" },
+    pr_r: { x: 760, y: 160, w: 100, label: "prune i≥4" },
+    n12:  { x:  70, y: 280, w:  70, label: "[1, 2]" },
+    n13:  { x: 150, y: 280, w:  70, label: "[1, 3]" },
+    n14:  { x: 230, y: 280, w:  70, label: "[1, 4]" },
+    n23:  { x: 335, y: 280, w:  70, label: "[2, 3]" },
+    n24:  { x: 425, y: 280, w:  70, label: "[2, 4]" },
+    n34:  { x: 580, y: 280, w:  70, label: "[3, 4]" }
+  };
+  const edges = [
+    ["n0", "n1",   "solid"],
+    ["n0", "n2",   "solid"],
+    ["n0", "n3",   "solid"],
+    ["n0", "pr_r", "prune"],
+    ["n1", "n12",  "solid"],
+    ["n1", "n13",  "solid"],
+    ["n1", "n14",  "solid"],
+    ["n2", "n23",  "solid"],
+    ["n2", "n24",  "solid"],
+    ["n3", "n34",  "solid"]
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(([from, to, kind]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 14);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 14);
+    line.setAttribute('class', kind === 'prune' ? 'edge prune-edge' : 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box');
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 14);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 28);
+    rect.setAttribute('rx', 5);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y + 1);
+    t.textContent = n.label;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    if (key.startsWith('pr_')) {
+      g.classList.add('prune');
+      g.style.display = 'none';
+    }
+  });
+
+  // ============ STEP DATA ============
+  // Each step:
+  //   line: active code lines
+  //   activeI: loop variable i (or null)
+  //   activeIndex: frame's `index` param
+  //   current, need, bound
+  //   action, kind
+  //   activeNode, onPath, successNodes, doneNodes
+  //   revealedPrunes: prune markers shown so far
+  //   result
+  const steps = [
+    { line: [3], activeI: null, activeIndex: 1, current: [], need: 2, bound: 3,
+      action: "Entry: result = []. Call backtrack(n=4, index=1, [], k=2).",
+      kind: "call", activeNode: null, onPath: [], successNodes: [], doneNodes: [], revealedPrunes: [], result: [] },
+
+    { line: [9], activeI: null, activeIndex: 1, current: [], need: 2, bound: 3,
+      action: "Base check in n0: size==k? 0==2? No. Fall through.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], revealedPrunes: [], result: [] },
+
+    { line: [13, 14], activeI: null, activeIndex: 1, current: [], need: 2, bound: 3,
+      action: "need = k − size = 2 − 0 = 2. Loop bound: i ≤ n − need + 1 = 4 − 2 + 1 = 3.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], revealedPrunes: [], result: [] },
+
+    { line: [14, 15], activeI: 1, activeIndex: 1, current: [1], need: 2, bound: 3,
+      action: "i=1 ≤ 3 ✓. current.add(1). current = [1].",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], revealedPrunes: [], result: [] },
+
+    { line: [16], activeI: 1, activeIndex: 2, current: [1], need: 1, bound: 4,
+      action: "Call backtrack(n=4, index=2, [1], k=2).",
+      kind: "call", activeNode: "n1", onPath: ["n0"], successNodes: [], doneNodes: [], revealedPrunes: [], result: [] },
+
+    { line: [9, 13, 14], activeI: null, activeIndex: 2, current: [1], need: 1, bound: 4,
+      action: "n1 base check fails (size=1). need = 1. Loop bound = 4 − 1 + 1 = 4.",
+      kind: "check", activeNode: "n1", onPath: ["n0"], successNodes: [], doneNodes: [], revealedPrunes: [], result: [] },
+
+    { line: [14, 15], activeI: 2, activeIndex: 2, current: [1, 2], need: 1, bound: 4,
+      action: "i=2 ≤ 4 ✓. current.add(2). current = [1, 2].",
+      kind: "pick", activeNode: "n1", onPath: ["n0"], successNodes: [], doneNodes: [], revealedPrunes: [], result: [] },
+
+    { line: [16], activeI: 2, activeIndex: 3, current: [1, 2], need: 0, bound: 5,
+      action: "Call backtrack(n=4, index=3, [1, 2], k=2).",
+      kind: "call", activeNode: "n12", onPath: ["n0", "n1"], successNodes: [], doneNodes: [], revealedPrunes: [], result: [] },
+
+    { line: [9, 10], activeI: null, activeIndex: 3, current: [1, 2], need: 0, bound: 5,
+      action: "n12 base: size==k ✓. RECORD [1, 2]. ★",
+      kind: "record", activeNode: "n12", onPath: ["n0", "n1"], successNodes: ["n12"], doneNodes: [], revealedPrunes: [], result: [[1, 2]] },
+
+    { line: [11], activeI: null, activeIndex: 3, current: [1, 2], need: 0, bound: 5,
+      action: "Return from n12.",
+      kind: "return", activeNode: "n12", onPath: ["n0", "n1"], successNodes: ["n12"], doneNodes: ["n12"], revealedPrunes: [], result: [[1, 2]] },
+
+    { line: [17], activeI: 2, activeIndex: 2, current: [1], need: 1, bound: 4,
+      action: "Back in n1. current.remove last → current = [1].",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: ["n12"], doneNodes: ["n12"], revealedPrunes: [], result: [[1, 2]] },
+
+    { line: [14, 15], activeI: 3, activeIndex: 2, current: [1, 3], need: 1, bound: 4,
+      action: "i=3 ≤ 4 ✓. current.add(3). current = [1, 3].",
+      kind: "pick", activeNode: "n1", onPath: ["n0"], successNodes: ["n12"], doneNodes: ["n12"], revealedPrunes: [], result: [[1, 2]] },
+
+    { line: [16], activeI: 3, activeIndex: 4, current: [1, 3], need: 0, bound: 5,
+      action: "Call backtrack(n=4, index=4, [1, 3], k=2).",
+      kind: "call", activeNode: "n13", onPath: ["n0", "n1"], successNodes: ["n12"], doneNodes: ["n12"], revealedPrunes: [], result: [[1, 2]] },
+
+    { line: [9, 10], activeI: null, activeIndex: 4, current: [1, 3], need: 0, bound: 5,
+      action: "RECORD [1, 3]. ★",
+      kind: "record", activeNode: "n13", onPath: ["n0", "n1"], successNodes: ["n12", "n13"], doneNodes: ["n12"], revealedPrunes: [], result: [[1, 2], [1, 3]] },
+
+    { line: [11, 17], activeI: 3, activeIndex: 2, current: [1], need: 1, bound: 4,
+      action: "Return. Back in n1. Remove 3 → current = [1].",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: ["n12", "n13"], doneNodes: ["n12", "n13"], revealedPrunes: [], result: [[1, 2], [1, 3]] },
+
+    { line: [14, 15], activeI: 4, activeIndex: 2, current: [1, 4], need: 1, bound: 4,
+      action: "i=4 ≤ 4 ✓. current.add(4). current = [1, 4].",
+      kind: "pick", activeNode: "n1", onPath: ["n0"], successNodes: ["n12", "n13"], doneNodes: ["n12", "n13"], revealedPrunes: [], result: [[1, 2], [1, 3]] },
+
+    { line: [16], activeI: 4, activeIndex: 5, current: [1, 4], need: 0, bound: 5,
+      action: "Call backtrack(n=4, index=5, [1, 4], k=2).",
+      kind: "call", activeNode: "n14", onPath: ["n0", "n1"], successNodes: ["n12", "n13"], doneNodes: ["n12", "n13"], revealedPrunes: [], result: [[1, 2], [1, 3]] },
+
+    { line: [9, 10], activeI: null, activeIndex: 5, current: [1, 4], need: 0, bound: 5,
+      action: "RECORD [1, 4]. ★",
+      kind: "record", activeNode: "n14", onPath: ["n0", "n1"], successNodes: ["n12", "n13", "n14"], doneNodes: ["n12", "n13"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4]] },
+
+    { line: [11, 17], activeI: 4, activeIndex: 2, current: [1], need: 1, bound: 4,
+      action: "Return. Back in n1. Remove 4 → current = [1].",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: ["n12", "n13", "n14"], doneNodes: ["n12", "n13", "n14"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4]] },
+
+    { line: [14, 18, 19], activeI: null, activeIndex: 2, current: [1], need: 1, bound: 4,
+      action: "Loop in n1 exhausted (i=5 > bound 4). Return.",
+      kind: "return", activeNode: "n1", onPath: ["n0"], successNodes: ["n12", "n13", "n14"], doneNodes: ["n1", "n12", "n13", "n14"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4]] },
+
+    { line: [17], activeI: 1, activeIndex: 1, current: [], need: 2, bound: 3,
+      action: "Back in n0. Remove 1 → current = [].",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n12", "n13", "n14"], doneNodes: ["n1", "n12", "n13", "n14"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4]] },
+
+    { line: [14, 15], activeI: 2, activeIndex: 1, current: [2], need: 2, bound: 3,
+      action: "i=2 ≤ 3 ✓. current.add(2). current = [2].",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: ["n12", "n13", "n14"], doneNodes: ["n1", "n12", "n13", "n14"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4]] },
+
+    { line: [16], activeI: 2, activeIndex: 3, current: [2], need: 1, bound: 4,
+      action: "Call backtrack(n=4, index=3, [2], k=2).",
+      kind: "call", activeNode: "n2", onPath: ["n0"], successNodes: ["n12", "n13", "n14"], doneNodes: ["n1", "n12", "n13", "n14"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4]] },
+
+    { line: [14, 15], activeI: 3, activeIndex: 3, current: [2, 3], need: 1, bound: 4,
+      action: "i=3 ≤ 4 ✓. Pick 3. current = [2, 3].",
+      kind: "pick", activeNode: "n2", onPath: ["n0"], successNodes: ["n12", "n13", "n14"], doneNodes: ["n1", "n12", "n13", "n14"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4]] },
+
+    { line: [16, 9, 10], activeI: 3, activeIndex: 4, current: [2, 3], need: 0, bound: 5,
+      action: "Call backtrack(index=4, [2, 3]). RECORD [2, 3]. ★",
+      kind: "record", activeNode: "n23", onPath: ["n0", "n2"], successNodes: ["n12", "n13", "n14", "n23"], doneNodes: ["n1", "n12", "n13", "n14"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3]] },
+
+    { line: [11, 17], activeI: 3, activeIndex: 3, current: [2], need: 1, bound: 4,
+      action: "Return. Back in n2. Remove 3 → current = [2].",
+      kind: "return", activeNode: "n2", onPath: ["n0"], successNodes: ["n12", "n13", "n14", "n23"], doneNodes: ["n1", "n12", "n13", "n14", "n23"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3]] },
+
+    { line: [14, 15], activeI: 4, activeIndex: 3, current: [2, 4], need: 1, bound: 4,
+      action: "i=4 ≤ 4 ✓. Pick 4. current = [2, 4].",
+      kind: "pick", activeNode: "n2", onPath: ["n0"], successNodes: ["n12", "n13", "n14", "n23"], doneNodes: ["n1", "n12", "n13", "n14", "n23"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3]] },
+
+    { line: [16, 9, 10], activeI: 4, activeIndex: 5, current: [2, 4], need: 0, bound: 5,
+      action: "Call backtrack(index=5, [2, 4]). RECORD [2, 4]. ★",
+      kind: "record", activeNode: "n24", onPath: ["n0", "n2"], successNodes: ["n12", "n13", "n14", "n23", "n24"], doneNodes: ["n1", "n12", "n13", "n14", "n23"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4]] },
+
+    { line: [11, 17, 14, 18, 19], activeI: null, activeIndex: 3, current: [2], need: 1, bound: 4,
+      action: "Return. Remove 4. Loop in n2 exhausted. Return from n2.",
+      kind: "return", activeNode: "n2", onPath: ["n0"], successNodes: ["n12", "n13", "n14", "n23", "n24"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23", "n24"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4]] },
+
+    { line: [17], activeI: 2, activeIndex: 1, current: [], need: 2, bound: 3,
+      action: "Back in n0. Remove 2 → current = [].",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n12", "n13", "n14", "n23", "n24"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23", "n24"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4]] },
+
+    { line: [14, 15], activeI: 3, activeIndex: 1, current: [3], need: 2, bound: 3,
+      action: "i=3 ≤ 3 ✓. Pick 3. current = [3].",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: ["n12", "n13", "n14", "n23", "n24"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23", "n24"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4]] },
+
+    { line: [16], activeI: 3, activeIndex: 4, current: [3], need: 1, bound: 4,
+      action: "Call backtrack(n=4, index=4, [3], k=2).",
+      kind: "call", activeNode: "n3", onPath: ["n0"], successNodes: ["n12", "n13", "n14", "n23", "n24"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23", "n24"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4]] },
+
+    { line: [14, 15], activeI: 4, activeIndex: 4, current: [3, 4], need: 1, bound: 4,
+      action: "i=4 ≤ 4 ✓. Pick 4. current = [3, 4].",
+      kind: "pick", activeNode: "n3", onPath: ["n0"], successNodes: ["n12", "n13", "n14", "n23", "n24"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23", "n24"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4]] },
+
+    { line: [16, 9, 10], activeI: 4, activeIndex: 5, current: [3, 4], need: 0, bound: 5,
+      action: "Call. RECORD [3, 4]. ★",
+      kind: "record", activeNode: "n34", onPath: ["n0", "n3"], successNodes: ["n12", "n13", "n14", "n23", "n24", "n34"], doneNodes: ["n1", "n2", "n12", "n13", "n14", "n23", "n24"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]] },
+
+    { line: [11, 17, 14, 18, 19], activeI: null, activeIndex: 4, current: [3], need: 1, bound: 4,
+      action: "Return. Remove. Loop in n3 exhausted. Return from n3.",
+      kind: "return", activeNode: "n3", onPath: ["n0"], successNodes: ["n12", "n13", "n14", "n23", "n24", "n34"], doneNodes: ["n1", "n2", "n3", "n12", "n13", "n14", "n23", "n24", "n34"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]] },
+
+    { line: [17], activeI: 3, activeIndex: 1, current: [], need: 2, bound: 3,
+      action: "Back in n0. Remove 3 → current = [].",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n12", "n13", "n14", "n23", "n24", "n34"], doneNodes: ["n1", "n2", "n3", "n12", "n13", "n14", "n23", "n24", "n34"], revealedPrunes: [], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]] },
+
+    { line: [14], activeI: 4, activeIndex: 1, current: [], need: 2, bound: 3,
+      action: "Next loop iter: i=4. Check: 4 ≤ bound (3)? NO. PRUNED — starting from 4 leaves only {4}, need 2 picks, impossible.",
+      kind: "prune", activeNode: "n0", onPath: [], successNodes: ["n12", "n13", "n14", "n23", "n24", "n34"], doneNodes: ["n1", "n2", "n3", "n12", "n13", "n14", "n23", "n24", "n34"], revealedPrunes: ["pr_r"], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]] },
+
+    { line: [18, 19], activeI: null, activeIndex: 1, current: [], need: 2, bound: 3,
+      action: "Return from n0. DONE — 6 combinations = C(4, 2). All without exploring any dead branch.",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n12", "n13", "n14", "n23", "n24", "n34"], doneNodes: ["n0", "n1", "n2", "n3", "n12", "n13", "n14", "n23", "n24", "n34"], revealedPrunes: ["pr_r"], result: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]] }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const currentCellsEl = document.getElementById('currentCells');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const sizeValEl = document.getElementById('sizeVal');
+  const needValEl = document.getElementById('needVal');
+  const boundValEl = document.getElementById('boundVal');
+  const pillSizeEl = document.getElementById('pillSize');
+
+  function render(idx, animateAdd = false) {
+    const s = steps[idx];
+    // Code lines
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pool cells
+    poolCells.forEach((el, i) => {
+      el.classList.remove('i-cursor', 'index-mark', 'dim', 'beyond-bound');
+      const digit = i + 1;
+      // Dim digits already in current (no reuse)
+      if (s.current.includes(digit)) {
+        el.classList.add('dim');
+      }
+      // Beyond loop bound (still could be in pool but unreachable)
+      if (digit > s.bound && digit <= N) {
+        el.classList.add('beyond-bound');
+      }
+      if (s.activeIndex && digit === s.activeIndex && digit !== s.activeI) {
+        el.classList.add('index-mark');
+      }
+      if (s.activeI !== null && digit === s.activeI) {
+        el.classList.add('i-cursor');
+      }
+    });
+    // Pills
+    sizeValEl.textContent = `${s.current.length} / ${K}`;
+    pillSizeEl.classList.toggle('full', s.current.length === K);
+    needValEl.textContent = s.need;
+    boundValEl.textContent = s.bound;
+    // Current
+    currentCellsEl.innerHTML = '';
+    s.current.forEach((v, i) => {
+      const c = document.createElement('div');
+      c.className = 'cell';
+      if (animateAdd && i === s.current.length - 1 && s.kind === 'pick') {
+        c.classList.add('just-added');
+      }
+      c.textContent = v;
+      currentCellsEl.appendChild(c);
+    });
+    // Tree nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-path', 'success', 'done');
+      if (key.startsWith('pr_')) {
+        el.style.display = s.revealedPrunes.includes(key) ? '' : 'none';
+      } else {
+        if (s.successNodes.includes(key)) {
+          el.classList.add('success');
+        } else if (s.doneNodes.includes(key)) {
+          el.classList.add('done');
+        } else if (s.activeNode === key) {
+          el.classList.add('active');
+        } else if (s.onPath.includes(key)) {
+          el.classList.add('on-path');
+        }
+      }
+    });
+    // Edges
+    edges.forEach(([from, to, kind]) => {
+      const e = edgeEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      if (kind === 'prune') {
+        e.style.display = s.revealedPrunes.includes(to) ? '' : 'none';
+      } else {
+        const pathSet = new Set([...s.onPath, s.activeNode]);
+        if (pathSet.has(from) && pathSet.has(to)) {
+          e.classList.add('on-path');
+        }
+      }
+    });
+    // Result
+    resultEl.innerHTML = '';
+    s.result.forEach((combo, i) => {
+      const li = document.createElement('li');
+      li.textContent = JSON.stringify(combo).replace(/,/g, ', ');
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    // Action card
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    // Step info
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+
+  function goTo(idx, animate = false) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx, animate);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1, false);
+  });
+  nextBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(stepIdx + 1, true);
+  });
+  resetBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(0, false);
+  });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1, true);
+    }, 1100);
+  });
+
+  goTo(0, false);
+</script>
+</body>
+</html>
