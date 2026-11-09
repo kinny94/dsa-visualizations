@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 761 — Special Binary String</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 500px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .pills { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    transition: all 0.25s;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.bal-zero .pill-v { color: #4de88c; }
+  .label { width: 72px; font-size: 11px; color: #aaa; text-align: right; }
+  .char-row { display: flex; gap: 4px; align-items: center; min-height: 48px; }
+  .char-cell {
+    width: 28px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.25s;
+    font-family: 'Monaco', monospace;
+    font-size: 14px;
+    position: relative;
+  }
+  .char-cell.char-1 { color: #ffd87a; }
+  .char-cell.char-0 { color: #9ad4ff; }
+  .char-cell.before-start { opacity: 0.3; }
+  .char-cell.in-window { border-color: #ffa500; background: #3a2a0a; }
+  .char-cell.window-start { box-shadow: -3px 0 0 #ffa500; }
+  .char-cell.window-end   { box-shadow:  3px 0 0 #ffa500; }
+  .char-cell.at-i { border-color: #e94560; box-shadow: 0 0 6px rgba(233, 69, 96, 0.6); }
+  .char-cell .idx-num {
+    position: absolute;
+    top: -14px; left: 0; right: 0;
+    text-align: center;
+    font-size: 9px;
+    color: #666;
+    font-weight: normal;
+  }
+  .char-cell .bal-num {
+    position: absolute;
+    bottom: -14px; left: 0; right: 0;
+    text-align: center;
+    font-size: 9px;
+    color: #ffa500;
+    font-weight: bold;
+    font-family: 'Monaco', monospace;
+  }
+  .parts-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    flex-wrap: wrap;
+  }
+  .parts-list {
+    display: inline-flex;
+    gap: 6px;
+    padding: 4px 6px;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 6px;
+    min-height: 36px;
+    align-items: center;
+    font-family: 'Monaco', monospace;
+    min-width: 72px;
+    flex-wrap: wrap;
+  }
+  .parts-list.empty { color: #6a7a9a; font-size: 13px; padding-left: 10px; }
+  .parts-list .part {
+    display: inline-flex;
+    padding: 2px 8px;
+    background: #0f6b3a;
+    border: 1px solid #0f9950;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+  }
+  .parts-list .part.just-added { animation: pop 0.35s ease-out; }
+  .parts-list .part.sorted { background: #7a5a0f; border-color: #c08020; }
+  @keyframes pop {
+    0% { transform: scale(0.1); opacity: 0; }
+    60% { transform: scale(1.3); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #bbb;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box .sub-text { fill: #888; font-size: 9px; }
+  .node-box .ret-text { fill: #4de88c; font-size: 10px; font-weight: bold; }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .node-box.done .ret-text { fill: #4de88c; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 72px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-walk { background: #1a4a7a; color: white; }
+  .kind-hit  { background: #e94560; color: white; }
+  .kind-recurse { background: #c080e8; color: #1a1a2e; }
+  .kind-collect { background: #0f9950; color: white; }
+  .kind-sort { background: #c08020; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .result-box {
+    font-family: 'Monaco', monospace;
+    font-size: 14px;
+    padding: 10px;
+    background: #0f3460;
+    border-radius: 4px;
+    border-left: 3px solid #0f9950;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-align: center;
+    min-height: 40px;
+    color: #4de88c;
+  }
+  .result-box .pending { color: #888; font-size: 12px; font-style: italic; letter-spacing: normal; }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 2px; }
+  .chip-active { background: #e94560; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 761 — Special Binary String</h1>
+    <div class="subtitle">Recursive decomposition · balance walk splits top-level children · sort desc · concatenate &nbsp;·&nbsp; s = "11011000"</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill"><span class="pill-k">depth</span><span class="pill-v" id="depthVal">0</span></span>
+      <span class="pill" id="pillBal"><span class="pill-k">balance</span><span class="pill-v" id="balVal">0</span></span>
+      <span class="pill"><span class="pill-k">start</span><span class="pill-v" id="startVal">0</span></span>
+      <span class="pill"><span class="pill-k">i</span><span class="pill-v" id="iVal">—</span></span>
+    </div>
+    <div class="row">
+      <span class="label">local s:</span>
+      <div class="char-row" id="chars"></div>
+    </div>
+    <div class="row parts-wrap">
+      <span class="label">parts:</span>
+      <div class="parts-list empty" id="parts">[]</div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 920 400" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result</div>
+    <div class="result-box" id="result"><span class="pending">(running…)</span></div>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Legend — char cells</div>
+      <div><span style="color:#ffd87a">1</span> / <span style="color:#9ad4ff">0</span> colored by bit</div>
+      <div><span style="color:#ffa500">orange outline</span> = current window [start..i]</div>
+      <div><span style="color:#e94560">pink glow</span> = cell at pointer i</div>
+      <div><span style="color:#ffa500; font-size:9px;">bal</span> below each cell = running balance after visiting it</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public String makeLargestSpecial(String s) {",
+    "    List<String> parts = new ArrayList<>();",
+    "    int balance = 0;",
+    "    int start = 0;",
+    "    for (int i = 0; i < s.length(); i++) {",
+    "        balance += (s.charAt(i) == '1') ? 1 : -1;",
+    "        if (balance == 0) {",
+    "            String inner = makeLargestSpecial(",
+    "                s.substring(start + 1, i));",
+    "            parts.add(\"1\" + inner + \"0\");",
+    "            start = i + 1;",
+    "        }",
+    "    }",
+    "    parts.sort(Collections.reverseOrder());",
+    "    StringBuilder sb = new StringBuilder();",
+    "    for (String p : parts) {",
+    "        sb.append(p);",
+    "    }",
+    "    return sb.toString();",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ RECURSION CALL TREE ============
+  // Static layout of every call made during the run.
+  //
+  //       call0 ("11011000")
+  //           |
+  //       call1 ("101100")
+  //         /   \
+  //    call2a   call3 ("10")
+  //    ("")       |
+  //              call4 ("")
+  //
+  const nodes = {
+    call0: { x: 460, y:  50, w: 190, label: 's = "11011000"', sub: 'depth 0', ret: '"11100100"' },
+    call1: { x: 460, y: 140, w: 170, label: 's = "101100"',   sub: 'depth 1', ret: '"110010"'   },
+    call2a:{ x: 280, y: 230, w: 130, label: 's = ""',          sub: 'depth 2', ret: '""'         },
+    call3: { x: 640, y: 230, w: 130, label: 's = "10"',        sub: 'depth 2', ret: '"10"'       },
+    call4: { x: 640, y: 320, w: 130, label: 's = ""',          sub: 'depth 3', ret: '""'         }
+  };
+  const edges = [
+    ["call0", "call1"],
+    ["call1", "call2a"],
+    ["call1", "call3"],
+    ["call3", "call4"]
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(([from, to]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 22);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 22);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box');
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 22);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 44);
+    rect.setAttribute('rx', 6);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y - 8);
+    t.textContent = n.label;
+    g.appendChild(t);
+    const sub = document.createElementNS(SVGNS, 'text');
+    sub.setAttribute('x', n.x);
+    sub.setAttribute('y', n.y + 6);
+    sub.setAttribute('class', 'sub-text');
+    sub.textContent = n.sub;
+    g.appendChild(sub);
+    const ret = document.createElementNS(SVGNS, 'text');
+    ret.setAttribute('x', n.x);
+    ret.setAttribute('y', n.y + 18);
+    ret.setAttribute('class', 'ret-text');
+    ret.textContent = '';
+    g.appendChild(ret);
+    svg.appendChild(g);
+    nodeEls[key] = { g, ret };
+  });
+
+  // ============ STEP DATA ============
+  // local: string being processed by the active frame
+  // bals:  per-position running balance *after* visiting that char (null until visited)
+  //
+  const steps = [
+    // -- 1 -- Entry call0
+    { line: [1,2,3,4], local: "11011000", depth: 0, balance: 0, start: 0, i: null, bals: [null,null,null,null,null,null,null,null], windowStart: null, windowEnd: null,
+      parts: [], sortedIdx: -1,
+      action: "Entry. makeLargestSpecial(\"11011000\"). parts=[], balance=0, start=0.",
+      kind: "call", active: "call0", onPath: [], done: [], returned: {}, result: null },
+
+    // -- 2 -- iter i=0 (balance 1)
+    { line: [5,6], local: "11011000", depth: 0, balance: 1, start: 0, i: 0, bals: [1,null,null,null,null,null,null,null], windowStart: 0, windowEnd: 0,
+      parts: [], sortedIdx: -1,
+      action: "i=0: s[0]='1' → balance +=1 → 1. Not 0.",
+      kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
+
+    // -- 3 -- iter i=1 (bal 2)
+    { line: [5,6], local: "11011000", depth: 0, balance: 2, start: 0, i: 1, bals: [1,2,null,null,null,null,null,null], windowStart: 0, windowEnd: 1,
+      parts: [], sortedIdx: -1,
+      action: "i=1: s[1]='1' → balance=2.",
+      kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
+
+    // -- 4 -- iter i=2 (bal 1)
+    { line: [5,6], local: "11011000", depth: 0, balance: 1, start: 0, i: 2, bals: [1,2,1,null,null,null,null,null], windowStart: 0, windowEnd: 2,
+      parts: [], sortedIdx: -1,
+      action: "i=2: s[2]='0' → balance=1.",
+      kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
+
+    // -- 5 -- iter i=3 (bal 2)
+    { line: [5,6], local: "11011000", depth: 0, balance: 2, start: 0, i: 3, bals: [1,2,1,2,null,null,null,null], windowStart: 0, windowEnd: 3,
+      parts: [], sortedIdx: -1,
+      action: "i=3: s[3]='1' → balance=2.",
+      kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
+
+    // -- 6 -- iter i=4 (bal 3)
+    { line: [5,6], local: "11011000", depth: 0, balance: 3, start: 0, i: 4, bals: [1,2,1,2,3,null,null,null], windowStart: 0, windowEnd: 4,
+      parts: [], sortedIdx: -1,
+      action: "i=4: s[4]='1' → balance=3.",
+      kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
+
+    // -- 7 -- iter i=5 (bal 2)
+    { line: [5,6], local: "11011000", depth: 0, balance: 2, start: 0, i: 5, bals: [1,2,1,2,3,2,null,null], windowStart: 0, windowEnd: 5,
+      parts: [], sortedIdx: -1,
+      action: "i=5: s[5]='0' → balance=2.",
+      kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
+
+    // -- 8 -- iter i=6 (bal 1)
+    { line: [5,6], local: "11011000", depth: 0, balance: 1, start: 0, i: 6, bals: [1,2,1,2,3,2,1,null], windowStart: 0, windowEnd: 6,
+      parts: [], sortedIdx: -1,
+      action: "i=6: s[6]='0' → balance=1.",
+      kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
+
+    // -- 9 -- iter i=7 HIT (bal 0)
+    { line: [5,6,7], local: "11011000", depth: 0, balance: 0, start: 0, i: 7, bals: [1,2,1,2,3,2,1,0], windowStart: 0, windowEnd: 7,
+      parts: [], sortedIdx: -1,
+      action: "i=7: s[7]='0' → balance=0. HIT ★ — s[0..7]=\"11011000\" is a top-level child. Peel outer: interior=\"101100\". Recurse.",
+      kind: "hit", active: "call0", onPath: [], done: [], returned: {}, result: null },
+
+    // -- 10 -- Enter call1
+    { line: [8,9], local: "101100", depth: 1, balance: 0, start: 0, i: null, bals: [null,null,null,null,null,null], windowStart: null, windowEnd: null,
+      parts: [], sortedIdx: -1,
+      action: "→ makeLargestSpecial(\"101100\"). New frame. parts=[], balance=0, start=0.",
+      kind: "recurse", active: "call1", onPath: ["call0"], done: [], returned: {}, result: null },
+
+    // -- 11 -- call1 i=0 (bal 1)
+    { line: [5,6], local: "101100", depth: 1, balance: 1, start: 0, i: 0, bals: [1,null,null,null,null,null], windowStart: 0, windowEnd: 0,
+      parts: [], sortedIdx: -1,
+      action: "i=0: '1' → balance=1.",
+      kind: "walk", active: "call1", onPath: ["call0"], done: [], returned: {}, result: null },
+
+    // -- 12 -- call1 i=1 HIT (bal 0)
+    { line: [5,6,7], local: "101100", depth: 1, balance: 0, start: 0, i: 1, bals: [1,0,null,null,null,null], windowStart: 0, windowEnd: 1,
+      parts: [], sortedIdx: -1,
+      action: "i=1: '0' → balance=0. HIT ★ — s[0..1]=\"10\". Peel: interior=\"\". Recurse.",
+      kind: "hit", active: "call1", onPath: ["call0"], done: [], returned: {}, result: null },
+
+    // -- 13 -- Enter call2a (empty)
+    { line: [8,9], local: "", depth: 2, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
+      parts: [], sortedIdx: -1,
+      action: "→ makeLargestSpecial(\"\"). Empty string.",
+      kind: "recurse", active: "call2a", onPath: ["call0","call1"], done: [], returned: {}, result: null },
+
+    // -- 14 -- call2a return
+    { line: [14,15,16,17,18,19], local: "", depth: 2, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
+      parts: [], sortedIdx: -1,
+      action: "Empty loop. parts=[]. Sort trivially. Return \"\".",
+      kind: "return", active: "call2a", onPath: ["call0","call1"], done: ["call2a"], returned: {call2a: '""'}, result: null },
+
+    // -- 15 -- back in call1: add "10"
+    { line: [10,11], local: "101100", depth: 1, balance: 0, start: 2, i: 1, bals: [1,0,null,null,null,null], windowStart: null, windowEnd: null,
+      parts: ["10"], justAdded: 0, sortedIdx: -1,
+      action: "Back in call1. parts.add(\"1\"+\"\"+\"0\") = \"10\". parts=[\"10\"]. start = i+1 = 2.",
+      kind: "collect", active: "call1", onPath: ["call0"], done: ["call2a"], returned: {call2a: '""'}, result: null },
+
+    // -- 16 -- call1 i=2 (bal 1)
+    { line: [5,6], local: "101100", depth: 1, balance: 1, start: 2, i: 2, bals: [1,0,1,null,null,null], windowStart: 2, windowEnd: 2,
+      parts: ["10"], sortedIdx: -1,
+      action: "i=2: '1' → balance=1.",
+      kind: "walk", active: "call1", onPath: ["call0"], done: ["call2a"], returned: {call2a: '""'}, result: null },
+
+    // -- 17 -- call1 i=3 (bal 2)
+    { line: [5,6], local: "101100", depth: 1, balance: 2, start: 2, i: 3, bals: [1,0,1,2,null,null], windowStart: 2, windowEnd: 3,
+      parts: ["10"], sortedIdx: -1,
+      action: "i=3: '1' → balance=2.",
+      kind: "walk", active: "call1", onPath: ["call0"], done: ["call2a"], returned: {call2a: '""'}, result: null },
+
+    // -- 18 -- call1 i=4 (bal 1)
+    { line: [5,6], local: "101100", depth: 1, balance: 1, start: 2, i: 4, bals: [1,0,1,2,1,null], windowStart: 2, windowEnd: 4,
+      parts: ["10"], sortedIdx: -1,
+      action: "i=4: '0' → balance=1.",
+      kind: "walk", active: "call1", onPath: ["call0"], done: ["call2a"], returned: {call2a: '""'}, result: null },
+
+    // -- 19 -- call1 i=5 HIT (bal 0)
+    { line: [5,6,7], local: "101100", depth: 1, balance: 0, start: 2, i: 5, bals: [1,0,1,2,1,0], windowStart: 2, windowEnd: 5,
+      parts: ["10"], sortedIdx: -1,
+      action: "i=5: '0' → balance=0. HIT ★ — s[2..5]=\"1100\". Peel: interior=\"10\". Recurse.",
+      kind: "hit", active: "call1", onPath: ["call0"], done: ["call2a"], returned: {call2a: '""'}, result: null },
+
+    // -- 20 -- Enter call3 ("10")
+    { line: [8,9], local: "10", depth: 2, balance: 0, start: 0, i: null, bals: [null,null], windowStart: null, windowEnd: null,
+      parts: [], sortedIdx: -1,
+      action: "→ makeLargestSpecial(\"10\"). parts=[], balance=0, start=0.",
+      kind: "recurse", active: "call3", onPath: ["call0","call1"], done: ["call2a"], returned: {call2a: '""'}, result: null },
+
+    // -- 21 -- call3 i=0 (bal 1)
+    { line: [5,6], local: "10", depth: 2, balance: 1, start: 0, i: 0, bals: [1,null], windowStart: 0, windowEnd: 0,
+      parts: [], sortedIdx: -1,
+      action: "i=0: '1' → balance=1.",
+      kind: "walk", active: "call3", onPath: ["call0","call1"], done: ["call2a"], returned: {call2a: '""'}, result: null },
+
+    // -- 22 -- call3 i=1 HIT (bal 0)
+    { line: [5,6,7], local: "10", depth: 2, balance: 0, start: 0, i: 1, bals: [1,0], windowStart: 0, windowEnd: 1,
+      parts: [], sortedIdx: -1,
+      action: "i=1: '0' → balance=0. HIT ★ — s[0..1]=\"10\". Peel: interior=\"\". Recurse.",
+      kind: "hit", active: "call3", onPath: ["call0","call1"], done: ["call2a"], returned: {call2a: '""'}, result: null },
+
+    // -- 23 -- Enter call4 (empty)
+    { line: [8,9], local: "", depth: 3, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
+      parts: [], sortedIdx: -1,
+      action: "→ makeLargestSpecial(\"\"). Empty string.",
+      kind: "recurse", active: "call4", onPath: ["call0","call1","call3"], done: ["call2a"], returned: {call2a: '""'}, result: null },
+
+    // -- 24 -- call4 return
+    { line: [14,19], local: "", depth: 3, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
+      parts: [], sortedIdx: -1,
+      action: "Empty loop. Return \"\".",
+      kind: "return", active: "call4", onPath: ["call0","call1","call3"], done: ["call2a","call4"], returned: {call2a: '""', call4: '""'}, result: null },
+
+    // -- 25 -- back in call3: add "10"
+    { line: [10,11], local: "10", depth: 2, balance: 0, start: 2, i: 1, bals: [1,0], windowStart: null, windowEnd: null,
+      parts: ["10"], justAdded: 0, sortedIdx: -1,
+      action: "Back in call3. parts.add(\"1\"+\"\"+\"0\") = \"10\". parts=[\"10\"]. start = 2.",
+      kind: "collect", active: "call3", onPath: ["call0","call1"], done: ["call2a","call4"], returned: {call2a: '""', call4: '""'}, result: null },
+
+    // -- 26 -- call3 loop done, sort & return
+    { line: [14,15,16,17,18,19], local: "10", depth: 2, balance: 0, start: 2, i: 1, bals: [1,0], windowStart: null, windowEnd: null,
+      parts: ["10"], sortedIdx: 0,
+      action: "Loop done. Sort [\"10\"] desc → [\"10\"]. Concat → \"10\". Return \"10\".",
+      kind: "return", active: "call3", onPath: ["call0","call1"], done: ["call2a","call4","call3"], returned: {call2a: '""', call4: '""', call3: '"10"'}, result: null },
+
+    // -- 27 -- back in call1: add "1100"
+    { line: [10,11], local: "101100", depth: 1, balance: 0, start: 6, i: 5, bals: [1,0,1,2,1,0], windowStart: null, windowEnd: null,
+      parts: ["10","1100"], justAdded: 1, sortedIdx: -1,
+      action: "Back in call1. parts.add(\"1\"+\"10\"+\"0\") = \"1100\". parts=[\"10\",\"1100\"]. start = 6.",
+      kind: "collect", active: "call1", onPath: ["call0"], done: ["call2a","call4","call3"], returned: {call2a: '""', call4: '""', call3: '"10"'}, result: null },
+
+    // -- 28 -- call1 loop done, sort
+    { line: [14], local: "101100", depth: 1, balance: 0, start: 6, i: 5, bals: [1,0,1,2,1,0], windowStart: null, windowEnd: null,
+      parts: ["1100","10"], sortedIdx: 2,
+      action: "Loop done (i=5 was last). Sort parts desc: \"1100\" > \"10\" → [\"1100\",\"10\"].",
+      kind: "sort", active: "call1", onPath: ["call0"], done: ["call2a","call4","call3"], returned: {call2a: '""', call4: '""', call3: '"10"'}, result: null },
+
+    // -- 29 -- call1 concat & return
+    { line: [15,16,17,18,19], local: "101100", depth: 1, balance: 0, start: 6, i: 5, bals: [1,0,1,2,1,0], windowStart: null, windowEnd: null,
+      parts: ["1100","10"], sortedIdx: 2,
+      action: "Concat → \"110010\". Return \"110010\".",
+      kind: "return", active: "call1", onPath: ["call0"], done: ["call2a","call4","call3","call1"], returned: {call2a: '""', call4: '""', call3: '"10"', call1: '"110010"'}, result: null },
+
+    // -- 30 -- back in call0: add "11100100"
+    { line: [10,11], local: "11011000", depth: 0, balance: 0, start: 8, i: 7, bals: [1,2,1,2,3,2,1,0], windowStart: null, windowEnd: null,
+      parts: ["11100100"], justAdded: 0, sortedIdx: -1,
+      action: "Back in call0. parts.add(\"1\"+\"110010\"+\"0\") = \"11100100\". parts=[\"11100100\"]. start = 8.",
+      kind: "collect", active: "call0", onPath: [], done: ["call2a","call4","call3","call1"], returned: {call2a: '""', call4: '""', call3: '"10"', call1: '"110010"'}, result: null },
+
+    // -- 31 -- call0 loop done, sort & return & final result
+    { line: [14,15,16,17,18,19], local: "11011000", depth: 0, balance: 0, start: 8, i: 7, bals: [1,2,1,2,3,2,1,0], windowStart: null, windowEnd: null,
+      parts: ["11100100"], sortedIdx: 1,
+      action: "Loop done. Sort trivially. Concat → \"11100100\". Return \"11100100\". ★ FINAL ANSWER.",
+      kind: "return", active: "call0", onPath: [], done: ["call2a","call4","call3","call1","call0"],
+      returned: {call2a: '""', call4: '""', call3: '"10"', call1: '"110010"', call0: '"11100100"'},
+      result: "11100100" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevCharsLen = 0;
+  const charsEl = document.getElementById('chars');
+  const partsEl = document.getElementById('parts');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const depthValEl = document.getElementById('depthVal');
+  const balValEl   = document.getElementById('balVal');
+  const pillBalEl  = document.getElementById('pillBal');
+  const startValEl = document.getElementById('startVal');
+  const iValEl     = document.getElementById('iVal');
+  const resultEl   = document.getElementById('result');
+
+  function renderChars(local, bals, i, windowStart, windowEnd, start) {
+    // Rebuild cells if local length changed.
+    if (local.length !== prevCharsLen) {
+      charsEl.innerHTML = '';
+      for (let k = 0; k < local.length; k++) {
+        const cell = document.createElement('div');
+        cell.className = 'char-cell';
+        cell.innerHTML = '';
+        const idxLbl = document.createElement('span');
+        idxLbl.className = 'idx-num';
+        idxLbl.textContent = k;
+        const chLbl = document.createElement('span');
+        chLbl.textContent = local[k];
+        const balLbl = document.createElement('span');
+        balLbl.className = 'bal-num';
+        balLbl.textContent = '';
+        cell.appendChild(idxLbl);
+        cell.appendChild(chLbl);
+        cell.appendChild(balLbl);
+        charsEl.appendChild(cell);
+      }
+      prevCharsLen = local.length;
+    }
+    // Update each cell
+    const cells = charsEl.querySelectorAll('.char-cell');
+    for (let k = 0; k < local.length; k++) {
+      const cell = cells[k];
+      cell.classList.remove('before-start', 'in-window', 'window-start', 'window-end', 'at-i', 'char-1', 'char-0');
+      cell.classList.add(local[k] === '1' ? 'char-1' : 'char-0');
+      if (k < start) { cell.classList.add('before-start'); }
+      if (windowStart !== null && k >= windowStart && k <= windowEnd) {
+        cell.classList.add('in-window');
+        if (k === windowStart) { cell.classList.add('window-start'); }
+        if (k === windowEnd)   { cell.classList.add('window-end'); }
+      }
+      if (i !== null && k === i) { cell.classList.add('at-i'); }
+      // Update text + balance underneath
+      const kids = cell.children;
+      kids[1].textContent = local[k];
+      kids[2].textContent = (bals[k] === null || bals[k] === undefined) ? '' : bals[k];
+    }
+    if (local.length === 0) {
+      charsEl.innerHTML = '<span style="color:#6a7a9a; font-size:12px; font-style:italic; padding-left:8px;">(empty)</span>';
+      prevCharsLen = 0;
+    }
+  }
+
+  function renderParts(parts, justAdded, sortedIdx) {
+    partsEl.classList.toggle('empty', parts.length === 0);
+    if (parts.length === 0) {
+      partsEl.textContent = '[]';
+      return;
+    }
+    partsEl.innerHTML = '';
+    for (let k = 0; k < parts.length; k++) {
+      const el = document.createElement('span');
+      el.className = 'part';
+      el.textContent = parts[k];
+      if (k === justAdded) { el.classList.add('just-added'); }
+      if (sortedIdx >= 0 && k < sortedIdx) { el.classList.add('sorted'); }
+      partsEl.appendChild(el);
+    }
+  }
+
+  function render(idx) {
+    const s = steps[idx];
+    // Code
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    depthValEl.textContent = s.depth;
+    balValEl.textContent = s.balance;
+    pillBalEl.classList.toggle('bal-zero', s.balance === 0);
+    startValEl.textContent = s.start;
+    iValEl.textContent = (s.i === null || s.i === undefined) ? '—' : s.i;
+    // Chars
+    renderChars(s.local, s.bals, s.i, s.windowStart, s.windowEnd, s.start);
+    // Parts
+    renderParts(s.parts, s.justAdded, s.sortedIdx);
+    // Tree
+    Object.keys(nodeEls).forEach(key => {
+      const { g, ret } = nodeEls[key];
+      g.classList.remove('active', 'on-path', 'done');
+      if (s.active === key) { g.classList.add('active'); }
+      else if (s.done.includes(key)) { g.classList.add('done'); }
+      else if (s.onPath.includes(key)) { g.classList.add('on-path'); }
+      ret.textContent = s.returned[key] ? ('→ ' + s.returned[key]) : '';
+    });
+    edges.forEach(([from, to]) => {
+      const e = edgeEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      const pathSet = new Set([...s.onPath, s.active]);
+      if (pathSet.has(from) && pathSet.has(to)) {
+        e.classList.add('on-path');
+      }
+    });
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    // Result
+    if (s.result) {
+      resultEl.innerHTML = '';
+      resultEl.textContent = '"' + s.result + '"';
+    } else {
+      resultEl.innerHTML = '<span class="pending">(running…)</span>';
+    }
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

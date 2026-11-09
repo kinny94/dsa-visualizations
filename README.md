@@ -30,6 +30,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [131](https://kinny94.github.io/dsa-visualizations/lc131-palindrome-partitioning.html) | Palindrome Partitioning | Recursion · Backtracking |
 | [93](https://kinny94.github.io/dsa-visualizations/lc93-restore-ip-addresses.html) | Restore IP Addresses | Recursion · Backtracking |
 | [51](https://kinny94.github.io/dsa-visualizations/lc51-n-queens.html) | N-Queens | Recursion · Backtracking |
+| [761](https://kinny94.github.io/dsa-visualizations/lc761-special-binary-string.html) | Special Binary String | Recursion · Greedy |
 
 ## Adding a new animation
 
