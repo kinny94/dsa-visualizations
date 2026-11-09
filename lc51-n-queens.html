@@ -218,7 +218,7 @@
     border-radius: 4px;
     min-height: 0;
   }
-  svg { display: block; width: 100%; height: 100%; }
+  svg { display: block; width: 2400px; height: 500px; }
   .node-box rect {
     fill: #1a2e4a;
     stroke: #2a4a7a;
@@ -365,7 +365,7 @@
 <header>
   <div>
     <h1>LC 51 — N-Queens</h1>
-    <div class="subtitle">Row-by-row backtracking · 3 HashSets (col / \ diag / / diag) · O(1) safety check &nbsp;·&nbsp; n = 4</div>
+    <div class="subtitle">Row-by-row backtracking · 3 HashSets (col / \ diag / / diag) · O(1) safety check &nbsp;·&nbsp; n = 4 &nbsp;·&nbsp; full tree, every iteration (96 steps)</div>
   </div>
   <div class="step-info" id="stepInfo">step 0</div>
 </header>
@@ -391,7 +391,7 @@
       </div>
     </div>
     <div class="tree-wrap">
-      <svg id="tree" viewBox="0 0 920 400" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg id="tree" viewBox="0 0 2400 500" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
     <div class="action-card" id="action">
       <div class="kind kind-call" id="actionKind">start</div>
@@ -492,46 +492,114 @@
     codeEl.appendChild(span);
   });
 
-  // ============ TREE ============
-  //                      n_root
-  //            ┌────────┬───┴──┬────────┐
-  //         n_c0      n_c1   n_c2      n_c3
-  //        (done)   /  |  \    |      (done)
-  //              x0  x2  c3   c0
-  //                      |    |
-  //                     c3_c0 c0_c3
-  //                      |    |
-  //                     ★    c0_c3_c1
-  //                           |
-  //                           ★
+  // ============ TREE (full search, every iteration) ============
+  // Nodes are named by the columns picked top-down.
+  //   n_c<a>_c<b>_...  = placed queen at row=i col=c<i>
+  //   n_c<a>_..._x<c>  = pruned diag conflict at column c (safety check failed)
+  // col-takens (cols.contains(col)==true) are rendered as step actions only,
+  // not as separate tree nodes (they'd clutter and add nothing — they just
+  // mean "same row-0..i-1 already has that column").
   const nodes = {
-    n_root:          { x: 460, y:  40, w:  60, label: '[]',              sub: 'row=0',   pruned: false },
-    n_c0:            { x: 110, y: 118, w:  80, label: '[0]',             sub: 'no sols', pruned: false },
-    n_c1:            { x: 340, y: 118, w:  80, label: '[1]',             sub: 'row=1',   pruned: false },
-    n_c2:            { x: 560, y: 118, w:  80, label: '[2]',             sub: 'row=1',   pruned: false },
-    n_c3:            { x: 810, y: 118, w:  80, label: '[3]',             sub: 'no sols', pruned: false },
-    n_c1_x0:         { x: 240, y: 196, w: 100, label: '[1,0] ✗',         sub: '/ diag',  pruned: true  },
-    n_c1_x2:         { x: 340, y: 196, w: 100, label: '[1,2] ✗',         sub: '\\ diag', pruned: true  },
-    n_c1_c3:         { x: 445, y: 196, w:  90, label: '[1,3]',           sub: 'row=2',   pruned: false },
-    n_c2_c0:         { x: 560, y: 196, w:  90, label: '[2,0]',           sub: 'row=2',   pruned: false },
-    n_c1_c3_c0:      { x: 445, y: 274, w: 100, label: '[1,3,0]',         sub: 'row=3',   pruned: false },
-    n_c2_c0_c3:      { x: 560, y: 274, w: 100, label: '[2,0,3]',         sub: 'row=3',   pruned: false },
-    n_c1_c3_c0_c2:   { x: 445, y: 352, w: 125, label: '[1,3,0,2] ★',     sub: 'SOLN 1',  pruned: false },
-    n_c2_c0_c3_c1:   { x: 560, y: 352, w: 125, label: '[2,0,3,1] ★',     sub: 'SOLN 2',  pruned: false }
+    n_root:          { x: 1200, y:  40, w:  60, label: '[]',              sub: 'row=0',   pruned: false },
+
+    // --------- Row 0 placements (all 4 safe since sets empty) ---------
+    n_c0:            { x:  300, y: 140, w:  70, label: '[0]',             sub: 'row=1',   pruned: false },
+    n_c1:            { x:  900, y: 140, w:  70, label: '[1]',             sub: 'row=1',   pruned: false },
+    n_c2:            { x: 1500, y: 140, w:  70, label: '[2]',             sub: 'row=1',   pruned: false },
+    n_c3:            { x: 2100, y: 140, w:  70, label: '[3]',             sub: 'row=1',   pruned: false },
+
+    // --------- Row 1 under n_c0 (cols={0}, diag1={0}, diag2={0}) ---------
+    n_c0_x1:         { x:  170, y: 260, w: 100, label: '[0,1] ✗',         sub: '\\ diag', pruned: true  },
+    n_c0_c2:         { x:  300, y: 260, w:  90, label: '[0,2]',           sub: 'row=2',   pruned: false },
+    n_c0_c3:         { x:  450, y: 260, w:  90, label: '[0,3]',           sub: 'row=2',   pruned: false },
+
+    // --------- Row 1 under n_c1 (cols={1}, diag1={-1}, diag2={1}) ---------
+    n_c1_x0:         { x:  760, y: 260, w: 100, label: '[1,0] ✗',         sub: '/ diag',  pruned: true  },
+    n_c1_x2:         { x:  870, y: 260, w: 100, label: '[1,2] ✗',         sub: '\\ diag', pruned: true  },
+    n_c1_c3:         { x: 1000, y: 260, w:  90, label: '[1,3]',           sub: 'row=2',   pruned: false },
+
+    // --------- Row 1 under n_c2 (cols={2}, diag1={-2}, diag2={2}) ---------
+    n_c2_c0:         { x: 1380, y: 260, w:  90, label: '[2,0]',           sub: 'row=2',   pruned: false },
+    n_c2_x1:         { x: 1500, y: 260, w: 100, label: '[2,1] ✗',         sub: '/ diag',  pruned: true  },
+    n_c2_x3:         { x: 1620, y: 260, w: 100, label: '[2,3] ✗',         sub: '\\ diag', pruned: true  },
+
+    // --------- Row 1 under n_c3 (cols={3}, diag1={-3}, diag2={3}) ---------
+    n_c3_c0:         { x: 1940, y: 260, w:  90, label: '[3,0]',           sub: 'row=2',   pruned: false },
+    n_c3_c1:         { x: 2080, y: 260, w:  90, label: '[3,1]',           sub: 'row=2',   pruned: false },
+    n_c3_x2:         { x: 2210, y: 260, w: 100, label: '[3,2] ✗',         sub: '/ diag',  pruned: true  },
+
+    // --------- Row 2 under n_c0_c2 (cols={0,2}, diag1={0,-1}, diag2={0,3}) ---------
+    n_c0_c2_x1:      { x:  250, y: 360, w: 110, label: '[0,2,1] ✗',       sub: '/ diag',  pruned: true  },
+    n_c0_c2_x3:      { x:  360, y: 360, w: 110, label: '[0,2,3] ✗',       sub: '\\ diag', pruned: true  },
+
+    // --------- Row 2 under n_c0_c3 (cols={0,3}, diag1={0,-2}, diag2={0,4}) ---------
+    n_c0_c3_c1:      { x:  490, y: 360, w: 110, label: '[0,3,1]',         sub: 'row=3',   pruned: false },
+    n_c0_c3_x2:      { x:  610, y: 360, w: 110, label: '[0,3,2] ✗',       sub: '\\ diag', pruned: true  },
+
+    // --------- Row 2 under n_c1_c3 (cols={1,3}, diag1={-1,-2}, diag2={1,4}) ---------
+    n_c1_c3_c0:      { x:  940, y: 360, w: 110, label: '[1,3,0]',         sub: 'row=3',   pruned: false },
+    n_c1_c3_x2:      { x: 1060, y: 360, w: 110, label: '[1,3,2] ✗',       sub: '/ diag',  pruned: true  },
+
+    // --------- Row 2 under n_c2_c0 (cols={2,0}, diag1={-2,1}, diag2={2,1}) ---------
+    n_c2_c0_x1:      { x: 1300, y: 360, w: 110, label: '[2,0,1] ✗',       sub: '\\ diag', pruned: true  },
+    n_c2_c0_c3:      { x: 1420, y: 360, w: 110, label: '[2,0,3]',         sub: 'row=3',   pruned: false },
+
+    // --------- Row 2 under n_c3_c0 (cols={3,0}, diag1={-3,1}, diag2={3,1}) ---------
+    n_c3_c0_x1:      { x: 1880, y: 360, w: 110, label: '[3,0,1] ✗',       sub: '/ diag',  pruned: true  },
+    n_c3_c0_c2:      { x: 2000, y: 360, w: 110, label: '[3,0,2]',         sub: 'row=3',   pruned: false },
+
+    // --------- Row 2 under n_c3_c1 (cols={3,1}, diag1={-3,0}, diag2={3,2}) ---------
+    n_c3_c1_x0:      { x: 2130, y: 360, w: 110, label: '[3,1,0] ✗',       sub: '/ diag',  pruned: true  },
+    n_c3_c1_x2:      { x: 2240, y: 360, w: 110, label: '[3,1,2] ✗',       sub: '\\ diag', pruned: true  },
+
+    // --------- Row 3 leaves ---------
+    n_c0_c3_c1_x2:   { x:  490, y: 450, w: 130, label: '[0,3,1,2] ✗',     sub: '\\ diag', pruned: true  },
+    n_c1_c3_c0_c2:   { x:  940, y: 450, w: 140, label: '[1,3,0,2] ★',     sub: 'SOLN 1',  pruned: false },
+    n_c2_c0_c3_c1:   { x: 1420, y: 450, w: 140, label: '[2,0,3,1] ★',     sub: 'SOLN 2',  pruned: false },
+    n_c3_c0_c2_x1:   { x: 2000, y: 450, w: 130, label: '[3,0,2,1] ✗',     sub: '/ diag',  pruned: true  }
   };
   const edges = [
+    // Root → row-0 placements
     ["n_root", "n_c0", "col=0", false],
     ["n_root", "n_c1", "col=1", false],
     ["n_root", "n_c2", "col=2", false],
     ["n_root", "n_c3", "col=3", false],
-    ["n_c1",   "n_c1_x0",        "col=0", true ],
-    ["n_c1",   "n_c1_x2",        "col=2", true ],
-    ["n_c1",   "n_c1_c3",        "col=3", false],
-    ["n_c2",   "n_c2_c0",        "col=0", false],
-    ["n_c1_c3", "n_c1_c3_c0",    "col=0", false],
-    ["n_c2_c0", "n_c2_c0_c3",    "col=3", false],
+
+    // Row 0 col=0 subtree
+    ["n_c0", "n_c0_x1", "col=1", true ],
+    ["n_c0", "n_c0_c2", "col=2", false],
+    ["n_c0", "n_c0_c3", "col=3", false],
+    ["n_c0_c2", "n_c0_c2_x1", "col=1", true],
+    ["n_c0_c2", "n_c0_c2_x3", "col=3", true],
+    ["n_c0_c3", "n_c0_c3_c1", "col=1", false],
+    ["n_c0_c3", "n_c0_c3_x2", "col=2", true],
+    ["n_c0_c3_c1", "n_c0_c3_c1_x2", "col=2", true],
+
+    // Row 0 col=1 subtree
+    ["n_c1", "n_c1_x0", "col=0", true ],
+    ["n_c1", "n_c1_x2", "col=2", true ],
+    ["n_c1", "n_c1_c3", "col=3", false],
+    ["n_c1_c3", "n_c1_c3_c0", "col=0", false],
+    ["n_c1_c3", "n_c1_c3_x2", "col=2", true],
     ["n_c1_c3_c0", "n_c1_c3_c0_c2", "col=2", false],
-    ["n_c2_c0_c3", "n_c2_c0_c3_c1", "col=1", false]
+
+    // Row 0 col=2 subtree
+    ["n_c2", "n_c2_c0", "col=0", false],
+    ["n_c2", "n_c2_x1", "col=1", true],
+    ["n_c2", "n_c2_x3", "col=3", true],
+    ["n_c2_c0", "n_c2_c0_x1", "col=1", true],
+    ["n_c2_c0", "n_c2_c0_c3", "col=3", false],
+    ["n_c2_c0_c3", "n_c2_c0_c3_c1", "col=1", false],
+
+    // Row 0 col=3 subtree
+    ["n_c3", "n_c3_c0", "col=0", false],
+    ["n_c3", "n_c3_c1", "col=1", false],
+    ["n_c3", "n_c3_x2", "col=2", true],
+    ["n_c3_c0", "n_c3_c0_x1", "col=1", true],
+    ["n_c3_c0", "n_c3_c0_c2", "col=2", false],
+    ["n_c3_c0_c2", "n_c3_c0_c2_x1", "col=1", true],
+    ["n_c3_c1", "n_c3_c1_x0", "col=0", true],
+    ["n_c3_c1", "n_c3_c1_x2", "col=2", true]
   ];
   const svg = document.getElementById('tree');
   const SVGNS = "http://www.w3.org/2000/svg";
@@ -615,249 +683,102 @@
   };
 
   const steps = [
-    stateFrom({
-      line: [7], row: 0,
-      action: "Entry. solve(row=0, ...). All three HashSets empty, queenCol filled with _.",
-      kind: "call", activeNode: "n_root"
-    }),
-
-    stateFrom({
-      line: [13, 17], row: 0,
-      action: "n_root: row==n? 0==4 → no. Enter for-loop col = 0..3.",
-      kind: "check", activeNode: "n_root"
-    }),
-
-    stateFrom({
-      line: [18, 19, 20], row: 0,
-      checkText: "safe ✓ (all empty)", checkKind: "ok",
-      action: "col=0: cols.contains(0)? no. diag1.contains(0-0=0)? no. diag2.contains(0+0=0)? no. → safe.",
-      kind: "check", activeNode: "n_root"
-    }),
-
-    stateFrom({
-      line: [23, 24, 25, 26], row: 0,
-      cols: [0], diag1: [0], diag2: [0], qc: [0, null, null, null],
-      checkText: "placed (0,0)", checkKind: "ok",
-      justPlaced: {r: 0, c: 0},
-      action: "Place queen at (0,0). cols+={0}, diag1+={0}, diag2+={0}. queenCol[0]=0.",
-      kind: "pick", activeNode: "n_root"
-    }),
-
-    stateFrom({
-      line: [28], row: 1,
-      cols: [0], diag1: [0], diag2: [0], qc: [0, null, null, null],
-      action: "Recurse: solve(row=1). Descend to n_c0. (For brevity this whole subtree will be summarised next.)",
-      kind: "call", activeNode: "n_c0", onPath: ["n_root"]
-    }),
-
-    stateFrom({
-      line: [30, 31, 32], row: 0,
-      cols: [], diag1: [], diag2: [], qc: [null, null, null, null],
-      action: "n_c0 subtree fully explored — no valid completion exists. Return. Remove col=0, diag1=0, diag2=0 (sets empty again).",
-      kind: "return", activeNode: "n_root", onPath: [], doneNodes: ["n_c0"]
-    }),
-
-    stateFrom({
-      line: [18, 19, 20], row: 0,
-      checkText: "safe ✓ (all empty)", checkKind: "ok",
-      action: "Loop continues. col=1: cols no, diag1(0-1=-1) no, diag2(0+1=1) no. → safe.",
-      kind: "check", activeNode: "n_root", doneNodes: ["n_c0"]
-    }),
-
-    stateFrom({
-      line: [23, 24, 25, 26], row: 0,
-      cols: [1], diag1: [-1], diag2: [1], qc: [1, null, null, null],
-      checkText: "placed (0,1)", checkKind: "ok",
-      justPlaced: {r: 0, c: 1},
-      action: "Place queen at (0,1). cols+={1}, diag1+={-1}, diag2+={1}. queenCol[0]=1.",
-      kind: "pick", activeNode: "n_root", doneNodes: ["n_c0"]
-    }),
-
-    stateFrom({
-      line: [28], row: 1,
-      cols: [1], diag1: [-1], diag2: [1], qc: [1, null, null, null],
-      action: "Recurse: solve(row=1). Descend to n_c1.",
-      kind: "call", activeNode: "n_c1", onPath: ["n_root"], doneNodes: ["n_c0"]
-    }),
-
-    stateFrom({
-      line: [18, 19, 20, 21], row: 1,
-      cols: [1], diag1: [-1], diag2: [1], qc: [1, null, null, null],
-      checkText: "diag2(1) ✗", checkKind: "bad",
-      action: "n_c1 col=0: cols no, diag1(1-0=1) no, diag2(1+0=1) ∈ {1} ✗. → PRUNE (same / diagonal as (0,1)).",
-      kind: "prune", activeNode: "n_c1_x0", onPath: ["n_root", "n_c1"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0"]
-    }),
-
-    stateFrom({
-      line: [18, 19, 20, 21], row: 1,
-      cols: [1], diag1: [-1], diag2: [1], qc: [1, null, null, null],
-      checkText: "diag1(-1) ✗", checkKind: "bad",
-      action: "col=1: cols.contains(1) ✓ → skip (same column, not drawn).  col=2: diag1(1-2=-1) ∈ {-1} ✗. → PRUNE (same \\ diagonal).",
-      kind: "prune", activeNode: "n_c1_x2", onPath: ["n_root", "n_c1"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
-    }),
-
-    stateFrom({
-      line: [18, 19, 20], row: 1,
-      cols: [1], diag1: [-1], diag2: [1], qc: [1, null, null, null],
-      checkText: "safe ✓", checkKind: "ok",
-      action: "col=3: cols no, diag1(1-3=-2) no, diag2(1+3=4) no. → safe.",
-      kind: "check", activeNode: "n_c1", onPath: ["n_root"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
-    }),
-
-    stateFrom({
-      line: [23, 24, 25, 26], row: 1,
-      cols: [1, 3], diag1: [-1, -2], diag2: [1, 4], qc: [1, 3, null, null],
-      checkText: "placed (1,3)", checkKind: "ok",
-      justPlaced: {r: 1, c: 3},
-      action: "Place queen at (1,3). cols+={3}, diag1+={-2}, diag2+={4}. queenCol[1]=3.",
-      kind: "pick", activeNode: "n_c1", onPath: ["n_root"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
-    }),
-
-    stateFrom({
-      line: [28], row: 2,
-      cols: [1, 3], diag1: [-1, -2], diag2: [1, 4], qc: [1, 3, null, null],
-      action: "Recurse to n_c1_c3. (col=0 is the only safe choice at row=2; cols 1,3 taken, col=2 hits diag2(2+2=4) ∈ {1,4} ✗.)",
-      kind: "call", activeNode: "n_c1_c3", onPath: ["n_root", "n_c1"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
-    }),
-
-    stateFrom({
-      line: [18, 19, 20, 23, 24, 25, 26], row: 2,
-      cols: [1, 3, 0], diag1: [-1, -2, 2], diag2: [1, 4, 2], qc: [1, 3, 0, null],
-      checkText: "placed (2,0)", checkKind: "ok",
-      justPlaced: {r: 2, c: 0},
-      action: "col=0: diag1(2-0=2) no, diag2(2+0=2) no. ✓ safe. Place (2,0). queenCol[2]=0.",
-      kind: "pick", activeNode: "n_c1_c3", onPath: ["n_root", "n_c1"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
-    }),
-
-    stateFrom({
-      line: [28], row: 3,
-      cols: [1, 3, 0], diag1: [-1, -2, 2], diag2: [1, 4, 2], qc: [1, 3, 0, null],
-      action: "Recurse to n_c1_c3_c0. (At row=3 only col=2 escapes all three sets.)",
-      kind: "call", activeNode: "n_c1_c3_c0", onPath: ["n_root", "n_c1", "n_c1_c3"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
-    }),
-
-    stateFrom({
-      line: [18, 19, 20, 23, 24, 25, 26], row: 3,
-      cols: [1, 3, 0, 2], diag1: [-1, -2, 2, 1], diag2: [1, 4, 2, 5], qc: [1, 3, 0, 2],
-      checkText: "placed (3,2)", checkKind: "ok",
-      justPlaced: {r: 3, c: 2},
-      action: "col=2: diag1(3-2=1) no, diag2(3+2=5) no. ✓ safe. Place (3,2). queenCol=[1,3,0,2].",
-      kind: "pick", activeNode: "n_c1_c3_c0", onPath: ["n_root", "n_c1", "n_c1_c3"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
-    }),
-
-    stateFrom({
-      line: [28], row: 4,
-      cols: [1, 3, 0, 2], diag1: [-1, -2, 2, 1], diag2: [1, 4, 2, 5], qc: [1, 3, 0, 2],
-      action: "Recurse: solve(row=4).",
-      kind: "call", activeNode: "n_c1_c3_c0_c2", onPath: ["n_root", "n_c1", "n_c1_c3", "n_c1_c3_c0"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
-    }),
-
-    stateFrom({
-      line: [13, 14, 15], row: 4,
-      cols: [1, 3, 0, 2], diag1: [-1, -2, 2, 1], diag2: [1, 4, 2, 5], qc: [1, 3, 0, 2],
-      action: "Base case: row==n (4==4). RECORD solution 1: .Q../...Q/Q.../..Q. ★",
-      kind: "record", activeNode: "n_c1_c3_c0_c2", onPath: ["n_root", "n_c1", "n_c1_c3", "n_c1_c3_c0"],
-      successNodes: ["n_c1_c3_c0_c2"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"],
-      result: [SOL1]
-    }),
-
-    stateFrom({
-      line: [30, 31, 32], row: 0,
-      cols: [], diag1: [], diag2: [], qc: [null, null, null, null],
-      action: "Return. Unwind backtrack chain: remove (3,2) → (2,0) → (1,3) → (0,1). All sibling slots at every level fail their safety check. Sets drain to empty.",
-      kind: "return", activeNode: "n_root", onPath: [],
-      successNodes: ["n_c1_c3_c0_c2"],
-      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
-      prunedNodes: ["n_c1_x0", "n_c1_x2"],
-      result: [SOL1]
-    }),
-
-    stateFrom({
-      line: [18, 19, 20, 23, 24, 25, 26], row: 0,
-      cols: [2], diag1: [-2], diag2: [2], qc: [2, null, null, null],
-      checkText: "placed (0,2)", checkKind: "ok",
-      justPlaced: {r: 0, c: 2},
-      action: "Loop continues. col=2: all sets empty → safe. Place (0,2). queenCol[0]=2.",
-      kind: "pick", activeNode: "n_root",
-      successNodes: ["n_c1_c3_c0_c2"],
-      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
-      prunedNodes: ["n_c1_x0", "n_c1_x2"],
-      result: [SOL1]
-    }),
-
-    stateFrom({
-      line: [28], row: 1,
-      cols: [2], diag1: [-2], diag2: [2], qc: [2, null, null, null],
-      action: "Recurse to n_c2.  At row=1: col=0 safe (diag1(1)∉, diag2(1)∉); col=1 hits diag2(2)∈{2}; col=2 col-taken; col=3 hits diag1(-2)∈{-2}.",
-      kind: "call", activeNode: "n_c2", onPath: ["n_root"],
-      successNodes: ["n_c1_c3_c0_c2"],
-      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
-      prunedNodes: ["n_c1_x0", "n_c1_x2"],
-      result: [SOL1]
-    }),
-
-    stateFrom({
-      line: [18, 19, 20, 23, 24, 25, 26], row: 1,
-      cols: [2, 0], diag1: [-2, 1], diag2: [2, 1], qc: [2, 0, null, null],
-      checkText: "placed (1,0)", checkKind: "ok",
-      justPlaced: {r: 1, c: 0},
-      action: "col=0: diag1(1) no, diag2(1) no. ✓ safe. Place (1,0). queenCol[1]=0.",
-      kind: "pick", activeNode: "n_c2", onPath: ["n_root"],
-      successNodes: ["n_c1_c3_c0_c2"],
-      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
-      prunedNodes: ["n_c1_x0", "n_c1_x2"],
-      result: [SOL1]
-    }),
-
-    stateFrom({
-      line: [28, 18, 19, 20, 23, 24, 25, 26], row: 2,
-      cols: [2, 0, 3], diag1: [-2, 1, -1], diag2: [2, 1, 5], qc: [2, 0, 3, null],
-      checkText: "placed (2,3)", checkKind: "ok",
-      justPlaced: {r: 2, c: 3},
-      action: "Recurse. At row=2 only col=3 escapes: diag1(-1), diag2(5), both fresh. Place (2,3). queenCol[2]=3.",
-      kind: "pick", activeNode: "n_c2_c0", onPath: ["n_root", "n_c2"],
-      successNodes: ["n_c1_c3_c0_c2"],
-      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
-      prunedNodes: ["n_c1_x0", "n_c1_x2"],
-      result: [SOL1]
-    }),
-
-    stateFrom({
-      line: [28, 18, 19, 20, 23, 24, 25, 26], row: 3,
-      cols: [2, 0, 3, 1], diag1: [-2, 1, -1, 2], diag2: [2, 1, 5, 4], qc: [2, 0, 3, 1],
-      checkText: "placed (3,1)", checkKind: "ok",
-      justPlaced: {r: 3, c: 1},
-      action: "Recurse. At row=3 only col=1 escapes: diag1(2), diag2(4), both fresh. Place (3,1). queenCol=[2,0,3,1].",
-      kind: "pick", activeNode: "n_c2_c0_c3", onPath: ["n_root", "n_c2", "n_c2_c0"],
-      successNodes: ["n_c1_c3_c0_c2"],
-      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
-      prunedNodes: ["n_c1_x0", "n_c1_x2"],
-      result: [SOL1]
-    }),
-
-    stateFrom({
-      line: [13, 14, 15], row: 4,
-      cols: [2, 0, 3, 1], diag1: [-2, 1, -1, 2], diag2: [2, 1, 5, 4], qc: [2, 0, 3, 1],
-      action: "Base case: row==n. RECORD solution 2: ..Q./Q.../...Q/.Q.. ★",
-      kind: "record", activeNode: "n_c2_c0_c3_c1", onPath: ["n_root", "n_c2", "n_c2_c0", "n_c2_c0_c3"],
-      successNodes: ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"],
-      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
-      prunedNodes: ["n_c1_x0", "n_c1_x2"],
-      result: [SOL1, SOL2]
-    }),
-
-    stateFrom({
-      line: [30, 31, 32], row: 0,
-      cols: [], diag1: [], diag2: [], qc: [null, null, null, null],
-      action: "Unwind backtrack chain. Loop continues at root: col=3 subtree explored → no solutions (symmetric to col=0). DONE. 2 solutions total. ★",
-      kind: "return", activeNode: "n_root", onPath: [],
-      successNodes: ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"],
-      doneNodes: ["n_c0", "n_c3", "n_root",
-                  "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1",
-                  "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"],
-      prunedNodes: ["n_c1_x0", "n_c1_x2"],
-      result: [SOL1, SOL2]
-    })
+    {"line": [7], "row": 0, "cols": [], "diag1": [], "diag2": [], "qc": [null, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "Entry. solve(row=0, ...). All sets empty.", "kind": "call", "activeNode": "n_root", "onPath": [], "successNodes": [], "prunedNodes": [], "doneNodes": [], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 0, "cols": [], "diag1": [], "diag2": [], "qc": [null, null, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "n_root iter col=0: cols/diag1/diag2 all empty → safe.", "kind": "check", "activeNode": "n_root", "onPath": [], "successNodes": [], "prunedNodes": [], "doneNodes": [], "result": [], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 1, "cols": [0], "diag1": [0], "diag2": [0], "qc": [0, null, null, null], "checkText": "placed (0,0)", "checkKind": "ok", "action": "Place (0,0). cols+={0}, diag1+={0}, diag2+={0}. Recurse to n_c0.", "kind": "pick", "activeNode": "n_c0", "onPath": ["n_root"], "successNodes": [], "prunedNodes": [], "doneNodes": [], "result": [], "justPlaced": {"r": 0, "c": 0}},
+    {"line": [18, 19, 22], "row": 1, "cols": [0], "diag1": [0], "diag2": [0], "qc": [0, null, null, null], "checkText": "cols has 0 ✗", "checkKind": "bad", "action": "n_c0 iter col=0: cols.contains(0) ✓ → continue.", "kind": "check", "activeNode": "n_c0", "onPath": ["n_root"], "successNodes": [], "prunedNodes": [], "doneNodes": [], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 1, "cols": [0], "diag1": [0], "diag2": [0], "qc": [0, null, null, null], "checkText": "diag1(0) ✗", "checkKind": "bad", "action": "n_c0 iter col=1: diag1(1-1=0) ∈ {0} ✗ → PRUNE (same \\ diag as (0,0)).", "kind": "prune", "activeNode": "n_c0_x1", "onPath": ["n_root", "n_c0"], "successNodes": [], "prunedNodes": ["n_c0_x1"], "doneNodes": [], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 1, "cols": [0], "diag1": [0], "diag2": [0], "qc": [0, null, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "n_c0 iter col=2: diag1(-1) no, diag2(3) no, cols no → safe.", "kind": "check", "activeNode": "n_c0", "onPath": ["n_root"], "successNodes": [], "prunedNodes": ["n_c0_x1"], "doneNodes": [], "result": [], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 2, "cols": [0, 2], "diag1": [0, -1], "diag2": [0, 3], "qc": [0, 2, null, null], "checkText": "placed (1,2)", "checkKind": "ok", "action": "Place (1,2). cols+={2}, diag1+={-1}, diag2+={3}. Recurse to n_c0_c2.", "kind": "pick", "activeNode": "n_c0_c2", "onPath": ["n_root", "n_c0"], "successNodes": [], "prunedNodes": ["n_c0_x1"], "doneNodes": [], "result": [], "justPlaced": {"r": 1, "c": 2}},
+    {"line": [18, 19, 22], "row": 2, "cols": [0, 2], "diag1": [0, -1], "diag2": [0, 3], "qc": [0, 2, null, null], "checkText": "cols has 0 ✗", "checkKind": "bad", "action": "n_c0_c2 iter col=0: cols.contains(0) ✓ → continue.", "kind": "check", "activeNode": "n_c0_c2", "onPath": ["n_root", "n_c0"], "successNodes": [], "prunedNodes": ["n_c0_x1"], "doneNodes": [], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 2, "cols": [0, 2], "diag1": [0, -1], "diag2": [0, 3], "qc": [0, 2, null, null], "checkText": "diag2(3) ✗", "checkKind": "bad", "action": "col=1: diag2(2+1=3) ∈ {0,3} ✗ → PRUNE (same / diag as (1,2)).", "kind": "prune", "activeNode": "n_c0_c2_x1", "onPath": ["n_root", "n_c0", "n_c0_c2"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1"], "doneNodes": [], "result": [], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 2, "cols": [0, 2], "diag1": [0, -1], "diag2": [0, 3], "qc": [0, 2, null, null], "checkText": "cols has 2 ✗", "checkKind": "bad", "action": "col=2: cols.contains(2) ✓ → continue.", "kind": "check", "activeNode": "n_c0_c2", "onPath": ["n_root", "n_c0"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1"], "doneNodes": [], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 2, "cols": [0, 2], "diag1": [0, -1], "diag2": [0, 3], "qc": [0, 2, null, null], "checkText": "diag1(-1) ✗", "checkKind": "bad", "action": "col=3: diag1(2-3=-1) ∈ {0,-1} ✗ → PRUNE (same \\ diag as (1,2)).", "kind": "prune", "activeNode": "n_c0_c2_x3", "onPath": ["n_root", "n_c0", "n_c0_c2"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3"], "doneNodes": [], "result": [], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 1, "cols": [0], "diag1": [0], "diag2": [0], "qc": [0, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c0_c2 loop done (no safe col). Return. Remove (1,2).", "kind": "return", "activeNode": "n_c0", "onPath": ["n_root"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3"], "doneNodes": ["n_c0_c2"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 1, "cols": [0], "diag1": [0], "diag2": [0], "qc": [0, null, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "n_c0 iter col=3: diag1(-2) no, diag2(4) no, cols no → safe.", "kind": "check", "activeNode": "n_c0", "onPath": ["n_root"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3"], "doneNodes": ["n_c0_c2"], "result": [], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 2, "cols": [0, 3], "diag1": [0, -2], "diag2": [0, 4], "qc": [0, 3, null, null], "checkText": "placed (1,3)", "checkKind": "ok", "action": "Place (1,3). Recurse to n_c0_c3.", "kind": "pick", "activeNode": "n_c0_c3", "onPath": ["n_root", "n_c0"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3"], "doneNodes": ["n_c0_c2"], "result": [], "justPlaced": {"r": 1, "c": 3}},
+    {"line": [18, 19, 22], "row": 2, "cols": [0, 3], "diag1": [0, -2], "diag2": [0, 4], "qc": [0, 3, null, null], "checkText": "cols has 0 ✗", "checkKind": "bad", "action": "n_c0_c3 iter col=0: cols.contains(0) ✓ → continue.", "kind": "check", "activeNode": "n_c0_c3", "onPath": ["n_root", "n_c0"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3"], "doneNodes": ["n_c0_c2"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 2, "cols": [0, 3], "diag1": [0, -2], "diag2": [0, 4], "qc": [0, 3, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "col=1: diag1(1) no, diag2(3) no, cols no → safe.", "kind": "check", "activeNode": "n_c0_c3", "onPath": ["n_root", "n_c0"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3"], "doneNodes": ["n_c0_c2"], "result": [], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 3, "cols": [0, 3, 1], "diag1": [0, -2, 1], "diag2": [0, 4, 3], "qc": [0, 3, 1, null], "checkText": "placed (2,1)", "checkKind": "ok", "action": "Place (2,1). Recurse to n_c0_c3_c1.", "kind": "pick", "activeNode": "n_c0_c3_c1", "onPath": ["n_root", "n_c0", "n_c0_c3"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3"], "doneNodes": ["n_c0_c2"], "result": [], "justPlaced": {"r": 2, "c": 1}},
+    {"line": [18, 19, 22], "row": 3, "cols": [0, 3, 1], "diag1": [0, -2, 1], "diag2": [0, 4, 3], "qc": [0, 3, 1, null], "checkText": "cols has 0 ✗", "checkKind": "bad", "action": "n_c0_c3_c1 iter col=0: cols.contains(0) ✓ → continue.", "kind": "check", "activeNode": "n_c0_c3_c1", "onPath": ["n_root", "n_c0", "n_c0_c3"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3"], "doneNodes": ["n_c0_c2"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 3, "cols": [0, 3, 1], "diag1": [0, -2, 1], "diag2": [0, 4, 3], "qc": [0, 3, 1, null], "checkText": "cols has 1 ✗", "checkKind": "bad", "action": "col=1: cols.contains(1) ✓ → continue.", "kind": "check", "activeNode": "n_c0_c3_c1", "onPath": ["n_root", "n_c0", "n_c0_c3"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3"], "doneNodes": ["n_c0_c2"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 3, "cols": [0, 3, 1], "diag1": [0, -2, 1], "diag2": [0, 4, 3], "qc": [0, 3, 1, null], "checkText": "diag1(1) ✗", "checkKind": "bad", "action": "col=2: diag1(3-2=1) ∈ {0,-2,1} ✗ → PRUNE (same \\ diag as (2,1)).", "kind": "prune", "activeNode": "n_c0_c3_c1_x2", "onPath": ["n_root", "n_c0", "n_c0_c3", "n_c0_c3_c1"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2"], "doneNodes": ["n_c0_c2"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 3, "cols": [0, 3, 1], "diag1": [0, -2, 1], "diag2": [0, 4, 3], "qc": [0, 3, 1, null], "checkText": "cols has 3 ✗", "checkKind": "bad", "action": "col=3: cols.contains(3) ✓ → continue.", "kind": "check", "activeNode": "n_c0_c3_c1", "onPath": ["n_root", "n_c0", "n_c0_c3"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2"], "doneNodes": ["n_c0_c2"], "result": [], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 2, "cols": [0, 3], "diag1": [0, -2], "diag2": [0, 4], "qc": [0, 3, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c0_c3_c1 loop done. Return. Remove (2,1).", "kind": "return", "activeNode": "n_c0_c3", "onPath": ["n_root", "n_c0"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 2, "cols": [0, 3], "diag1": [0, -2], "diag2": [0, 4], "qc": [0, 3, null, null], "checkText": "diag1(0) ✗", "checkKind": "bad", "action": "n_c0_c3 iter col=2: diag1(2-2=0) ∈ {0,-2} ✗ → PRUNE.", "kind": "prune", "activeNode": "n_c0_c3_x2", "onPath": ["n_root", "n_c0", "n_c0_c3"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 2, "cols": [0, 3], "diag1": [0, -2], "diag2": [0, 4], "qc": [0, 3, null, null], "checkText": "cols has 3 ✗", "checkKind": "bad", "action": "col=3: cols.contains(3) ✓ → continue.", "kind": "check", "activeNode": "n_c0_c3", "onPath": ["n_root", "n_c0"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1"], "result": [], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 1, "cols": [0], "diag1": [0], "diag2": [0], "qc": [0, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c0_c3 loop done. Return. Remove (1,3).", "kind": "return", "activeNode": "n_c0", "onPath": ["n_root"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3"], "result": [], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 0, "cols": [], "diag1": [], "diag2": [], "qc": [null, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c0 loop done. Return. Remove (0,0). Sets back to empty. Subtree [0] produced no solutions.", "kind": "return", "activeNode": "n_root", "onPath": [], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 0, "cols": [], "diag1": [], "diag2": [], "qc": [null, null, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "n_root iter col=1: all sets empty → safe.", "kind": "check", "activeNode": "n_root", "onPath": [], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 1, "cols": [1], "diag1": [-1], "diag2": [1], "qc": [1, null, null, null], "checkText": "placed (0,1)", "checkKind": "ok", "action": "Place (0,1). cols+={1}, diag1+={-1}, diag2+={1}. Recurse to n_c1.", "kind": "pick", "activeNode": "n_c1", "onPath": ["n_root"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": {"r": 0, "c": 1}},
+    {"line": [18, 19, 20, 22], "row": 1, "cols": [1], "diag1": [-1], "diag2": [1], "qc": [1, null, null, null], "checkText": "diag2(1) ✗", "checkKind": "bad", "action": "n_c1 iter col=0: diag2(1+0=1) ∈ {1} ✗ → PRUNE (same / diag as (0,1)).", "kind": "prune", "activeNode": "n_c1_x0", "onPath": ["n_root", "n_c1"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 1, "cols": [1], "diag1": [-1], "diag2": [1], "qc": [1, null, null, null], "checkText": "cols has 1 ✗", "checkKind": "bad", "action": "col=1: cols.contains(1) ✓ → continue.", "kind": "check", "activeNode": "n_c1", "onPath": ["n_root"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 1, "cols": [1], "diag1": [-1], "diag2": [1], "qc": [1, null, null, null], "checkText": "diag1(-1) ✗", "checkKind": "bad", "action": "col=2: diag1(1-2=-1) ∈ {-1} ✗ → PRUNE (same \\ diag as (0,1)).", "kind": "prune", "activeNode": "n_c1_x2", "onPath": ["n_root", "n_c1"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 1, "cols": [1], "diag1": [-1], "diag2": [1], "qc": [1, null, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "col=3: diag1(-2) no, diag2(4) no, cols no → safe.", "kind": "check", "activeNode": "n_c1", "onPath": ["n_root"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 2, "cols": [1, 3], "diag1": [-1, -2], "diag2": [1, 4], "qc": [1, 3, null, null], "checkText": "placed (1,3)", "checkKind": "ok", "action": "Place (1,3). Recurse to n_c1_c3.", "kind": "pick", "activeNode": "n_c1_c3", "onPath": ["n_root", "n_c1"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": {"r": 1, "c": 3}},
+    {"line": [18, 19, 20], "row": 2, "cols": [1, 3], "diag1": [-1, -2], "diag2": [1, 4], "qc": [1, 3, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "n_c1_c3 iter col=0: diag1(2) no, diag2(2) no, cols no → safe.", "kind": "check", "activeNode": "n_c1_c3", "onPath": ["n_root", "n_c1"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 3, "cols": [1, 3, 0], "diag1": [-1, -2, 2], "diag2": [1, 4, 2], "qc": [1, 3, 0, null], "checkText": "placed (2,0)", "checkKind": "ok", "action": "Place (2,0). Recurse to n_c1_c3_c0.", "kind": "pick", "activeNode": "n_c1_c3_c0", "onPath": ["n_root", "n_c1", "n_c1_c3"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": {"r": 2, "c": 0}},
+    {"line": [18, 19, 22], "row": 3, "cols": [1, 3, 0], "diag1": [-1, -2, 2], "diag2": [1, 4, 2], "qc": [1, 3, 0, null], "checkText": "cols has 0 ✗", "checkKind": "bad", "action": "n_c1_c3_c0 iter col=0: cols.contains(0) ✓ → continue.", "kind": "check", "activeNode": "n_c1_c3_c0", "onPath": ["n_root", "n_c1", "n_c1_c3"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 3, "cols": [1, 3, 0], "diag1": [-1, -2, 2], "diag2": [1, 4, 2], "qc": [1, 3, 0, null], "checkText": "cols has 1 ✗", "checkKind": "bad", "action": "col=1: cols.contains(1) ✓ → continue.", "kind": "check", "activeNode": "n_c1_c3_c0", "onPath": ["n_root", "n_c1", "n_c1_c3"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 3, "cols": [1, 3, 0], "diag1": [-1, -2, 2], "diag2": [1, 4, 2], "qc": [1, 3, 0, null], "checkText": "safe ✓", "checkKind": "ok", "action": "col=2: diag1(1) no, diag2(5) no, cols no → safe.", "kind": "check", "activeNode": "n_c1_c3_c0", "onPath": ["n_root", "n_c1", "n_c1_c3"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 4, "cols": [1, 3, 0, 2], "diag1": [-1, -2, 2, 1], "diag2": [1, 4, 2, 5], "qc": [1, 3, 0, 2], "checkText": "placed (3,2)", "checkKind": "ok", "action": "Place (3,2). Recurse.", "kind": "pick", "activeNode": "n_c1_c3_c0_c2", "onPath": ["n_root", "n_c1", "n_c1_c3", "n_c1_c3_c0"], "successNodes": [], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [], "justPlaced": {"r": 3, "c": 2}},
+    {"line": [13, 14, 15], "row": 4, "cols": [1, 3, 0, 2], "diag1": [-1, -2, 2, 1], "diag2": [1, 4, 2, 5], "qc": [1, 3, 0, 2], "checkText": "check(—)", "checkKind": null, "action": "Base case: row==n (4==4). RECORD solution 1: .Q../...Q/Q.../..Q. ★", "kind": "record", "activeNode": "n_c1_c3_c0_c2", "onPath": ["n_root", "n_c1", "n_c1_c3", "n_c1_c3_c0"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 3, "cols": [1, 3, 0], "diag1": [-1, -2, 2], "diag2": [1, 4, 2], "qc": [1, 3, 0, null], "checkText": "check(—)", "checkKind": null, "action": "Return from base. Remove (3,2).", "kind": "return", "activeNode": "n_c1_c3_c0", "onPath": ["n_root", "n_c1", "n_c1_c3"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 3, "cols": [1, 3, 0], "diag1": [-1, -2, 2], "diag2": [1, 4, 2], "qc": [1, 3, 0, null], "checkText": "cols has 3 ✗", "checkKind": "bad", "action": "col=3: cols.contains(3) ✓ → continue.", "kind": "check", "activeNode": "n_c1_c3_c0", "onPath": ["n_root", "n_c1", "n_c1_c3"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 2, "cols": [1, 3], "diag1": [-1, -2], "diag2": [1, 4], "qc": [1, 3, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c1_c3_c0 loop done. Return. Remove (2,0).", "kind": "return", "activeNode": "n_c1_c3", "onPath": ["n_root", "n_c1"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 2, "cols": [1, 3], "diag1": [-1, -2], "diag2": [1, 4], "qc": [1, 3, null, null], "checkText": "cols has 1 ✗", "checkKind": "bad", "action": "n_c1_c3 iter col=1: cols.contains(1) ✓ → continue.", "kind": "check", "activeNode": "n_c1_c3", "onPath": ["n_root", "n_c1"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 2, "cols": [1, 3], "diag1": [-1, -2], "diag2": [1, 4], "qc": [1, 3, null, null], "checkText": "diag2(4) ✗", "checkKind": "bad", "action": "col=2: diag2(2+2=4) ∈ {1,4} ✗ → PRUNE (same / diag as (1,3)).", "kind": "prune", "activeNode": "n_c1_c3_x2", "onPath": ["n_root", "n_c1", "n_c1_c3"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 2, "cols": [1, 3], "diag1": [-1, -2], "diag2": [1, 4], "qc": [1, 3, null, null], "checkText": "cols has 3 ✗", "checkKind": "bad", "action": "col=3: cols.contains(3) ✓ → continue.", "kind": "check", "activeNode": "n_c1_c3", "onPath": ["n_root", "n_c1"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 1, "cols": [1], "diag1": [-1], "diag2": [1], "qc": [1, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c1_c3 loop done. Return. Remove (1,3).", "kind": "return", "activeNode": "n_c1", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 0, "cols": [], "diag1": [], "diag2": [], "qc": [null, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c1 loop done. Return. Remove (0,1). Subtree [1] yielded 1 solution.", "kind": "return", "activeNode": "n_root", "onPath": [], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 0, "cols": [], "diag1": [], "diag2": [], "qc": [null, null, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "n_root iter col=2: all sets empty → safe.", "kind": "check", "activeNode": "n_root", "onPath": [], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 1, "cols": [2], "diag1": [-2], "diag2": [2], "qc": [2, null, null, null], "checkText": "placed (0,2)", "checkKind": "ok", "action": "Place (0,2). cols+={2}, diag1+={-2}, diag2+={2}. Recurse.", "kind": "pick", "activeNode": "n_c2", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": {"r": 0, "c": 2}},
+    {"line": [18, 19, 20], "row": 1, "cols": [2], "diag1": [-2], "diag2": [2], "qc": [2, null, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "n_c2 iter col=0: diag1(1) no, diag2(1) no, cols no → safe.", "kind": "check", "activeNode": "n_c2", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 2, "cols": [2, 0], "diag1": [-2, 1], "diag2": [2, 1], "qc": [2, 0, null, null], "checkText": "placed (1,0)", "checkKind": "ok", "action": "Place (1,0). Recurse to n_c2_c0.", "kind": "pick", "activeNode": "n_c2_c0", "onPath": ["n_root", "n_c2"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": {"r": 1, "c": 0}},
+    {"line": [18, 19, 22], "row": 2, "cols": [2, 0], "diag1": [-2, 1], "diag2": [2, 1], "qc": [2, 0, null, null], "checkText": "cols has 0 ✗", "checkKind": "bad", "action": "n_c2_c0 iter col=0: cols.contains(0) ✓ → continue.", "kind": "check", "activeNode": "n_c2_c0", "onPath": ["n_root", "n_c2"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 2, "cols": [2, 0], "diag1": [-2, 1], "diag2": [2, 1], "qc": [2, 0, null, null], "checkText": "diag1(1) ✗", "checkKind": "bad", "action": "col=1: diag1(2-1=1) ∈ {-2,1} ✗ → PRUNE (same \\ diag as (1,0)).", "kind": "prune", "activeNode": "n_c2_c0_x1", "onPath": ["n_root", "n_c2", "n_c2_c0"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 2, "cols": [2, 0], "diag1": [-2, 1], "diag2": [2, 1], "qc": [2, 0, null, null], "checkText": "cols has 2 ✗", "checkKind": "bad", "action": "col=2: cols.contains(2) ✓ → continue.", "kind": "check", "activeNode": "n_c2_c0", "onPath": ["n_root", "n_c2"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 2, "cols": [2, 0], "diag1": [-2, 1], "diag2": [2, 1], "qc": [2, 0, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "col=3: diag1(-1) no, diag2(5) no, cols no → safe.", "kind": "check", "activeNode": "n_c2_c0", "onPath": ["n_root", "n_c2"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 3, "cols": [2, 0, 3], "diag1": [-2, 1, -1], "diag2": [2, 1, 5], "qc": [2, 0, 3, null], "checkText": "placed (2,3)", "checkKind": "ok", "action": "Place (2,3). Recurse to n_c2_c0_c3.", "kind": "pick", "activeNode": "n_c2_c0_c3", "onPath": ["n_root", "n_c2", "n_c2_c0"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": {"r": 2, "c": 3}},
+    {"line": [18, 19, 22], "row": 3, "cols": [2, 0, 3], "diag1": [-2, 1, -1], "diag2": [2, 1, 5], "qc": [2, 0, 3, null], "checkText": "cols has 0 ✗", "checkKind": "bad", "action": "n_c2_c0_c3 iter col=0: cols.contains(0) ✓ → continue.", "kind": "check", "activeNode": "n_c2_c0_c3", "onPath": ["n_root", "n_c2", "n_c2_c0"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 3, "cols": [2, 0, 3], "diag1": [-2, 1, -1], "diag2": [2, 1, 5], "qc": [2, 0, 3, null], "checkText": "safe ✓", "checkKind": "ok", "action": "col=1: diag1(2) no, diag2(4) no, cols no → safe.", "kind": "check", "activeNode": "n_c2_c0_c3", "onPath": ["n_root", "n_c2", "n_c2_c0"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 4, "cols": [2, 0, 3, 1], "diag1": [-2, 1, -1, 2], "diag2": [2, 1, 5, 4], "qc": [2, 0, 3, 1], "checkText": "placed (3,1)", "checkKind": "ok", "action": "Place (3,1). Recurse.", "kind": "pick", "activeNode": "n_c2_c0_c3_c1", "onPath": ["n_root", "n_c2", "n_c2_c0", "n_c2_c0_c3"], "successNodes": ["n_c1_c3_c0_c2"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2]], "justPlaced": {"r": 3, "c": 1}},
+    {"line": [13, 14, 15], "row": 4, "cols": [2, 0, 3, 1], "diag1": [-2, 1, -1, 2], "diag2": [2, 1, 5, 4], "qc": [2, 0, 3, 1], "checkText": "check(—)", "checkKind": null, "action": "Base case: row==n. RECORD solution 2: ..Q./Q.../...Q/.Q.. ★", "kind": "record", "activeNode": "n_c2_c0_c3_c1", "onPath": ["n_root", "n_c2", "n_c2_c0", "n_c2_c0_c3"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 3, "cols": [2, 0, 3], "diag1": [-2, 1, -1], "diag2": [2, 1, 5], "qc": [2, 0, 3, null], "checkText": "check(—)", "checkKind": null, "action": "Return from base. Remove (3,1).", "kind": "return", "activeNode": "n_c2_c0_c3", "onPath": ["n_root", "n_c2", "n_c2_c0"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 3, "cols": [2, 0, 3], "diag1": [-2, 1, -1], "diag2": [2, 1, 5], "qc": [2, 0, 3, null], "checkText": "cols has 2 ✗", "checkKind": "bad", "action": "col=2: cols.contains(2) ✓ → continue.", "kind": "check", "activeNode": "n_c2_c0_c3", "onPath": ["n_root", "n_c2", "n_c2_c0"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 3, "cols": [2, 0, 3], "diag1": [-2, 1, -1], "diag2": [2, 1, 5], "qc": [2, 0, 3, null], "checkText": "cols has 3 ✗", "checkKind": "bad", "action": "col=3: cols.contains(3) ✓ → continue.", "kind": "check", "activeNode": "n_c2_c0_c3", "onPath": ["n_root", "n_c2", "n_c2_c0"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 2, "cols": [2, 0], "diag1": [-2, 1], "diag2": [2, 1], "qc": [2, 0, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c2_c0_c3 loop done. Return. Remove (2,3).", "kind": "return", "activeNode": "n_c2_c0", "onPath": ["n_root", "n_c2"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 1, "cols": [2], "diag1": [-2], "diag2": [2], "qc": [2, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c2_c0 loop done. Return. Remove (1,0).", "kind": "return", "activeNode": "n_c2", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 1, "cols": [2], "diag1": [-2], "diag2": [2], "qc": [2, null, null, null], "checkText": "diag2(2) ✗", "checkKind": "bad", "action": "n_c2 iter col=1: diag2(1+1=2) ∈ {2} ✗ → PRUNE (same / diag as (0,2)).", "kind": "prune", "activeNode": "n_c2_x1", "onPath": ["n_root", "n_c2"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 1, "cols": [2], "diag1": [-2], "diag2": [2], "qc": [2, null, null, null], "checkText": "cols has 2 ✗", "checkKind": "bad", "action": "col=2: cols.contains(2) ✓ → continue.", "kind": "check", "activeNode": "n_c2", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 1, "cols": [2], "diag1": [-2], "diag2": [2], "qc": [2, null, null, null], "checkText": "diag1(-2) ✗", "checkKind": "bad", "action": "col=3: diag1(1-3=-2) ∈ {-2} ✗ → PRUNE (same \\ diag as (0,2)).", "kind": "prune", "activeNode": "n_c2_x3", "onPath": ["n_root", "n_c2"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 0, "cols": [], "diag1": [], "diag2": [], "qc": [null, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c2 loop done. Return. Remove (0,2). Subtree [2] yielded 1 solution.", "kind": "return", "activeNode": "n_root", "onPath": [], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 0, "cols": [], "diag1": [], "diag2": [], "qc": [null, null, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "n_root iter col=3: all sets empty → safe.", "kind": "check", "activeNode": "n_root", "onPath": [], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 1, "cols": [3], "diag1": [-3], "diag2": [3], "qc": [3, null, null, null], "checkText": "placed (0,3)", "checkKind": "ok", "action": "Place (0,3). cols+={3}, diag1+={-3}, diag2+={3}. Recurse.", "kind": "pick", "activeNode": "n_c3", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": {"r": 0, "c": 3}},
+    {"line": [18, 19, 20], "row": 1, "cols": [3], "diag1": [-3], "diag2": [3], "qc": [3, null, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "n_c3 iter col=0: diag1(1) no, diag2(1) no, cols no → safe.", "kind": "check", "activeNode": "n_c3", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 2, "cols": [3, 0], "diag1": [-3, 1], "diag2": [3, 1], "qc": [3, 0, null, null], "checkText": "placed (1,0)", "checkKind": "ok", "action": "Place (1,0). Recurse to n_c3_c0.", "kind": "pick", "activeNode": "n_c3_c0", "onPath": ["n_root", "n_c3"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": {"r": 1, "c": 0}},
+    {"line": [18, 19, 22], "row": 2, "cols": [3, 0], "diag1": [-3, 1], "diag2": [3, 1], "qc": [3, 0, null, null], "checkText": "cols has 0 ✗", "checkKind": "bad", "action": "n_c3_c0 iter col=0: cols.contains(0) ✓ → continue.", "kind": "check", "activeNode": "n_c3_c0", "onPath": ["n_root", "n_c3"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 2, "cols": [3, 0], "diag1": [-3, 1], "diag2": [3, 1], "qc": [3, 0, null, null], "checkText": "diag2(3) ✗", "checkKind": "bad", "action": "col=1: diag2(2+1=3) ∈ {3,1} ✗ → PRUNE (same / diag as (0,3)).", "kind": "prune", "activeNode": "n_c3_c0_x1", "onPath": ["n_root", "n_c3", "n_c3_c0"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 2, "cols": [3, 0], "diag1": [-3, 1], "diag2": [3, 1], "qc": [3, 0, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "col=2: diag1(0) no, diag2(4) no, cols no → safe.", "kind": "check", "activeNode": "n_c3_c0", "onPath": ["n_root", "n_c3"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 3, "cols": [3, 0, 2], "diag1": [-3, 1, 0], "diag2": [3, 1, 4], "qc": [3, 0, 2, null], "checkText": "placed (2,2)", "checkKind": "ok", "action": "Place (2,2). Recurse to n_c3_c0_c2.", "kind": "pick", "activeNode": "n_c3_c0_c2", "onPath": ["n_root", "n_c3", "n_c3_c0"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": {"r": 2, "c": 2}},
+    {"line": [18, 19, 22], "row": 3, "cols": [3, 0, 2], "diag1": [-3, 1, 0], "diag2": [3, 1, 4], "qc": [3, 0, 2, null], "checkText": "cols has 0 ✗", "checkKind": "bad", "action": "n_c3_c0_c2 iter col=0: cols.contains(0) ✓ → continue.", "kind": "check", "activeNode": "n_c3_c0_c2", "onPath": ["n_root", "n_c3", "n_c3_c0"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 3, "cols": [3, 0, 2], "diag1": [-3, 1, 0], "diag2": [3, 1, 4], "qc": [3, 0, 2, null], "checkText": "diag2(4) ✗", "checkKind": "bad", "action": "col=1: diag2(3+1=4) ∈ {3,1,4} ✗ → PRUNE (same / diag as (2,2)).", "kind": "prune", "activeNode": "n_c3_c0_c2_x1", "onPath": ["n_root", "n_c3", "n_c3_c0", "n_c3_c0_c2"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 3, "cols": [3, 0, 2], "diag1": [-3, 1, 0], "diag2": [3, 1, 4], "qc": [3, 0, 2, null], "checkText": "cols has 2 ✗", "checkKind": "bad", "action": "col=2: cols.contains(2) ✓ → continue.", "kind": "check", "activeNode": "n_c3_c0_c2", "onPath": ["n_root", "n_c3", "n_c3_c0"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 3, "cols": [3, 0, 2], "diag1": [-3, 1, 0], "diag2": [3, 1, 4], "qc": [3, 0, 2, null], "checkText": "cols has 3 ✗", "checkKind": "bad", "action": "col=3: cols.contains(3) ✓ → continue.", "kind": "check", "activeNode": "n_c3_c0_c2", "onPath": ["n_root", "n_c3", "n_c3_c0"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 2, "cols": [3, 0], "diag1": [-3, 1], "diag2": [3, 1], "qc": [3, 0, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c3_c0_c2 loop done. Return. Remove (2,2).", "kind": "return", "activeNode": "n_c3_c0", "onPath": ["n_root", "n_c3"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 2, "cols": [3, 0], "diag1": [-3, 1], "diag2": [3, 1], "qc": [3, 0, null, null], "checkText": "cols has 3 ✗", "checkKind": "bad", "action": "n_c3_c0 iter col=3: cols.contains(3) ✓ → continue.", "kind": "check", "activeNode": "n_c3_c0", "onPath": ["n_root", "n_c3"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 1, "cols": [3], "diag1": [-3], "diag2": [3], "qc": [3, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c3_c0 loop done. Return. Remove (1,0).", "kind": "return", "activeNode": "n_c3", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 20], "row": 1, "cols": [3], "diag1": [-3], "diag2": [3], "qc": [3, null, null, null], "checkText": "safe ✓", "checkKind": "ok", "action": "n_c3 iter col=1: diag1(0) no, diag2(2) no, cols no → safe.", "kind": "check", "activeNode": "n_c3", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [23, 24, 25, 26, 28], "row": 2, "cols": [3, 1], "diag1": [-3, 0], "diag2": [3, 2], "qc": [3, 1, null, null], "checkText": "placed (1,1)", "checkKind": "ok", "action": "Place (1,1). Recurse to n_c3_c1.", "kind": "pick", "activeNode": "n_c3_c1", "onPath": ["n_root", "n_c3"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": {"r": 1, "c": 1}},
+    {"line": [18, 19, 20, 22], "row": 2, "cols": [3, 1], "diag1": [-3, 0], "diag2": [3, 2], "qc": [3, 1, null, null], "checkText": "diag2(2) ✗", "checkKind": "bad", "action": "n_c3_c1 iter col=0: diag2(2+0=2) ∈ {3,2} ✗ → PRUNE (same / diag as (1,1)).", "kind": "prune", "activeNode": "n_c3_c1_x0", "onPath": ["n_root", "n_c3", "n_c3_c1"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1", "n_c3_c1_x0"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 2, "cols": [3, 1], "diag1": [-3, 0], "diag2": [3, 2], "qc": [3, 1, null, null], "checkText": "cols has 1 ✗", "checkKind": "bad", "action": "col=1: cols.contains(1) ✓ → continue.", "kind": "check", "activeNode": "n_c3_c1", "onPath": ["n_root", "n_c3"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1", "n_c3_c1_x0"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 2, "cols": [3, 1], "diag1": [-3, 0], "diag2": [3, 2], "qc": [3, 1, null, null], "checkText": "diag1(0) ✗", "checkKind": "bad", "action": "col=2: diag1(2-2=0) ∈ {-3,0} ✗ → PRUNE (same \\ diag as (0,3)).", "kind": "prune", "activeNode": "n_c3_c1_x2", "onPath": ["n_root", "n_c3", "n_c3_c1"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1", "n_c3_c1_x0", "n_c3_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 2, "cols": [3, 1], "diag1": [-3, 0], "diag2": [3, 2], "qc": [3, 1, null, null], "checkText": "cols has 3 ✗", "checkKind": "bad", "action": "col=3: cols.contains(3) ✓ → continue.", "kind": "check", "activeNode": "n_c3_c1", "onPath": ["n_root", "n_c3"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1", "n_c3_c1_x0", "n_c3_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 1, "cols": [3], "diag1": [-3], "diag2": [3], "qc": [3, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c3_c1 loop done. Return. Remove (1,1).", "kind": "return", "activeNode": "n_c3", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1", "n_c3_c1_x0", "n_c3_c1_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0", "n_c3_c1"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 20, 22], "row": 1, "cols": [3], "diag1": [-3], "diag2": [3], "qc": [3, null, null, null], "checkText": "diag2(3) ✗", "checkKind": "bad", "action": "n_c3 iter col=2: diag2(1+2=3) ∈ {3} ✗ → PRUNE (same / diag as (0,3)).", "kind": "prune", "activeNode": "n_c3_x2", "onPath": ["n_root", "n_c3"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1", "n_c3_c1_x0", "n_c3_c1_x2", "n_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0", "n_c3_c1"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [18, 19, 22], "row": 1, "cols": [3], "diag1": [-3], "diag2": [3], "qc": [3, null, null, null], "checkText": "cols has 3 ✗", "checkKind": "bad", "action": "col=3: cols.contains(3) ✓ → continue.", "kind": "check", "activeNode": "n_c3", "onPath": ["n_root"], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1", "n_c3_c1_x0", "n_c3_c1_x2", "n_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0", "n_c3_c1"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 0, "cols": [], "diag1": [], "diag2": [], "qc": [null, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_c3 loop done. Return. Remove (0,3). Subtree [3] produced no solutions.", "kind": "return", "activeNode": "n_root", "onPath": [], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1", "n_c3_c1_x0", "n_c3_c1_x2", "n_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0", "n_c3_c1", "n_c3"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null},
+    {"line": [30, 31, 32], "row": 0, "cols": [], "diag1": [], "diag2": [], "qc": [null, null, null, null], "checkText": "check(—)", "checkKind": null, "action": "n_root loop done. 2 solutions found. ★", "kind": "return", "activeNode": "n_root", "onPath": [], "successNodes": ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"], "prunedNodes": ["n_c0_x1", "n_c0_c2_x1", "n_c0_c2_x3", "n_c0_c3_c1_x2", "n_c0_c3_x2", "n_c1_x0", "n_c1_x2", "n_c1_c3_x2", "n_c2_c0_x1", "n_c2_x1", "n_c2_x3", "n_c3_c0_x1", "n_c3_c0_c2_x1", "n_c3_c1_x0", "n_c3_c1_x2", "n_c3_x2"], "doneNodes": ["n_c0_c2", "n_c0_c3_c1", "n_c0_c3", "n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1", "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2", "n_c3_c0_c2", "n_c3_c0", "n_c3_c1", "n_c3", "n_root"], "result": [[1, 3, 0, 2], [2, 0, 3, 1]], "justPlaced": null}
   ];
 
   // ============ RENDERER ============
