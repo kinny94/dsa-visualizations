@@ -346,14 +346,17 @@
   // ============ CODE ============
   const codeText = [
     "public String makeLargestSpecial(String s) {",
+    "    return solve(s, 0, s.length());",
+    "}",
+    "",
+    "private String solve(String s, int lo, int hi) {",
     "    List<String> parts = new ArrayList<>();",
     "    int balance = 0;",
-    "    int start = 0;",
-    "    for (int i = 0; i < s.length(); i++) {",
+    "    int start = lo;",
+    "    for (int i = lo; i < hi; i++) {",
     "        balance += (s.charAt(i) == '1') ? 1 : -1;",
     "        if (balance == 0) {",
-    "            String inner = makeLargestSpecial(",
-    "                s.substring(start + 1, i));",
+    "            String inner = solve(s, start + 1, i);",
     "            parts.add(\"1\" + inner + \"0\");",
     "            start = i + 1;",
     "        }",
@@ -451,187 +454,187 @@
   //
   const steps = [
     // -- 1 -- Entry call0
-    { line: [1,2,3,4], local: "11011000", depth: 0, balance: 0, start: 0, i: null, bals: [null,null,null,null,null,null,null,null], windowStart: null, windowEnd: null,
+    { line: [1,2,5,6,7,8], local: "11011000", depth: 0, balance: 0, start: 0, i: null, bals: [null,null,null,null,null,null,null,null], windowStart: null, windowEnd: null,
       parts: [], sortedIdx: -1,
       action: "Entry. makeLargestSpecial(\"11011000\"). parts=[], balance=0, start=0.",
       kind: "call", active: "call0", onPath: [], done: [], returned: {}, result: null },
 
     // -- 2 -- iter i=0 (balance 1)
-    { line: [5,6], local: "11011000", depth: 0, balance: 1, start: 0, i: 0, bals: [1,null,null,null,null,null,null,null], windowStart: 0, windowEnd: 0,
+    { line: [9,10], local: "11011000", depth: 0, balance: 1, start: 0, i: 0, bals: [1,null,null,null,null,null,null,null], windowStart: 0, windowEnd: 0,
       parts: [], sortedIdx: -1,
       action: "i=0: s[0]='1' → balance +=1 → 1. Not 0.",
       kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
 
     // -- 3 -- iter i=1 (bal 2)
-    { line: [5,6], local: "11011000", depth: 0, balance: 2, start: 0, i: 1, bals: [1,2,null,null,null,null,null,null], windowStart: 0, windowEnd: 1,
+    { line: [9,10], local: "11011000", depth: 0, balance: 2, start: 0, i: 1, bals: [1,2,null,null,null,null,null,null], windowStart: 0, windowEnd: 1,
       parts: [], sortedIdx: -1,
       action: "i=1: s[1]='1' → balance=2.",
       kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
 
     // -- 4 -- iter i=2 (bal 1)
-    { line: [5,6], local: "11011000", depth: 0, balance: 1, start: 0, i: 2, bals: [1,2,1,null,null,null,null,null], windowStart: 0, windowEnd: 2,
+    { line: [9,10], local: "11011000", depth: 0, balance: 1, start: 0, i: 2, bals: [1,2,1,null,null,null,null,null], windowStart: 0, windowEnd: 2,
       parts: [], sortedIdx: -1,
       action: "i=2: s[2]='0' → balance=1.",
       kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
 
     // -- 5 -- iter i=3 (bal 2)
-    { line: [5,6], local: "11011000", depth: 0, balance: 2, start: 0, i: 3, bals: [1,2,1,2,null,null,null,null], windowStart: 0, windowEnd: 3,
+    { line: [9,10], local: "11011000", depth: 0, balance: 2, start: 0, i: 3, bals: [1,2,1,2,null,null,null,null], windowStart: 0, windowEnd: 3,
       parts: [], sortedIdx: -1,
       action: "i=3: s[3]='1' → balance=2.",
       kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
 
     // -- 6 -- iter i=4 (bal 3)
-    { line: [5,6], local: "11011000", depth: 0, balance: 3, start: 0, i: 4, bals: [1,2,1,2,3,null,null,null], windowStart: 0, windowEnd: 4,
+    { line: [9,10], local: "11011000", depth: 0, balance: 3, start: 0, i: 4, bals: [1,2,1,2,3,null,null,null], windowStart: 0, windowEnd: 4,
       parts: [], sortedIdx: -1,
       action: "i=4: s[4]='1' → balance=3.",
       kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
 
     // -- 7 -- iter i=5 (bal 2)
-    { line: [5,6], local: "11011000", depth: 0, balance: 2, start: 0, i: 5, bals: [1,2,1,2,3,2,null,null], windowStart: 0, windowEnd: 5,
+    { line: [9,10], local: "11011000", depth: 0, balance: 2, start: 0, i: 5, bals: [1,2,1,2,3,2,null,null], windowStart: 0, windowEnd: 5,
       parts: [], sortedIdx: -1,
       action: "i=5: s[5]='0' → balance=2.",
       kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
 
     // -- 8 -- iter i=6 (bal 1)
-    { line: [5,6], local: "11011000", depth: 0, balance: 1, start: 0, i: 6, bals: [1,2,1,2,3,2,1,null], windowStart: 0, windowEnd: 6,
+    { line: [9,10], local: "11011000", depth: 0, balance: 1, start: 0, i: 6, bals: [1,2,1,2,3,2,1,null], windowStart: 0, windowEnd: 6,
       parts: [], sortedIdx: -1,
       action: "i=6: s[6]='0' → balance=1.",
       kind: "walk", active: "call0", onPath: [], done: [], returned: {}, result: null },
 
     // -- 9 -- iter i=7 HIT (bal 0)
-    { line: [5,6,7], local: "11011000", depth: 0, balance: 0, start: 0, i: 7, bals: [1,2,1,2,3,2,1,0], windowStart: 0, windowEnd: 7,
+    { line: [9,10,11], local: "11011000", depth: 0, balance: 0, start: 0, i: 7, bals: [1,2,1,2,3,2,1,0], windowStart: 0, windowEnd: 7,
       parts: [], sortedIdx: -1,
       action: "i=7: s[7]='0' → balance=0. HIT ★ — s[0..7]=\"11011000\" is a top-level child. Peel outer: interior=\"101100\". Recurse.",
       kind: "hit", active: "call0", onPath: [], done: [], returned: {}, result: null },
 
     // -- 10 -- Enter call1
-    { line: [8,9], local: "101100", depth: 1, balance: 0, start: 0, i: null, bals: [null,null,null,null,null,null], windowStart: null, windowEnd: null,
+    { line: [12,5,6,7,8], local: "101100", depth: 1, balance: 0, start: 0, i: null, bals: [null,null,null,null,null,null], windowStart: null, windowEnd: null,
       parts: [], sortedIdx: -1,
       action: "→ makeLargestSpecial(\"101100\"). New frame. parts=[], balance=0, start=0.",
       kind: "recurse", active: "call1", onPath: ["call0"], done: [], returned: {}, result: null },
 
     // -- 11 -- call1 i=0 (bal 1)
-    { line: [5,6], local: "101100", depth: 1, balance: 1, start: 0, i: 0, bals: [1,null,null,null,null,null], windowStart: 0, windowEnd: 0,
+    { line: [9,10], local: "101100", depth: 1, balance: 1, start: 0, i: 0, bals: [1,null,null,null,null,null], windowStart: 0, windowEnd: 0,
       parts: [], sortedIdx: -1,
       action: "i=0: '1' → balance=1.",
       kind: "walk", active: "call1", onPath: ["call0"], done: [], returned: {}, result: null },
 
     // -- 12 -- call1 i=1 HIT (bal 0)
-    { line: [5,6,7], local: "101100", depth: 1, balance: 0, start: 0, i: 1, bals: [1,0,null,null,null,null], windowStart: 0, windowEnd: 1,
+    { line: [9,10,11], local: "101100", depth: 1, balance: 0, start: 0, i: 1, bals: [1,0,null,null,null,null], windowStart: 0, windowEnd: 1,
       parts: [], sortedIdx: -1,
       action: "i=1: '0' → balance=0. HIT ★ — s[0..1]=\"10\". Peel: interior=\"\". Recurse.",
       kind: "hit", active: "call1", onPath: ["call0"], done: [], returned: {}, result: null },
 
     // -- 13 -- Enter call2a (empty)
-    { line: [8,9], local: "", depth: 2, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
+    { line: [12,5,6,7,8], local: "", depth: 2, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
       parts: [], sortedIdx: -1,
       action: "→ makeLargestSpecial(\"\"). Empty string.",
       kind: "recurse", active: "call2a", onPath: ["call0","call1"], done: [], returned: {}, result: null },
 
     // -- 14 -- call2a return
-    { line: [14,15,16,17,18,19], local: "", depth: 2, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
+    { line: [17,18,19,20,21,22], local: "", depth: 2, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
       parts: [], sortedIdx: -1,
       action: "Empty loop. parts=[]. Sort trivially. Return \"\".",
       kind: "return", active: "call2a", onPath: ["call0","call1"], done: ["call2a"], returned: {call2a: '""'}, result: null },
 
     // -- 15 -- back in call1: add "10"
-    { line: [10,11], local: "101100", depth: 1, balance: 0, start: 2, i: 1, bals: [1,0,null,null,null,null], windowStart: null, windowEnd: null,
+    { line: [13,14], local: "101100", depth: 1, balance: 0, start: 2, i: 1, bals: [1,0,null,null,null,null], windowStart: null, windowEnd: null,
       parts: ["10"], justAdded: 0, sortedIdx: -1,
       action: "Back in call1. parts.add(\"1\"+\"\"+\"0\") = \"10\". parts=[\"10\"]. start = i+1 = 2.",
       kind: "collect", active: "call1", onPath: ["call0"], done: ["call2a"], returned: {call2a: '""'}, result: null },
 
     // -- 16 -- call1 i=2 (bal 1)
-    { line: [5,6], local: "101100", depth: 1, balance: 1, start: 2, i: 2, bals: [1,0,1,null,null,null], windowStart: 2, windowEnd: 2,
+    { line: [9,10], local: "101100", depth: 1, balance: 1, start: 2, i: 2, bals: [1,0,1,null,null,null], windowStart: 2, windowEnd: 2,
       parts: ["10"], sortedIdx: -1,
       action: "i=2: '1' → balance=1.",
       kind: "walk", active: "call1", onPath: ["call0"], done: ["call2a"], returned: {call2a: '""'}, result: null },
 
     // -- 17 -- call1 i=3 (bal 2)
-    { line: [5,6], local: "101100", depth: 1, balance: 2, start: 2, i: 3, bals: [1,0,1,2,null,null], windowStart: 2, windowEnd: 3,
+    { line: [9,10], local: "101100", depth: 1, balance: 2, start: 2, i: 3, bals: [1,0,1,2,null,null], windowStart: 2, windowEnd: 3,
       parts: ["10"], sortedIdx: -1,
       action: "i=3: '1' → balance=2.",
       kind: "walk", active: "call1", onPath: ["call0"], done: ["call2a"], returned: {call2a: '""'}, result: null },
 
     // -- 18 -- call1 i=4 (bal 1)
-    { line: [5,6], local: "101100", depth: 1, balance: 1, start: 2, i: 4, bals: [1,0,1,2,1,null], windowStart: 2, windowEnd: 4,
+    { line: [9,10], local: "101100", depth: 1, balance: 1, start: 2, i: 4, bals: [1,0,1,2,1,null], windowStart: 2, windowEnd: 4,
       parts: ["10"], sortedIdx: -1,
       action: "i=4: '0' → balance=1.",
       kind: "walk", active: "call1", onPath: ["call0"], done: ["call2a"], returned: {call2a: '""'}, result: null },
 
     // -- 19 -- call1 i=5 HIT (bal 0)
-    { line: [5,6,7], local: "101100", depth: 1, balance: 0, start: 2, i: 5, bals: [1,0,1,2,1,0], windowStart: 2, windowEnd: 5,
+    { line: [9,10,11], local: "101100", depth: 1, balance: 0, start: 2, i: 5, bals: [1,0,1,2,1,0], windowStart: 2, windowEnd: 5,
       parts: ["10"], sortedIdx: -1,
       action: "i=5: '0' → balance=0. HIT ★ — s[2..5]=\"1100\". Peel: interior=\"10\". Recurse.",
       kind: "hit", active: "call1", onPath: ["call0"], done: ["call2a"], returned: {call2a: '""'}, result: null },
 
     // -- 20 -- Enter call3 ("10")
-    { line: [8,9], local: "10", depth: 2, balance: 0, start: 0, i: null, bals: [null,null], windowStart: null, windowEnd: null,
+    { line: [12,5,6,7,8], local: "10", depth: 2, balance: 0, start: 0, i: null, bals: [null,null], windowStart: null, windowEnd: null,
       parts: [], sortedIdx: -1,
       action: "→ makeLargestSpecial(\"10\"). parts=[], balance=0, start=0.",
       kind: "recurse", active: "call3", onPath: ["call0","call1"], done: ["call2a"], returned: {call2a: '""'}, result: null },
 
     // -- 21 -- call3 i=0 (bal 1)
-    { line: [5,6], local: "10", depth: 2, balance: 1, start: 0, i: 0, bals: [1,null], windowStart: 0, windowEnd: 0,
+    { line: [9,10], local: "10", depth: 2, balance: 1, start: 0, i: 0, bals: [1,null], windowStart: 0, windowEnd: 0,
       parts: [], sortedIdx: -1,
       action: "i=0: '1' → balance=1.",
       kind: "walk", active: "call3", onPath: ["call0","call1"], done: ["call2a"], returned: {call2a: '""'}, result: null },
 
     // -- 22 -- call3 i=1 HIT (bal 0)
-    { line: [5,6,7], local: "10", depth: 2, balance: 0, start: 0, i: 1, bals: [1,0], windowStart: 0, windowEnd: 1,
+    { line: [9,10,11], local: "10", depth: 2, balance: 0, start: 0, i: 1, bals: [1,0], windowStart: 0, windowEnd: 1,
       parts: [], sortedIdx: -1,
       action: "i=1: '0' → balance=0. HIT ★ — s[0..1]=\"10\". Peel: interior=\"\". Recurse.",
       kind: "hit", active: "call3", onPath: ["call0","call1"], done: ["call2a"], returned: {call2a: '""'}, result: null },
 
     // -- 23 -- Enter call4 (empty)
-    { line: [8,9], local: "", depth: 3, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
+    { line: [12,5,6,7,8], local: "", depth: 3, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
       parts: [], sortedIdx: -1,
       action: "→ makeLargestSpecial(\"\"). Empty string.",
       kind: "recurse", active: "call4", onPath: ["call0","call1","call3"], done: ["call2a"], returned: {call2a: '""'}, result: null },
 
     // -- 24 -- call4 return
-    { line: [14,19], local: "", depth: 3, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
+    { line: [17,22], local: "", depth: 3, balance: 0, start: 0, i: null, bals: [], windowStart: null, windowEnd: null,
       parts: [], sortedIdx: -1,
       action: "Empty loop. Return \"\".",
       kind: "return", active: "call4", onPath: ["call0","call1","call3"], done: ["call2a","call4"], returned: {call2a: '""', call4: '""'}, result: null },
 
     // -- 25 -- back in call3: add "10"
-    { line: [10,11], local: "10", depth: 2, balance: 0, start: 2, i: 1, bals: [1,0], windowStart: null, windowEnd: null,
+    { line: [13,14], local: "10", depth: 2, balance: 0, start: 2, i: 1, bals: [1,0], windowStart: null, windowEnd: null,
       parts: ["10"], justAdded: 0, sortedIdx: -1,
       action: "Back in call3. parts.add(\"1\"+\"\"+\"0\") = \"10\". parts=[\"10\"]. start = 2.",
       kind: "collect", active: "call3", onPath: ["call0","call1"], done: ["call2a","call4"], returned: {call2a: '""', call4: '""'}, result: null },
 
     // -- 26 -- call3 loop done, sort & return
-    { line: [14,15,16,17,18,19], local: "10", depth: 2, balance: 0, start: 2, i: 1, bals: [1,0], windowStart: null, windowEnd: null,
+    { line: [17,18,19,20,21,22], local: "10", depth: 2, balance: 0, start: 2, i: 1, bals: [1,0], windowStart: null, windowEnd: null,
       parts: ["10"], sortedIdx: 0,
       action: "Loop done. Sort [\"10\"] desc → [\"10\"]. Concat → \"10\". Return \"10\".",
       kind: "return", active: "call3", onPath: ["call0","call1"], done: ["call2a","call4","call3"], returned: {call2a: '""', call4: '""', call3: '"10"'}, result: null },
 
     // -- 27 -- back in call1: add "1100"
-    { line: [10,11], local: "101100", depth: 1, balance: 0, start: 6, i: 5, bals: [1,0,1,2,1,0], windowStart: null, windowEnd: null,
+    { line: [13,14], local: "101100", depth: 1, balance: 0, start: 6, i: 5, bals: [1,0,1,2,1,0], windowStart: null, windowEnd: null,
       parts: ["10","1100"], justAdded: 1, sortedIdx: -1,
       action: "Back in call1. parts.add(\"1\"+\"10\"+\"0\") = \"1100\". parts=[\"10\",\"1100\"]. start = 6.",
       kind: "collect", active: "call1", onPath: ["call0"], done: ["call2a","call4","call3"], returned: {call2a: '""', call4: '""', call3: '"10"'}, result: null },
 
     // -- 28 -- call1 loop done, sort
-    { line: [14], local: "101100", depth: 1, balance: 0, start: 6, i: 5, bals: [1,0,1,2,1,0], windowStart: null, windowEnd: null,
+    { line: [17], local: "101100", depth: 1, balance: 0, start: 6, i: 5, bals: [1,0,1,2,1,0], windowStart: null, windowEnd: null,
       parts: ["1100","10"], sortedIdx: 2,
       action: "Loop done (i=5 was last). Sort parts desc: \"1100\" > \"10\" → [\"1100\",\"10\"].",
       kind: "sort", active: "call1", onPath: ["call0"], done: ["call2a","call4","call3"], returned: {call2a: '""', call4: '""', call3: '"10"'}, result: null },
 
     // -- 29 -- call1 concat & return
-    { line: [15,16,17,18,19], local: "101100", depth: 1, balance: 0, start: 6, i: 5, bals: [1,0,1,2,1,0], windowStart: null, windowEnd: null,
+    { line: [18,19,20,21,22], local: "101100", depth: 1, balance: 0, start: 6, i: 5, bals: [1,0,1,2,1,0], windowStart: null, windowEnd: null,
       parts: ["1100","10"], sortedIdx: 2,
       action: "Concat → \"110010\". Return \"110010\".",
       kind: "return", active: "call1", onPath: ["call0"], done: ["call2a","call4","call3","call1"], returned: {call2a: '""', call4: '""', call3: '"10"', call1: '"110010"'}, result: null },
 
     // -- 30 -- back in call0: add "11100100"
-    { line: [10,11], local: "11011000", depth: 0, balance: 0, start: 8, i: 7, bals: [1,2,1,2,3,2,1,0], windowStart: null, windowEnd: null,
+    { line: [13,14], local: "11011000", depth: 0, balance: 0, start: 8, i: 7, bals: [1,2,1,2,3,2,1,0], windowStart: null, windowEnd: null,
       parts: ["11100100"], justAdded: 0, sortedIdx: -1,
       action: "Back in call0. parts.add(\"1\"+\"110010\"+\"0\") = \"11100100\". parts=[\"11100100\"]. start = 8.",
       kind: "collect", active: "call0", onPath: [], done: ["call2a","call4","call3","call1"], returned: {call2a: '""', call4: '""', call3: '"10"', call1: '"110010"'}, result: null },
 
     // -- 31 -- call0 loop done, sort & return & final result
-    { line: [14,15,16,17,18,19], local: "11011000", depth: 0, balance: 0, start: 8, i: 7, bals: [1,2,1,2,3,2,1,0], windowStart: null, windowEnd: null,
+    { line: [17,18,19,20,21,22], local: "11011000", depth: 0, balance: 0, start: 8, i: 7, bals: [1,2,1,2,3,2,1,0], windowStart: null, windowEnd: null,
       parts: ["11100100"], sortedIdx: 1,
       action: "Loop done. Sort trivially. Concat → \"11100100\". Return \"11100100\". ★ FINAL ANSWER.",
       kind: "return", active: "call0", onPath: [], done: ["call2a","call4","call3","call1","call0"],
