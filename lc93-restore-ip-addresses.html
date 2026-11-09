@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 93 — Restore IP Addresses</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 500px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    transition: all 0.25s;
+  }
+  .pill .pill-k {
+    color: #888;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pill .pill-v {
+    font-weight: bold;
+    color: #ffa500;
+  }
+  .pill.done { background: #0f6b3a; border-color: #0f9950; }
+  .pill.done .pill-v { color: #4de88c; }
+  .label {
+    width: 72px;
+    font-size: 11px;
+    color: #aaa;
+    text-align: right;
+  }
+  .char-row { display: flex; gap: 5px; align-items: center; }
+  .char-cell {
+    width: 32px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.25s;
+    font-family: 'Monaco', monospace;
+    font-size: 15px;
+    position: relative;
+  }
+  .char-cell.before-index { opacity: 0.35; }
+  .char-cell.in-window {
+    border-color: #ffa500;
+    background: #3a2a0a;
+    color: #ffd87a;
+  }
+  .char-cell.window-start { box-shadow: -3px 0 0 #ffa500; }
+  .char-cell.window-end   { box-shadow:  3px 0 0 #ffa500; }
+  .char-cell .idx-num {
+    position: absolute;
+    top: -14px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 9px;
+    color: #666;
+    font-weight: normal;
+  }
+  .octet-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    background: #2a1a2a;
+    border: 1px solid #3a2a4a;
+    color: #888;
+    transition: all 0.25s;
+  }
+  .octet-indicator.ok {
+    background: #0f6b3a;
+    border-color: #0f9950;
+    color: #fff;
+  }
+  .octet-indicator.bad {
+    background: #4a1a2a;
+    border-color: #6a2a3a;
+    color: #ff8a8a;
+  }
+  .current-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+  }
+  .current-partition {
+    display: inline-flex;
+    gap: 5px;
+    padding: 4px 6px;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 6px;
+    min-height: 38px;
+    align-items: center;
+    font-family: 'Monaco', monospace;
+    min-width: 72px;
+  }
+  .current-partition.empty { color: #6a7a9a; font-size: 13px; padding-left: 10px; }
+  .current-partition .piece {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #0f6b3a;
+    border: 1px solid #0f9950;
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #fff;
+    transition: all 0.2s;
+  }
+  .current-partition .dot {
+    color: #ffa500;
+    font-weight: bold;
+    padding: 0 2px;
+  }
+  .current-partition .piece.just-added { animation: pop 0.3s ease-out; }
+  @keyframes pop {
+    0% { transform: scale(0.3); opacity: 0; }
+    60% { transform: scale(1.3); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #bbb;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box .idx-text {
+    fill: #888;
+    font-size: 9px;
+  }
+  .node-box.pruned rect { fill: #3a1a24; stroke: #6a2a3a; stroke-dasharray: 4,3; }
+  .node-box.pruned text { fill: #e99; }
+  .node-box.pruned .idx-text { fill: #a66; }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.on-path .idx-text { fill: #ffd87a; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.active .idx-text { fill: #ffdce1; }
+  .node-box.active.pruned rect { fill: #a33148; stroke: #e94560; stroke-dasharray: 4,3; }
+  .node-box.success rect { fill: #0f9950; stroke: #4de88c; stroke-width: 3; }
+  .node-box.success text { fill: #fff; font-weight: bold; }
+  .node-box.success .idx-text { fill: #cff8d9; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .node-box.done .idx-text { fill: #555; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .edge.pruned { stroke: #6a2a3a; stroke-dasharray: 4,3; }
+  .edge-label {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+  }
+  .edge-label.on-path { fill: #ffd87a; }
+  .edge-label.pruned { fill: #e99; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 72px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-record { background: #0f9950; color: white; }
+  .kind-pick { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #1a4a7a; color: white; }
+  .kind-prune { background: #a33148; color: white; }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+  }
+  .result-list li {
+    padding: 4px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #0f9950;
+    font-weight: bold;
+  }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 2px; }
+  .chip-active { background: #e94560; }
+  .chip-success { background: #0f9950; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .chip-pruned { background: #3a1a24; border: 1px dashed #6a2a3a; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 93 — Restore IP Addresses</h1>
+    <div class="subtitle">Cut-point backtracking · bounded loop (≤3 chars) · fixed 4-piece count &nbsp;·&nbsp; s = "0000"</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill"><span class="pill-k">index</span><span class="pill-v" id="indexVal">0</span></span>
+      <span class="pill" id="pillPieces"><span class="pill-k">pieces</span><span class="pill-v" id="piecesVal">0 / 4</span></span>
+      <span class="octet-indicator" id="octetInd">octet(—) : ?</span>
+    </div>
+    <div class="row">
+      <span class="label">s:</span>
+      <div class="char-row" id="chars"></div>
+    </div>
+    <div class="row current-wrap">
+      <span class="label">current:</span>
+      <div class="current-partition empty" id="currentPartition">[]</div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 920 400" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result (IP addresses)</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-success"></div>recorded IP</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+      <div class="legend-item"><div class="chip chip-pruned"></div>pruned (invalid octet)</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const S = "0000";
+
+  // ============ CHARS ============
+  const charsEl = document.getElementById('chars');
+  const charCells = [];
+  for (let i = 0; i < S.length; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'char-cell';
+    cell.textContent = S[i];
+    const idxLbl = document.createElement('span');
+    idxLbl.className = 'idx-num';
+    idxLbl.textContent = i;
+    cell.appendChild(idxLbl);
+    charsEl.appendChild(cell);
+    charCells.push(cell);
+  }
+
+  // ============ CODE ============
+  const codeText = [
+    "public List<String> restoreIpAddresses(String s) {",
+    "    List<String> result = new ArrayList<>();",
+    "    solve(s, new ArrayList<>(), result, 0);",
+    "    return result;",
+    "}",
+    "",
+    "private void solve(String s, List<String> pieces,",
+    "                   List<String> result, int index) {",
+    "    if (pieces.size() == 4) {",
+    "        if (index == s.length()) {",
+    "            result.add(String.join(\".\", pieces));",
+    "        }",
+    "        return;",
+    "    }",
+    "    int maxEnd = Math.min(index + 2, s.length() - 1);",
+    "    for (int i = index; i <= maxEnd; i++) {",
+    "        if (isValidOctet(s, index, i)) {",
+    "            pieces.add(s.substring(index, i + 1));",
+    "            solve(s, pieces, result, i + 1);",
+    "            pieces.remove(pieces.size() - 1);",
+    "        }",
+    "    }",
+    "}",
+    "",
+    "private boolean isValidOctet(String s, int low, int high) {",
+    "    if (high > low && s.charAt(low) == '0') {",
+    "        return false;",
+    "    }",
+    "    int value = 0;",
+    "    for (int i = low; i <= high; i++) {",
+    "        value = value * 10 + (s.charAt(i) - '0');",
+    "    }",
+    "    return value <= 255;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // s = "0000"  (n=4)
+  //                           n0 (idx=0)
+  //                         /    |       \
+  //                     [0]    [00] ✗   [000] ✗
+  //                    / | \
+  //               [0,0] [0,00]✗ [0,000]✗
+  //                /  \
+  //          [0,0,0] [0,0,00]✗
+  //             |
+  //          [0,0,0,0] ★
+  const nodes = {
+    n0:          { x: 460, y:  40, w:  60, label: '[]',            sub: 'idx=0',     pruned: false },
+    n0_0:        { x: 180, y: 118, w:  70, label: '[0]',           sub: 'idx=1',     pruned: false },
+    n0_00X:      { x: 460, y: 118, w: 100, label: '[00] ✗',        sub: 'lead 0',    pruned: true  },
+    n0_000X:     { x: 740, y: 118, w: 110, label: '[000] ✗',       sub: 'lead 0',    pruned: true  },
+    n0_0_0:      { x:  80, y: 198, w:  90, label: '[0,0]',         sub: 'idx=2',     pruned: false },
+    n0_0_00X:    { x: 220, y: 198, w: 110, label: '[0,00] ✗',      sub: 'lead 0',    pruned: true  },
+    n0_0_000X:   { x: 360, y: 198, w: 120, label: '[0,000] ✗',     sub: 'lead 0',    pruned: true  },
+    n0_0_0_0:    { x:  50, y: 278, w: 100, label: '[0,0,0]',       sub: 'idx=3',     pruned: false },
+    n0_0_0_00X:  { x: 190, y: 278, w: 130, label: '[0,0,00] ✗',    sub: 'lead 0',    pruned: true  },
+    n0_0_0_0_0:  { x:  50, y: 358, w: 120, label: '[0,0,0,0]',     sub: 'size=4 ★',  pruned: false }
+  };
+  const edges = [
+    ["n0",       "n0_0",       '"0"',    false],
+    ["n0",       "n0_00X",     '"00"',   true ],
+    ["n0",       "n0_000X",    '"000"',  true ],
+    ["n0_0",     "n0_0_0",     '"0"',    false],
+    ["n0_0",     "n0_0_00X",   '"00"',   true ],
+    ["n0_0",     "n0_0_000X",  '"000"',  true ],
+    ["n0_0_0",   "n0_0_0_0",   '"0"',    false],
+    ["n0_0_0",   "n0_0_0_00X", '"00"',   true ],
+    ["n0_0_0_0", "n0_0_0_0_0", '"0"',    false]
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  const edgeLabelEls = {};
+  edges.forEach(([from, to, ch, pruned]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 18);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 18);
+    line.setAttribute('class', 'edge' + (pruned ? ' pruned' : ''));
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+
+    const lbl = document.createElementNS(SVGNS, 'text');
+    const mx = (a.x + b.x) / 2 + (b.x < a.x ? -8 : (b.x > a.x ? 8 : 0));
+    const my = (a.y + b.y) / 2 + 3;
+    lbl.setAttribute('x', mx);
+    lbl.setAttribute('y', my);
+    lbl.setAttribute('class', 'edge-label' + (pruned ? ' pruned' : ''));
+    lbl.textContent = ch;
+    svg.appendChild(lbl);
+    edgeLabelEls[`${from}-${to}`] = lbl;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box' + (n.pruned ? ' pruned' : ''));
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 18);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 36);
+    rect.setAttribute('rx', 5);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y - 4);
+    t.textContent = n.label;
+    g.appendChild(t);
+    const s = document.createElementNS(SVGNS, 'text');
+    s.setAttribute('x', n.x);
+    s.setAttribute('y', n.y + 10);
+    s.setAttribute('class', 'idx-text');
+    s.textContent = n.sub;
+    g.appendChild(s);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  const steps = [
+    { line: [3], index: 0, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: [], action: "Entry. Call solve(s, [], result, 0). Start at index=0.",
+      kind: "call", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [9], index: 0, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: [], action: "n0: base check. pieces.size()==4? 0==4 → no.",
+      kind: "check", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [15, 16, 17, 18], index: 0, windowStart: 0, windowEnd: 0, octet: "ok", octetText: "octet(\"0\") = 0 ✓",
+      current: ["0"], action: "n0 loop i=0: s[0..0]=\"0\". isValidOctet(0) ✓. pieces.add(\"0\").",
+      kind: "pick", activeNode: "n0", onPath: [], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [19], index: 1, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0"], action: "Call solve(..., index=1). Descend to [0].",
+      kind: "call", activeNode: "n0_0", onPath: ["n0"], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [9], index: 1, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0"], action: "n0_0: base check. 1==4 → no.",
+      kind: "check", activeNode: "n0_0", onPath: ["n0"], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [15, 16, 17, 18], index: 1, windowStart: 1, windowEnd: 1, octet: "ok", octetText: "octet(\"0\") = 0 ✓",
+      current: ["0", "0"], action: "n0_0 loop i=1: s[1..1]=\"0\". isValidOctet ✓. add → [\"0\",\"0\"].",
+      kind: "pick", activeNode: "n0_0", onPath: ["n0"], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [19], index: 2, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0", "0"], action: "Call solve(..., index=2). Descend to [0,0].",
+      kind: "call", activeNode: "n0_0_0", onPath: ["n0", "n0_0"], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [9], index: 2, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0", "0"], action: "n0_0_0: base check. 2==4 → no.",
+      kind: "check", activeNode: "n0_0_0", onPath: ["n0", "n0_0"], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [15, 16, 17, 18], index: 2, windowStart: 2, windowEnd: 2, octet: "ok", octetText: "octet(\"0\") = 0 ✓",
+      current: ["0", "0", "0"], action: "n0_0_0 loop i=2: s[2..2]=\"0\". isValidOctet ✓. add → [\"0\",\"0\",\"0\"].",
+      kind: "pick", activeNode: "n0_0_0", onPath: ["n0", "n0_0"], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [19], index: 3, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0", "0", "0"], action: "Call solve(..., index=3). Descend to [0,0,0].",
+      kind: "call", activeNode: "n0_0_0_0", onPath: ["n0", "n0_0", "n0_0_0"], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [9], index: 3, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0", "0", "0"], action: "n0_0_0_0: base check. 3==4 → no.",
+      kind: "check", activeNode: "n0_0_0_0", onPath: ["n0", "n0_0", "n0_0_0"], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [15, 16, 17, 18], index: 3, windowStart: 3, windowEnd: 3, octet: "ok", octetText: "octet(\"0\") = 0 ✓",
+      current: ["0", "0", "0", "0"], action: "n0_0_0_0 loop i=3: s[3..3]=\"0\". isValidOctet ✓. add → [\"0\",\"0\",\"0\",\"0\"].",
+      kind: "pick", activeNode: "n0_0_0_0", onPath: ["n0", "n0_0", "n0_0_0"], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [19], index: 4, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0", "0", "0", "0"], action: "Call solve(..., index=4). Descend to [0,0,0,0].",
+      kind: "call", activeNode: "n0_0_0_0_0", onPath: ["n0", "n0_0", "n0_0_0", "n0_0_0_0"], successNodes: [], doneNodes: [], prunedNodes: [], result: [] },
+
+    { line: [9, 10, 11], index: 4, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0", "0", "0", "0"], action: "n0_0_0_0_0: base ✓. size==4 AND idx=4=n. RECORD \"0.0.0.0\". ★",
+      kind: "record", activeNode: "n0_0_0_0_0", onPath: ["n0", "n0_0", "n0_0_0", "n0_0_0_0"], successNodes: ["n0_0_0_0_0"], doneNodes: [], prunedNodes: [], result: ["0.0.0.0"] },
+
+    { line: [20], index: 3, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0", "0", "0"], action: "Return. Back in n0_0_0_0 line 20: pieces.remove(last). current = [\"0\",\"0\",\"0\"].",
+      kind: "return", activeNode: "n0_0_0_0", onPath: ["n0", "n0_0", "n0_0_0"], successNodes: ["n0_0_0_0_0"], doneNodes: ["n0_0_0_0_0"], prunedNodes: [], result: ["0.0.0.0"] },
+
+    { line: [22, 20], index: 2, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0", "0"], action: "n0_0_0_0 loop exhausted (maxEnd=3, only i=3 ran). Return → n0_0_0 line 20: remove. current = [\"0\",\"0\"].",
+      kind: "return", activeNode: "n0_0_0", onPath: ["n0", "n0_0"], successNodes: ["n0_0_0_0_0"], doneNodes: ["n0_0_0_0_0", "n0_0_0_0"], prunedNodes: [], result: ["0.0.0.0"] },
+
+    { line: [16, 17, 26], index: 2, windowStart: 2, windowEnd: 3, octet: "bad", octetText: "octet(\"00\") : lead 0 ✗",
+      current: ["0", "0"], action: "n0_0_0 loop i=3: s[2..3]=\"00\". isValidOctet ✗ (length>1 && starts '0'). Prune.",
+      kind: "prune", activeNode: "n0_0_0_00X", onPath: ["n0", "n0_0", "n0_0_0"], successNodes: ["n0_0_0_0_0"], doneNodes: ["n0_0_0_0_0", "n0_0_0_0"], prunedNodes: ["n0_0_0_00X"], result: ["0.0.0.0"] },
+
+    { line: [22, 20], index: 1, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: ["0"], action: "n0_0_0 loop done (maxEnd=3, both i=2 and i=3 processed). Return → n0_0 line 20: remove. current = [\"0\"].",
+      kind: "return", activeNode: "n0_0", onPath: ["n0"], successNodes: ["n0_0_0_0_0"], doneNodes: ["n0_0_0_0_0", "n0_0_0_0", "n0_0_0", "n0_0_0_00X"], prunedNodes: ["n0_0_0_00X"], result: ["0.0.0.0"] },
+
+    { line: [16, 17, 26], index: 1, windowStart: 1, windowEnd: 2, octet: "bad", octetText: "octet(\"00\") : lead 0 ✗",
+      current: ["0"], action: "n0_0 loop i=2: s[1..2]=\"00\". isValidOctet ✗ (leading zero). Prune.",
+      kind: "prune", activeNode: "n0_0_00X", onPath: ["n0", "n0_0"], successNodes: ["n0_0_0_0_0"], doneNodes: ["n0_0_0_0_0", "n0_0_0_0", "n0_0_0", "n0_0_0_00X"], prunedNodes: ["n0_0_0_00X", "n0_0_00X"], result: ["0.0.0.0"] },
+
+    { line: [16, 17, 26], index: 1, windowStart: 1, windowEnd: 3, octet: "bad", octetText: "octet(\"000\") : lead 0 ✗",
+      current: ["0"], action: "n0_0 loop i=3: s[1..3]=\"000\". isValidOctet ✗ (leading zero). Prune.",
+      kind: "prune", activeNode: "n0_0_000X", onPath: ["n0", "n0_0"], successNodes: ["n0_0_0_0_0"], doneNodes: ["n0_0_0_0_0", "n0_0_0_0", "n0_0_0", "n0_0_0_00X"], prunedNodes: ["n0_0_0_00X", "n0_0_00X", "n0_0_000X"], result: ["0.0.0.0"] },
+
+    { line: [22, 20], index: 0, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: [], action: "n0_0 loop done. Return → n0 line 20: remove. current = [].",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n0_0_0_0_0"], doneNodes: ["n0_0_0_0_0", "n0_0_0_0", "n0_0_0", "n0_0_0_00X", "n0_0", "n0_0_00X", "n0_0_000X"], prunedNodes: ["n0_0_0_00X", "n0_0_00X", "n0_0_000X"], result: ["0.0.0.0"] },
+
+    { line: [16, 17, 26], index: 0, windowStart: 0, windowEnd: 1, octet: "bad", octetText: "octet(\"00\") : lead 0 ✗",
+      current: [], action: "n0 loop i=1: s[0..1]=\"00\". isValidOctet ✗ (leading zero). Prune.",
+      kind: "prune", activeNode: "n0_00X", onPath: ["n0"], successNodes: ["n0_0_0_0_0"], doneNodes: ["n0_0_0_0_0", "n0_0_0_0", "n0_0_0", "n0_0_0_00X", "n0_0", "n0_0_00X", "n0_0_000X"], prunedNodes: ["n0_0_0_00X", "n0_0_00X", "n0_0_000X", "n0_00X"], result: ["0.0.0.0"] },
+
+    { line: [16, 17, 26], index: 0, windowStart: 0, windowEnd: 2, octet: "bad", octetText: "octet(\"000\") : lead 0 ✗",
+      current: [], action: "n0 loop i=2: s[0..2]=\"000\". isValidOctet ✗ (leading zero). Prune.",
+      kind: "prune", activeNode: "n0_000X", onPath: ["n0"], successNodes: ["n0_0_0_0_0"], doneNodes: ["n0_0_0_0_0", "n0_0_0_0", "n0_0_0", "n0_0_0_00X", "n0_0", "n0_0_00X", "n0_0_000X"], prunedNodes: ["n0_0_0_00X", "n0_0_00X", "n0_0_000X", "n0_00X", "n0_000X"], result: ["0.0.0.0"] },
+
+    { line: [22, 23], index: 0, windowStart: null, windowEnd: null, octet: null, octetText: "octet(—) : ?",
+      current: [], action: "n0 loop done. Return. DONE — 1 valid IP for \"0000\".",
+      kind: "return", activeNode: "n0", onPath: [], successNodes: ["n0_0_0_0_0"], doneNodes: ["n0_0_0_0_0", "n0_0_0_0", "n0_0_0", "n0_0_0_00X", "n0_0", "n0_0_00X", "n0_0_000X", "n0", "n0_00X", "n0_000X"], prunedNodes: ["n0_0_0_00X", "n0_0_00X", "n0_0_000X", "n0_00X", "n0_000X"], result: ["0.0.0.0"] }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const currentPartitionEl = document.getElementById('currentPartition');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const indexValEl = document.getElementById('indexVal');
+  const piecesValEl = document.getElementById('piecesVal');
+  const pillPiecesEl = document.getElementById('pillPieces');
+  const octetIndEl = document.getElementById('octetInd');
+
+  function renderPartition(pieces, animate, kind) {
+    currentPartitionEl.classList.toggle('empty', pieces.length === 0);
+    if (pieces.length === 0) {
+      currentPartitionEl.textContent = '[]';
+      return;
+    }
+    currentPartitionEl.innerHTML = '';
+    for (let i = 0; i < pieces.length; i++) {
+      if (i > 0) {
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.textContent = '.';
+        currentPartitionEl.appendChild(dot);
+      }
+      const span = document.createElement('span');
+      span.textContent = pieces[i];
+      span.className = 'piece';
+      if (animate && i === pieces.length - 1 && kind === 'pick') {
+        span.classList.add('just-added');
+      }
+      currentPartitionEl.appendChild(span);
+    }
+  }
+
+  function render(idx, animate = false) {
+    const s = steps[idx];
+    // Code
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    indexValEl.textContent = s.index;
+    piecesValEl.textContent = `${s.current.length} / 4`;
+    pillPiecesEl.classList.toggle('done', s.current.length === 4);
+    // Octet indicator
+    octetIndEl.className = 'octet-indicator';
+    if (s.octet === 'ok') { octetIndEl.classList.add('ok'); }
+    else if (s.octet === 'bad') { octetIndEl.classList.add('bad'); }
+    octetIndEl.textContent = s.octetText;
+    // Char cells
+    charCells.forEach((el, i) => {
+      el.classList.remove('before-index', 'in-window', 'window-start', 'window-end');
+      if (i < s.index) {
+        el.classList.add('before-index');
+      }
+      if (s.windowStart !== null && i >= s.windowStart && i <= s.windowEnd) {
+        el.classList.add('in-window');
+        if (i === s.windowStart) { el.classList.add('window-start'); }
+        if (i === s.windowEnd)   { el.classList.add('window-end'); }
+      }
+    });
+    // Current partition
+    renderPartition(s.current, animate, s.kind);
+    // Tree
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      const isPruned = nodes[key].pruned;
+      el.classList.remove('active', 'on-path', 'success', 'done');
+      el.classList.toggle('pruned', isPruned);
+      if (s.successNodes.includes(key)) {
+        el.classList.add('success');
+      } else if (s.activeNode === key) {
+        el.classList.add('active');
+      } else if (s.doneNodes.includes(key)) {
+        el.classList.add('done');
+      } else if (s.onPath.includes(key)) {
+        el.classList.add('on-path');
+      }
+    });
+    edges.forEach(([from, to, , pruned]) => {
+      const e = edgeEls[`${from}-${to}`];
+      const lbl = edgeLabelEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      lbl.classList.remove('on-path');
+      e.classList.toggle('pruned', pruned);
+      lbl.classList.toggle('pruned', pruned);
+      const pathSet = new Set([...s.onPath, s.activeNode]);
+      if (pathSet.has(from) && pathSet.has(to)) {
+        e.classList.add('on-path');
+        lbl.classList.add('on-path');
+      }
+    });
+    // Result
+    resultEl.innerHTML = '';
+    s.result.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.textContent = '"' + r + '"';
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+
+  function goTo(idx, animate = false) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx, animate);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1, false);
+  });
+  nextBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(stepIdx + 1, true);
+  });
+  resetBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(0, false);
+  });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1, true);
+    }, 1100);
+  });
+
+  goTo(0, false);
+</script>
+</body>
+</html>

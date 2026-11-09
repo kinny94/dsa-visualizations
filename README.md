@@ -28,6 +28,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [47](https://kinny94.github.io/dsa-visualizations/lc47-permutations-ii.html) | Permutations II | Recursion · Backtracking |
 | [22](https://kinny94.github.io/dsa-visualizations/lc22-generate-parentheses.html) | Generate Parentheses | Recursion · Backtracking |
 | [131](https://kinny94.github.io/dsa-visualizations/lc131-palindrome-partitioning.html) | Palindrome Partitioning | Recursion · Backtracking |
+| [93](https://kinny94.github.io/dsa-visualizations/lc93-restore-ip-addresses.html) | Restore IP Addresses | Recursion · Backtracking |
 
 ## Adding a new animation
 
