@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 51 — N-Queens</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 520px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pills {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    transition: all 0.25s;
+  }
+  .pill .pill-k {
+    color: #888;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pill .pill-v {
+    font-weight: bold;
+    color: #ffa500;
+  }
+  .pill.set-cols .pill-v { color: #4de88c; }
+  .pill.set-diag1 .pill-v { color: #ffd87a; }
+  .pill.set-diag2 .pill-v { color: #9ad4ff; }
+  .label {
+    width: 72px;
+    font-size: 11px;
+    color: #aaa;
+    text-align: right;
+  }
+  .board-wrap {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, 38px);
+    grid-template-rows: repeat(4, 38px);
+    gap: 0;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .board-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Monaco', monospace;
+    font-size: 22px;
+    font-weight: bold;
+    position: relative;
+    transition: all 0.25s;
+  }
+  .board-cell.light { background: #2e3a56; }
+  .board-cell.dark  { background: #1a2740; }
+  .board-cell.active-row { background: #3a2a0a; }
+  .board-cell.active-row.light { background: #4a3a1a; }
+  .board-cell .q {
+    color: #ffd87a;
+    text-shadow: 0 0 4px rgba(255, 216, 122, 0.8);
+  }
+  .board-cell .q.just-placed { animation: pop 0.35s ease-out; }
+  @keyframes pop {
+    0% { transform: scale(0.1); opacity: 0; }
+    60% { transform: scale(1.4); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .queen-col {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .queen-col .arr {
+    display: inline-flex;
+    gap: 2px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .queen-col .arr .slot {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 3px;
+    color: #888;
+    font-weight: bold;
+  }
+  .queen-col .arr .slot.filled {
+    background: #0f6b3a;
+    border-color: #0f9950;
+    color: #fff;
+  }
+  .queen-col-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 4px;
+    font-size: 11px;
+    color: #aaa;
+  }
+  .check-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    background: #2a1a2a;
+    border: 1px solid #3a2a4a;
+    color: #888;
+    transition: all 0.25s;
+  }
+  .check-indicator.ok {
+    background: #0f6b3a;
+    border-color: #0f9950;
+    color: #fff;
+  }
+  .check-indicator.bad {
+    background: #4a1a2a;
+    border-color: #6a2a3a;
+    color: #ff8a8a;
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #bbb;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box .idx-text {
+    fill: #888;
+    font-size: 9px;
+  }
+  .node-box.pruned rect { fill: #3a1a24; stroke: #6a2a3a; stroke-dasharray: 4,3; }
+  .node-box.pruned text { fill: #e99; }
+  .node-box.pruned .idx-text { fill: #a66; }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.on-path .idx-text { fill: #ffd87a; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.active .idx-text { fill: #ffdce1; }
+  .node-box.active.pruned rect { fill: #a33148; stroke: #e94560; stroke-dasharray: 4,3; }
+  .node-box.success rect { fill: #0f9950; stroke: #4de88c; stroke-width: 3; }
+  .node-box.success text { fill: #fff; font-weight: bold; }
+  .node-box.success .idx-text { fill: #cff8d9; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .node-box.done .idx-text { fill: #555; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .edge.pruned { stroke: #6a2a3a; stroke-dasharray: 4,3; }
+  .edge-label {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+  }
+  .edge-label.on-path { fill: #ffd87a; }
+  .edge-label.pruned { fill: #e99; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 72px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-record { background: #0f9950; color: white; }
+  .kind-pick { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #1a4a7a; color: white; }
+  .kind-prune { background: #a33148; color: white; }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    list-style: none;
+  }
+  .result-list li {
+    padding: 6px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #0f9950;
+    font-weight: bold;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    line-height: 1.3;
+  }
+  .result-list li .row-str { font-family: 'Monaco', monospace; letter-spacing: 1px; }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 2px; }
+  .chip-active { background: #e94560; }
+  .chip-success { background: #0f9950; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .chip-pruned { background: #3a1a24; border: 1px dashed #6a2a3a; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 51 — N-Queens</h1>
+    <div class="subtitle">Row-by-row backtracking · 3 HashSets (col / \ diag / / diag) · O(1) safety check &nbsp;·&nbsp; n = 4</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill"><span class="pill-k">row</span><span class="pill-v" id="rowVal">0</span></span>
+      <span class="pill set-cols"><span class="pill-k">cols</span><span class="pill-v" id="colsVal">{}</span></span>
+      <span class="pill set-diag1"><span class="pill-k">diag1 (r-c)</span><span class="pill-v" id="diag1Val">{}</span></span>
+      <span class="pill set-diag2"><span class="pill-k">diag2 (r+c)</span><span class="pill-v" id="diag2Val">{}</span></span>
+      <span class="check-indicator" id="checkInd">check(—)</span>
+    </div>
+    <div class="row board-wrap">
+      <div class="board" id="board"></div>
+      <div class="queen-col-meta">
+        <div><span style="color:#aaa">queenCol:</span></div>
+        <div class="queen-col"><div class="arr" id="queenColArr"></div></div>
+        <div style="color:#666; font-size:10px;">indices = row<br/>values = col of queen</div>
+      </div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 920 400" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result (solutions)</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-success"></div>recorded board</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+      <div class="legend-item"><div class="chip chip-pruned"></div>pruned (unsafe)</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const N = 4;
+
+  // ============ BOARD ============
+  const boardEl = document.getElementById('board');
+  const boardCells = [];
+  for (let r = 0; r < N; r++) {
+    const rowCells = [];
+    for (let c = 0; c < N; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'board-cell ' + (((r + c) & 1) ? 'dark' : 'light');
+      boardEl.appendChild(cell);
+      rowCells.push(cell);
+    }
+    boardCells.push(rowCells);
+  }
+
+  // queenCol array viz
+  const queenColArrEl = document.getElementById('queenColArr');
+  const queenColSlots = [];
+  for (let r = 0; r < N; r++) {
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.textContent = '_';
+    queenColArrEl.appendChild(slot);
+    queenColSlots.push(slot);
+  }
+
+  // ============ CODE ============
+  const codeText = [
+    "public List<List<String>> solveNQueens(int n) {",
+    "    List<List<String>> result = new ArrayList<>();",
+    "    int[] queenCol = new int[n];",
+    "    Set<Integer> cols  = new HashSet<>();",
+    "    Set<Integer> diag1 = new HashSet<>();  // row - col",
+    "    Set<Integer> diag2 = new HashSet<>();  // row + col",
+    "    solve(0, n, queenCol, cols, diag1, diag2, result);",
+    "    return result;",
+    "}",
+    "",
+    "private void solve(int row, int n, int[] queenCol,",
+    "                   Set<Integer> cols, Set<Integer> diag1,",
+    "                   Set<Integer> diag2, List<List<String>> result) {",
+    "    if (row == n) {",
+    "        result.add(build(queenCol, n));",
+    "        return;",
+    "    }",
+    "    for (int col = 0; col < n; col++) {",
+    "        if (cols.contains(col)",
+    "                || diag1.contains(row - col)",
+    "                || diag2.contains(row + col)) {",
+    "            continue;",
+    "        }",
+    "        queenCol[row] = col;",
+    "        cols.add(col);",
+    "        diag1.add(row - col);",
+    "        diag2.add(row + col);",
+    "",
+    "        solve(row + 1, n, queenCol, cols, diag1, diag2, result);",
+    "",
+    "        cols.remove(col);",
+    "        diag1.remove(row - col);",
+    "        diag2.remove(row + col);",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //                      n_root
+  //            ┌────────┬───┴──┬────────┐
+  //         n_c0      n_c1   n_c2      n_c3
+  //        (done)   /  |  \    |      (done)
+  //              x0  x2  c3   c0
+  //                      |    |
+  //                     c3_c0 c0_c3
+  //                      |    |
+  //                     ★    c0_c3_c1
+  //                           |
+  //                           ★
+  const nodes = {
+    n_root:          { x: 460, y:  40, w:  60, label: '[]',              sub: 'row=0',   pruned: false },
+    n_c0:            { x: 110, y: 118, w:  80, label: '[0]',             sub: 'no sols', pruned: false },
+    n_c1:            { x: 340, y: 118, w:  80, label: '[1]',             sub: 'row=1',   pruned: false },
+    n_c2:            { x: 560, y: 118, w:  80, label: '[2]',             sub: 'row=1',   pruned: false },
+    n_c3:            { x: 810, y: 118, w:  80, label: '[3]',             sub: 'no sols', pruned: false },
+    n_c1_x0:         { x: 240, y: 196, w: 100, label: '[1,0] ✗',         sub: '/ diag',  pruned: true  },
+    n_c1_x2:         { x: 340, y: 196, w: 100, label: '[1,2] ✗',         sub: '\\ diag', pruned: true  },
+    n_c1_c3:         { x: 445, y: 196, w:  90, label: '[1,3]',           sub: 'row=2',   pruned: false },
+    n_c2_c0:         { x: 560, y: 196, w:  90, label: '[2,0]',           sub: 'row=2',   pruned: false },
+    n_c1_c3_c0:      { x: 445, y: 274, w: 100, label: '[1,3,0]',         sub: 'row=3',   pruned: false },
+    n_c2_c0_c3:      { x: 560, y: 274, w: 100, label: '[2,0,3]',         sub: 'row=3',   pruned: false },
+    n_c1_c3_c0_c2:   { x: 445, y: 352, w: 125, label: '[1,3,0,2] ★',     sub: 'SOLN 1',  pruned: false },
+    n_c2_c0_c3_c1:   { x: 560, y: 352, w: 125, label: '[2,0,3,1] ★',     sub: 'SOLN 2',  pruned: false }
+  };
+  const edges = [
+    ["n_root", "n_c0", "col=0", false],
+    ["n_root", "n_c1", "col=1", false],
+    ["n_root", "n_c2", "col=2", false],
+    ["n_root", "n_c3", "col=3", false],
+    ["n_c1",   "n_c1_x0",        "col=0", true ],
+    ["n_c1",   "n_c1_x2",        "col=2", true ],
+    ["n_c1",   "n_c1_c3",        "col=3", false],
+    ["n_c2",   "n_c2_c0",        "col=0", false],
+    ["n_c1_c3", "n_c1_c3_c0",    "col=0", false],
+    ["n_c2_c0", "n_c2_c0_c3",    "col=3", false],
+    ["n_c1_c3_c0", "n_c1_c3_c0_c2", "col=2", false],
+    ["n_c2_c0_c3", "n_c2_c0_c3_c1", "col=1", false]
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  const edgeLabelEls = {};
+  edges.forEach(([from, to, ch, pruned]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 18);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 18);
+    line.setAttribute('class', 'edge' + (pruned ? ' pruned' : ''));
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+
+    const lbl = document.createElementNS(SVGNS, 'text');
+    const mx = (a.x + b.x) / 2 + (b.x < a.x ? -6 : (b.x > a.x ? 6 : 0));
+    const my = (a.y + b.y) / 2 + 3;
+    lbl.setAttribute('x', mx);
+    lbl.setAttribute('y', my);
+    lbl.setAttribute('class', 'edge-label' + (pruned ? ' pruned' : ''));
+    lbl.textContent = ch;
+    svg.appendChild(lbl);
+    edgeLabelEls[`${from}-${to}`] = lbl;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box' + (n.pruned ? ' pruned' : ''));
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 18);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 36);
+    rect.setAttribute('rx', 5);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y - 4);
+    t.textContent = n.label;
+    g.appendChild(t);
+    const s = document.createElementNS(SVGNS, 'text');
+    s.setAttribute('x', n.x);
+    s.setAttribute('y', n.y + 10);
+    s.setAttribute('class', 'idx-text');
+    s.textContent = n.sub;
+    g.appendChild(s);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // Shorthand: qc = queenCol state (array of col or null per row)
+  // Board placed: array of {r,c} currently placed (derived from qc + row)
+  function stateFrom(opts) {
+    return Object.assign({
+      line: [], row: 0, cols: [], diag1: [], diag2: [],
+      qc: [null, null, null, null],
+      placed: [],
+      checkText: "check(—)", checkKind: null,
+      action: "", kind: "call",
+      activeNode: "n_root", onPath: [], successNodes: [], doneNodes: [], prunedNodes: [],
+      result: [],
+      justPlaced: null
+    }, opts);
+  }
+
+  const SOL1 = [1, 3, 0, 2];
+  const SOL2 = [2, 0, 3, 1];
+  const ROW_STRS = (qc) => {
+    const out = [];
+    for (let r = 0; r < N; r++) {
+      let s = "";
+      for (let c = 0; c < N; c++) {
+        s += (qc[r] === c) ? "Q" : ".";
+      }
+      out.push(s);
+    }
+    return out;
+  };
+
+  const steps = [
+    stateFrom({
+      line: [7], row: 0,
+      action: "Entry. solve(row=0, ...). All three HashSets empty, queenCol filled with _.",
+      kind: "call", activeNode: "n_root"
+    }),
+
+    stateFrom({
+      line: [13, 17], row: 0,
+      action: "n_root: row==n? 0==4 → no. Enter for-loop col = 0..3.",
+      kind: "check", activeNode: "n_root"
+    }),
+
+    stateFrom({
+      line: [18, 19, 20], row: 0,
+      checkText: "safe ✓ (all empty)", checkKind: "ok",
+      action: "col=0: cols.contains(0)? no. diag1.contains(0-0=0)? no. diag2.contains(0+0=0)? no. → safe.",
+      kind: "check", activeNode: "n_root"
+    }),
+
+    stateFrom({
+      line: [23, 24, 25, 26], row: 0,
+      cols: [0], diag1: [0], diag2: [0], qc: [0, null, null, null],
+      checkText: "placed (0,0)", checkKind: "ok",
+      justPlaced: {r: 0, c: 0},
+      action: "Place queen at (0,0). cols+={0}, diag1+={0}, diag2+={0}. queenCol[0]=0.",
+      kind: "pick", activeNode: "n_root"
+    }),
+
+    stateFrom({
+      line: [28], row: 1,
+      cols: [0], diag1: [0], diag2: [0], qc: [0, null, null, null],
+      action: "Recurse: solve(row=1). Descend to n_c0. (For brevity this whole subtree will be summarised next.)",
+      kind: "call", activeNode: "n_c0", onPath: ["n_root"]
+    }),
+
+    stateFrom({
+      line: [30, 31, 32], row: 0,
+      cols: [], diag1: [], diag2: [], qc: [null, null, null, null],
+      action: "n_c0 subtree fully explored — no valid completion exists. Return. Remove col=0, diag1=0, diag2=0 (sets empty again).",
+      kind: "return", activeNode: "n_root", onPath: [], doneNodes: ["n_c0"]
+    }),
+
+    stateFrom({
+      line: [18, 19, 20], row: 0,
+      checkText: "safe ✓ (all empty)", checkKind: "ok",
+      action: "Loop continues. col=1: cols no, diag1(0-1=-1) no, diag2(0+1=1) no. → safe.",
+      kind: "check", activeNode: "n_root", doneNodes: ["n_c0"]
+    }),
+
+    stateFrom({
+      line: [23, 24, 25, 26], row: 0,
+      cols: [1], diag1: [-1], diag2: [1], qc: [1, null, null, null],
+      checkText: "placed (0,1)", checkKind: "ok",
+      justPlaced: {r: 0, c: 1},
+      action: "Place queen at (0,1). cols+={1}, diag1+={-1}, diag2+={1}. queenCol[0]=1.",
+      kind: "pick", activeNode: "n_root", doneNodes: ["n_c0"]
+    }),
+
+    stateFrom({
+      line: [28], row: 1,
+      cols: [1], diag1: [-1], diag2: [1], qc: [1, null, null, null],
+      action: "Recurse: solve(row=1). Descend to n_c1.",
+      kind: "call", activeNode: "n_c1", onPath: ["n_root"], doneNodes: ["n_c0"]
+    }),
+
+    stateFrom({
+      line: [18, 19, 20, 21], row: 1,
+      cols: [1], diag1: [-1], diag2: [1], qc: [1, null, null, null],
+      checkText: "diag2(1) ✗", checkKind: "bad",
+      action: "n_c1 col=0: cols no, diag1(1-0=1) no, diag2(1+0=1) ∈ {1} ✗. → PRUNE (same / diagonal as (0,1)).",
+      kind: "prune", activeNode: "n_c1_x0", onPath: ["n_root", "n_c1"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0"]
+    }),
+
+    stateFrom({
+      line: [18, 19, 20, 21], row: 1,
+      cols: [1], diag1: [-1], diag2: [1], qc: [1, null, null, null],
+      checkText: "diag1(-1) ✗", checkKind: "bad",
+      action: "col=1: cols.contains(1) ✓ → skip (same column, not drawn).  col=2: diag1(1-2=-1) ∈ {-1} ✗. → PRUNE (same \\ diagonal).",
+      kind: "prune", activeNode: "n_c1_x2", onPath: ["n_root", "n_c1"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
+    }),
+
+    stateFrom({
+      line: [18, 19, 20], row: 1,
+      cols: [1], diag1: [-1], diag2: [1], qc: [1, null, null, null],
+      checkText: "safe ✓", checkKind: "ok",
+      action: "col=3: cols no, diag1(1-3=-2) no, diag2(1+3=4) no. → safe.",
+      kind: "check", activeNode: "n_c1", onPath: ["n_root"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
+    }),
+
+    stateFrom({
+      line: [23, 24, 25, 26], row: 1,
+      cols: [1, 3], diag1: [-1, -2], diag2: [1, 4], qc: [1, 3, null, null],
+      checkText: "placed (1,3)", checkKind: "ok",
+      justPlaced: {r: 1, c: 3},
+      action: "Place queen at (1,3). cols+={3}, diag1+={-2}, diag2+={4}. queenCol[1]=3.",
+      kind: "pick", activeNode: "n_c1", onPath: ["n_root"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
+    }),
+
+    stateFrom({
+      line: [28], row: 2,
+      cols: [1, 3], diag1: [-1, -2], diag2: [1, 4], qc: [1, 3, null, null],
+      action: "Recurse to n_c1_c3. (col=0 is the only safe choice at row=2; cols 1,3 taken, col=2 hits diag2(2+2=4) ∈ {1,4} ✗.)",
+      kind: "call", activeNode: "n_c1_c3", onPath: ["n_root", "n_c1"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
+    }),
+
+    stateFrom({
+      line: [18, 19, 20, 23, 24, 25, 26], row: 2,
+      cols: [1, 3, 0], diag1: [-1, -2, 2], diag2: [1, 4, 2], qc: [1, 3, 0, null],
+      checkText: "placed (2,0)", checkKind: "ok",
+      justPlaced: {r: 2, c: 0},
+      action: "col=0: diag1(2-0=2) no, diag2(2+0=2) no. ✓ safe. Place (2,0). queenCol[2]=0.",
+      kind: "pick", activeNode: "n_c1_c3", onPath: ["n_root", "n_c1"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
+    }),
+
+    stateFrom({
+      line: [28], row: 3,
+      cols: [1, 3, 0], diag1: [-1, -2, 2], diag2: [1, 4, 2], qc: [1, 3, 0, null],
+      action: "Recurse to n_c1_c3_c0. (At row=3 only col=2 escapes all three sets.)",
+      kind: "call", activeNode: "n_c1_c3_c0", onPath: ["n_root", "n_c1", "n_c1_c3"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
+    }),
+
+    stateFrom({
+      line: [18, 19, 20, 23, 24, 25, 26], row: 3,
+      cols: [1, 3, 0, 2], diag1: [-1, -2, 2, 1], diag2: [1, 4, 2, 5], qc: [1, 3, 0, 2],
+      checkText: "placed (3,2)", checkKind: "ok",
+      justPlaced: {r: 3, c: 2},
+      action: "col=2: diag1(3-2=1) no, diag2(3+2=5) no. ✓ safe. Place (3,2). queenCol=[1,3,0,2].",
+      kind: "pick", activeNode: "n_c1_c3_c0", onPath: ["n_root", "n_c1", "n_c1_c3"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
+    }),
+
+    stateFrom({
+      line: [28], row: 4,
+      cols: [1, 3, 0, 2], diag1: [-1, -2, 2, 1], diag2: [1, 4, 2, 5], qc: [1, 3, 0, 2],
+      action: "Recurse: solve(row=4).",
+      kind: "call", activeNode: "n_c1_c3_c0_c2", onPath: ["n_root", "n_c1", "n_c1_c3", "n_c1_c3_c0"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"]
+    }),
+
+    stateFrom({
+      line: [13, 14, 15], row: 4,
+      cols: [1, 3, 0, 2], diag1: [-1, -2, 2, 1], diag2: [1, 4, 2, 5], qc: [1, 3, 0, 2],
+      action: "Base case: row==n (4==4). RECORD solution 1: .Q../...Q/Q.../..Q. ★",
+      kind: "record", activeNode: "n_c1_c3_c0_c2", onPath: ["n_root", "n_c1", "n_c1_c3", "n_c1_c3_c0"],
+      successNodes: ["n_c1_c3_c0_c2"], doneNodes: ["n_c0"], prunedNodes: ["n_c1_x0", "n_c1_x2"],
+      result: [SOL1]
+    }),
+
+    stateFrom({
+      line: [30, 31, 32], row: 0,
+      cols: [], diag1: [], diag2: [], qc: [null, null, null, null],
+      action: "Return. Unwind backtrack chain: remove (3,2) → (2,0) → (1,3) → (0,1). All sibling slots at every level fail their safety check. Sets drain to empty.",
+      kind: "return", activeNode: "n_root", onPath: [],
+      successNodes: ["n_c1_c3_c0_c2"],
+      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
+      prunedNodes: ["n_c1_x0", "n_c1_x2"],
+      result: [SOL1]
+    }),
+
+    stateFrom({
+      line: [18, 19, 20, 23, 24, 25, 26], row: 0,
+      cols: [2], diag1: [-2], diag2: [2], qc: [2, null, null, null],
+      checkText: "placed (0,2)", checkKind: "ok",
+      justPlaced: {r: 0, c: 2},
+      action: "Loop continues. col=2: all sets empty → safe. Place (0,2). queenCol[0]=2.",
+      kind: "pick", activeNode: "n_root",
+      successNodes: ["n_c1_c3_c0_c2"],
+      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
+      prunedNodes: ["n_c1_x0", "n_c1_x2"],
+      result: [SOL1]
+    }),
+
+    stateFrom({
+      line: [28], row: 1,
+      cols: [2], diag1: [-2], diag2: [2], qc: [2, null, null, null],
+      action: "Recurse to n_c2.  At row=1: col=0 safe (diag1(1)∉, diag2(1)∉); col=1 hits diag2(2)∈{2}; col=2 col-taken; col=3 hits diag1(-2)∈{-2}.",
+      kind: "call", activeNode: "n_c2", onPath: ["n_root"],
+      successNodes: ["n_c1_c3_c0_c2"],
+      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
+      prunedNodes: ["n_c1_x0", "n_c1_x2"],
+      result: [SOL1]
+    }),
+
+    stateFrom({
+      line: [18, 19, 20, 23, 24, 25, 26], row: 1,
+      cols: [2, 0], diag1: [-2, 1], diag2: [2, 1], qc: [2, 0, null, null],
+      checkText: "placed (1,0)", checkKind: "ok",
+      justPlaced: {r: 1, c: 0},
+      action: "col=0: diag1(1) no, diag2(1) no. ✓ safe. Place (1,0). queenCol[1]=0.",
+      kind: "pick", activeNode: "n_c2", onPath: ["n_root"],
+      successNodes: ["n_c1_c3_c0_c2"],
+      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
+      prunedNodes: ["n_c1_x0", "n_c1_x2"],
+      result: [SOL1]
+    }),
+
+    stateFrom({
+      line: [28, 18, 19, 20, 23, 24, 25, 26], row: 2,
+      cols: [2, 0, 3], diag1: [-2, 1, -1], diag2: [2, 1, 5], qc: [2, 0, 3, null],
+      checkText: "placed (2,3)", checkKind: "ok",
+      justPlaced: {r: 2, c: 3},
+      action: "Recurse. At row=2 only col=3 escapes: diag1(-1), diag2(5), both fresh. Place (2,3). queenCol[2]=3.",
+      kind: "pick", activeNode: "n_c2_c0", onPath: ["n_root", "n_c2"],
+      successNodes: ["n_c1_c3_c0_c2"],
+      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
+      prunedNodes: ["n_c1_x0", "n_c1_x2"],
+      result: [SOL1]
+    }),
+
+    stateFrom({
+      line: [28, 18, 19, 20, 23, 24, 25, 26], row: 3,
+      cols: [2, 0, 3, 1], diag1: [-2, 1, -1, 2], diag2: [2, 1, 5, 4], qc: [2, 0, 3, 1],
+      checkText: "placed (3,1)", checkKind: "ok",
+      justPlaced: {r: 3, c: 1},
+      action: "Recurse. At row=3 only col=1 escapes: diag1(2), diag2(4), both fresh. Place (3,1). queenCol=[2,0,3,1].",
+      kind: "pick", activeNode: "n_c2_c0_c3", onPath: ["n_root", "n_c2", "n_c2_c0"],
+      successNodes: ["n_c1_c3_c0_c2"],
+      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
+      prunedNodes: ["n_c1_x0", "n_c1_x2"],
+      result: [SOL1]
+    }),
+
+    stateFrom({
+      line: [13, 14, 15], row: 4,
+      cols: [2, 0, 3, 1], diag1: [-2, 1, -1, 2], diag2: [2, 1, 5, 4], qc: [2, 0, 3, 1],
+      action: "Base case: row==n. RECORD solution 2: ..Q./Q.../...Q/.Q.. ★",
+      kind: "record", activeNode: "n_c2_c0_c3_c1", onPath: ["n_root", "n_c2", "n_c2_c0", "n_c2_c0_c3"],
+      successNodes: ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"],
+      doneNodes: ["n_c0", "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1"],
+      prunedNodes: ["n_c1_x0", "n_c1_x2"],
+      result: [SOL1, SOL2]
+    }),
+
+    stateFrom({
+      line: [30, 31, 32], row: 0,
+      cols: [], diag1: [], diag2: [], qc: [null, null, null, null],
+      action: "Unwind backtrack chain. Loop continues at root: col=3 subtree explored → no solutions (symmetric to col=0). DONE. 2 solutions total. ★",
+      kind: "return", activeNode: "n_root", onPath: [],
+      successNodes: ["n_c1_c3_c0_c2", "n_c2_c0_c3_c1"],
+      doneNodes: ["n_c0", "n_c3", "n_root",
+                  "n_c1_c3_c0_c2", "n_c1_c3_c0", "n_c1_c3", "n_c1",
+                  "n_c2_c0_c3_c1", "n_c2_c0_c3", "n_c2_c0", "n_c2"],
+      prunedNodes: ["n_c1_x0", "n_c1_x2"],
+      result: [SOL1, SOL2]
+    })
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const rowValEl = document.getElementById('rowVal');
+  const colsValEl = document.getElementById('colsVal');
+  const diag1ValEl = document.getElementById('diag1Val');
+  const diag2ValEl = document.getElementById('diag2Val');
+  const checkIndEl = document.getElementById('checkInd');
+
+  function fmtSet(arr) {
+    if (arr.length === 0) { return "{}"; }
+    return "{" + arr.join(", ") + "}";
+  }
+
+  function render(idx, animate = false) {
+    const s = steps[idx];
+    // Code
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    rowValEl.textContent = s.row;
+    colsValEl.textContent = fmtSet(s.cols);
+    diag1ValEl.textContent = fmtSet(s.diag1);
+    diag2ValEl.textContent = fmtSet(s.diag2);
+    // Check indicator
+    checkIndEl.className = 'check-indicator';
+    if (s.checkKind === 'ok') { checkIndEl.classList.add('ok'); }
+    else if (s.checkKind === 'bad') { checkIndEl.classList.add('bad'); }
+    checkIndEl.textContent = s.checkText;
+    // Board
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const cell = boardCells[r][c];
+        cell.classList.remove('active-row');
+        cell.innerHTML = '';
+        if (s.qc[r] === c) {
+          const q = document.createElement('span');
+          q.className = 'q';
+          q.textContent = '♛';
+          if (animate && s.justPlaced && s.justPlaced.r === r && s.justPlaced.c === c) {
+            q.classList.add('just-placed');
+          }
+          cell.appendChild(q);
+        }
+      }
+    }
+    // Highlight the "current row" being worked on if row < N
+    if (s.row >= 0 && s.row < N) {
+      for (let c = 0; c < N; c++) {
+        boardCells[s.row][c].classList.add('active-row');
+      }
+    }
+    // queenCol array
+    queenColSlots.forEach((slot, r) => {
+      if (s.qc[r] === null || s.qc[r] === undefined) {
+        slot.textContent = '_';
+        slot.classList.remove('filled');
+      } else {
+        slot.textContent = s.qc[r];
+        slot.classList.add('filled');
+      }
+    });
+    // Tree
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      const isPrunedStatic = nodes[key].pruned;
+      el.classList.remove('active', 'on-path', 'success', 'done');
+      el.classList.toggle('pruned', isPrunedStatic);
+      if (s.successNodes.includes(key)) {
+        el.classList.add('success');
+      } else if (s.activeNode === key) {
+        el.classList.add('active');
+      } else if (s.doneNodes.includes(key)) {
+        el.classList.add('done');
+      } else if (s.onPath.includes(key)) {
+        el.classList.add('on-path');
+      }
+    });
+    edges.forEach(([from, to, , pruned]) => {
+      const e = edgeEls[`${from}-${to}`];
+      const lbl = edgeLabelEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      lbl.classList.remove('on-path');
+      e.classList.toggle('pruned', pruned);
+      lbl.classList.toggle('pruned', pruned);
+      const pathSet = new Set([...s.onPath, s.activeNode]);
+      if (pathSet.has(from) && pathSet.has(to)) {
+        e.classList.add('on-path');
+        lbl.classList.add('on-path');
+      }
+    });
+    // Result
+    resultEl.innerHTML = '';
+    s.result.forEach((qc, i) => {
+      const li = document.createElement('li');
+      ROW_STRS(qc).forEach(rs => {
+        const r = document.createElement('div');
+        r.className = 'row-str';
+        r.textContent = rs;
+        li.appendChild(r);
+      });
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+
+  function goTo(idx, animate = false) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx, animate);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1, false);
+  });
+  nextBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(stepIdx + 1, true);
+  });
+  resetBtn.addEventListener('click', () => {
+    stopPlay();
+    goTo(0, false);
+  });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1, true);
+    }, 1200);
+  });
+
+  goTo(0, false);
+</script>
+</body>
+</html>
