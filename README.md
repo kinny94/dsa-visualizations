@@ -31,6 +31,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [93](https://kinny94.github.io/dsa-visualizations/lc93-restore-ip-addresses.html) | Restore IP Addresses | Recursion · Backtracking |
 | [51](https://kinny94.github.io/dsa-visualizations/lc51-n-queens.html) | N-Queens | Recursion · Backtracking |
 | [761](https://kinny94.github.io/dsa-visualizations/lc761-special-binary-string.html) | Special Binary String | Recursion · Greedy |
+| [980](https://kinny94.github.io/dsa-visualizations/lc980-unique-paths-iii.html) | Unique Paths III | Recursion · Backtracking |
 
 ## Adding a new animation
 
