@@ -47,6 +47,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [144](https://kinny94.github.io/dsa-visualizations/lc144-binary-tree-preorder-traversal.html) | Binary Tree Preorder Traversal | Binary Tree · DFS · iterative stack |
 | [100](https://kinny94.github.io/dsa-visualizations/lc100-same-tree.html) | Same Tree | Binary Tree · Parallel recursion |
 | [101](https://kinny94.github.io/dsa-visualizations/lc101-symmetric-tree.html) | Symmetric Tree | Binary Tree · BFS · mirror pair-walk |
+| [257](https://kinny94.github.io/dsa-visualizations/lc257-binary-tree-paths.html) | Binary Tree Paths | Binary Tree · DFS · path accumulator |
 
 ## Adding a new animation
 
