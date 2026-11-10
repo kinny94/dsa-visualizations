@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 117 — Populating Next Right Pointers in Each Node II</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 460px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.cur .pill-v { color: #e94560; }
+  .pill.tail .pill-v { color: #4de88c; }
+  .pill.dummy .pill-v { color: #9ad4ff; }
+  .pill.outer .pill-v { color: #c89aff; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 360px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.cur circle { stroke: #ff8ca0; stroke-width: 4; fill: #4a0f1f; }
+  .node.cur text.val { fill: #fff; }
+  .node.tail circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; }
+  .node.tail text.val { fill: #fff; }
+  .node.cur.tail circle { stroke: #ffa500; stroke-width: 4; fill: #4a3010; }
+  .node.visited circle { stroke: #4a6a8a; fill: #1a2e4a; }
+  .node.dummy circle { fill: #2a2a40; stroke: #9ad4ff; stroke-width: 2; stroke-dasharray: 3,3; }
+  .node.dummy text.val { fill: #9ad4ff; font-size: 10px; }
+  .node.dummy.active circle { fill: #0f2a4a; stroke: #9ad4ff; stroke-width: 3; }
+  .node.dummy.spent circle { opacity: 0.3; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  /* Next-pointer arrows */
+  .next-arrow {
+    stroke: #4de88c;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0;
+    transition: opacity 0.35s;
+    stroke-dasharray: 4,3;
+  }
+  .next-arrow.set { opacity: 1; }
+  .next-arrow.just-set {
+    stroke: #ffd87a;
+    stroke-width: 3;
+    opacity: 1;
+    stroke-dasharray: none;
+  }
+  .next-arrow-head { fill: #4de88c; opacity: 0; transition: opacity 0.35s; }
+  .next-arrow-head.set { opacity: 1; }
+  .next-arrow-head.just-set { fill: #ffd87a; opacity: 1; }
+  .next-arrow.dummy-link { stroke: #9ad4ff; }
+  .next-arrow.dummy-link.just-set { stroke: #ffd87a; }
+  .next-arrow-head.dummy-link { fill: #9ad4ff; }
+  .next-arrow-head.dummy-link.just-set { fill: #ffd87a; }
+  .null-tag {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+  .null-tag.set { opacity: 1; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-wire { background: #4de88c; color: #1a1a2e; }
+  .kind-skip { background: #666; color: white; }
+  .kind-step { background: #e94560; color: white; }
+  .kind-return { background: #0f9950; color: white; }
+  .state-box {
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    padding: 8px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    margin-bottom: 6px;
+    border-left: 3px solid #9ad4ff;
+  }
+  .state-box.cur { border-left-color: #e94560; }
+  .state-box.tail { border-left-color: #4de88c; }
+  .state-box .k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .state-box .v { color: #ffa500; font-weight: bold; font-size: 14px; }
+  .state-box.cur .v { color: #e94560; }
+  .state-box.tail .v { color: #4de88c; }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-cur { background: #4a0f1f; border: 2px solid #e94560; }
+  .chip-tail { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-dummy { background: #2a2a40; border: 2px dashed #9ad4ff; }
+  .chip-wire { width: 14px; height: 2px; background: #4de88c; border-radius: 0; }
+  .chip-just { width: 14px; height: 3px; background: #ffd87a; border-radius: 0; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 117 — Populating Next Right Pointers in Each Node II</h1>
+    <div class="subtitle">O(1) extra space · imperfect BT · dummy sentinel per level eats the “first child” special case · root = [1, 2, 3, 4, 5, null, 7]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill outer"><span class="pill-k">outer iter</span><span class="pill-v" id="outerV">—</span></span>
+      <span class="pill cur"><span class="pill-k">cur</span><span class="pill-v" id="curV">—</span></span>
+      <span class="pill tail"><span class="pill-k">tail</span><span class="pill-v" id="tailV">—</span></span>
+      <span class="pill dummy"><span class="pill-k">dummy.next</span><span class="pill-v" id="dummyNextV">—</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 360" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">State</div>
+    <div class="state-box cur"><div class="k">cur (walker on current level)</div><div class="v" id="stateCur">node 1 (root)</div></div>
+    <div class="state-box tail"><div class="k">tail (tail of next level being built)</div><div class="v" id="stateTail">—</div></div>
+    <div class="state-box"><div class="k">dummy.next (first child of next level)</div><div class="v" id="stateDummy">—</div></div>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-cur"></div>cur: walking current level</div>
+      <div class="legend-item"><div class="chip chip-tail"></div>tail: tail of next-level chain</div>
+      <div class="legend-item"><div class="chip chip-dummy"></div>dummy sentinel (per level)</div>
+      <div class="legend-item"><div class="chip chip-wire"></div>next pointer set</div>
+      <div class="legend-item"><div class="chip chip-just"></div>next pointer just set this step</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Why the dummy</div>
+      Instead of branching on “is this the first child I’ve placed this level?” we start <code>tail = dummy</code>. Every subsequent <code>tail.next = child</code> works identically whether it’s the first or twentieth. When the inner loop ends, <code>dummy.next</code> IS the next level’s leftmost — drop down with <code>cur = dummy.next</code>.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public Node connect(Node root) {",
+    "    Node cur = root;",
+    "    while (cur != null) {",
+    "        Node dummy = new Node(0);",
+    "        Node tail = dummy;",
+    "        while (cur != null) {",
+    "            if (cur.left != null) {",
+    "                tail.next = cur.left;",
+    "                tail = tail.next;",
+    "            }",
+    "            if (cur.right != null) {",
+    "                tail.next = cur.right;",
+    "                tail = tail.next;",
+    "            }",
+    "            cur = cur.next;",
+    "        }",
+    "        cur = dummy.next;",
+    "    }",
+    "    return root;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // Imperfect tree: [1, 2, 3, 4, 5, null, 7]
+  //        1
+  //       / \
+  //      2   3
+  //     /\    \
+  //    4  5    7
+  const nodes = {
+    n1: { x: 320, y:  50, r: 22, val: '1' },
+    n2: { x: 200, y: 150, r: 22, val: '2' },
+    n3: { x: 440, y: 150, r: 22, val: '3' },
+    n4: { x: 130, y: 250, r: 22, val: '4' },
+    n5: { x: 270, y: 250, r: 22, val: '5' },
+    n7: { x: 510, y: 250, r: 22, val: '7' },
+    // Dummy sentinels — one visualized per level; only 'active' one highlighted at a time
+    dummyL1: { x:  60, y: 150, r: 14, val: 'D1', isDummy: true },
+    dummyL2: { x:  60, y: 250, r: 14, val: 'D2', isDummy: true },
+    dummyL3: { x:  60, y: 330, r: 14, val: 'D3', isDummy: true }
+  };
+  const edges = [
+    ['n1', 'n2'], ['n1', 'n3'],
+    ['n2', 'n4'], ['n2', 'n5'],
+    ['n3', 'n7']   // 3.left missing (imperfect!)
+  ];
+  const nextLinks = [
+    { id: 'l_dL1_2',  from: 'dummyL1', to: 'n2',  dummy: true },
+    { id: 'l_23',     from: 'n2',      to: 'n3',  dummy: false },
+    { id: 'l_3n',     from: 'n3',      to: 'null', dummy: false },
+    { id: 'l_dL2_4',  from: 'dummyL2', to: 'n4',  dummy: true },
+    { id: 'l_45',     from: 'n4',      to: 'n5',  dummy: false },
+    { id: 'l_57',     from: 'n5',      to: 'n7',  dummy: false },
+    { id: 'l_7n',     from: 'n7',      to: 'null', dummy: false },
+    { id: 'l_1n',     from: 'n1',      to: 'null', dummy: false }   // root's next stays null — drawn only after final state
+  ];
+
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  // Parent-child edges
+  edges.forEach(([from, to]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+  });
+  // Nodes
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.isDummy ? ' dummy' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x);
+    circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // Next-pointer arrows
+  const nextEls = {};
+  nextLinks.forEach(link => {
+    const from = nodes[link.from];
+    if (link.to === 'null') {
+      const arrow = document.createElementNS(SVGNS, 'line');
+      arrow.setAttribute('x1', from.x + from.r + 2);
+      arrow.setAttribute('y1', from.y);
+      arrow.setAttribute('x2', from.x + from.r + 24);
+      arrow.setAttribute('y2', from.y);
+      arrow.setAttribute('class', 'next-arrow' + (link.dummy ? ' dummy-link' : ''));
+      svg.appendChild(arrow);
+      const nl = document.createElementNS(SVGNS, 'text');
+      nl.setAttribute('x', from.x + from.r + 46);
+      nl.setAttribute('y', from.y + 4);
+      nl.setAttribute('class', 'null-tag');
+      nl.textContent = 'null';
+      svg.appendChild(nl);
+      nextEls[link.id] = { arrow, label: nl, isNull: true, dummy: link.dummy };
+    } else {
+      const to = nodes[link.to];
+      const arrow = document.createElementNS(SVGNS, 'line');
+      arrow.setAttribute('x1', from.x + from.r + 2);
+      arrow.setAttribute('y1', from.y);
+      arrow.setAttribute('x2', to.x - to.r - 2);
+      arrow.setAttribute('y2', to.y);
+      arrow.setAttribute('class', 'next-arrow' + (link.dummy ? ' dummy-link' : ''));
+      svg.appendChild(arrow);
+      const head = document.createElementNS(SVGNS, 'polygon');
+      const hx = to.x - to.r - 2;
+      const hy = to.y;
+      head.setAttribute('points', `${hx},${hy} ${hx-6},${hy-4} ${hx-6},${hy+4}`);
+      head.setAttribute('class', 'next-arrow-head' + (link.dummy ? ' dummy-link' : ''));
+      svg.appendChild(head);
+      nextEls[link.id] = { arrow, head, isNull: false, dummy: link.dummy };
+    }
+  });
+
+  // ============ STEP DATA ============
+  // outer: current outer iteration number
+  // activeDummy: which dummy is "live" (dummyL1/L2/L3) — rendered highlighted
+  // spentDummies: dummies past their outer iter (rendered faded)
+  // cur / tail: node ids or null
+  // setNext: array of link ids set so far
+  // justSet: array of link ids set in THIS step
+  // visited: array of node ids visited (cur at some point)
+  const steps = [
+    { line: [2, 3], outer: 0, activeDummy: null, spentDummies: [],
+      cur: "n1", tail: null, dummyNext: null,
+      setNext: [], justSet: [], visited: [],
+      action: "Enter connect(root). cur = root (node 1). Outer check: cur != null → enter outer loop.", kind: "call" },
+
+    { line: [4, 5], outer: 1, activeDummy: "dummyL1", spentDummies: [],
+      cur: "n1", tail: "dummyL1", dummyNext: null,
+      setNext: [], justSet: [], visited: [],
+      action: "OUTER ITER 1. Create new dummy (sentinel for level 1). tail = dummy.", kind: "call" },
+
+    { line: [6], outer: 1, activeDummy: "dummyL1", spentDummies: [],
+      cur: "n1", tail: "dummyL1", dummyNext: null,
+      setNext: [], justSet: [], visited: [],
+      action: "Inner while: cur = node 1 ≠ null → enter.", kind: "call" },
+
+    { line: [7, 8], outer: 1, activeDummy: "dummyL1", spentDummies: [],
+      cur: "n1", tail: "dummyL1", dummyNext: "n2",
+      setNext: ["l_dL1_2"], justSet: ["l_dL1_2"], visited: [],
+      action: "cur.left = node 2 ≠ null. tail.next = cur.left → dummy.next = node 2. (First child of level 1!)", kind: "wire" },
+
+    { line: [9], outer: 1, activeDummy: "dummyL1", spentDummies: [],
+      cur: "n1", tail: "n2", dummyNext: "n2",
+      setNext: ["l_dL1_2"], justSet: [], visited: [],
+      action: "tail = tail.next → tail now points at node 2.", kind: "step" },
+
+    { line: [11, 12], outer: 1, activeDummy: "dummyL1", spentDummies: [],
+      cur: "n1", tail: "n2", dummyNext: "n2",
+      setNext: ["l_dL1_2", "l_23"], justSet: ["l_23"], visited: [],
+      action: "cur.right = node 3 ≠ null. tail.next = cur.right → node 2.next = node 3.", kind: "wire" },
+
+    { line: [13], outer: 1, activeDummy: "dummyL1", spentDummies: [],
+      cur: "n1", tail: "n3", dummyNext: "n2",
+      setNext: ["l_dL1_2", "l_23"], justSet: [], visited: [],
+      action: "tail = tail.next → tail now points at node 3.", kind: "step" },
+
+    { line: [15], outer: 1, activeDummy: "dummyL1", spentDummies: [],
+      cur: null, tail: "n3", dummyNext: "n2",
+      setNext: ["l_dL1_2", "l_23"], justSet: [], visited: ["n1"],
+      action: "cur = cur.next → node 1 has no next (it’s the only node on level 0) → cur = null. Exit inner loop.", kind: "step" },
+
+    { line: [17], outer: 1, activeDummy: "dummyL1", spentDummies: [],
+      cur: "n2", tail: "n3", dummyNext: "n2",
+      setNext: ["l_dL1_2", "l_23"], justSet: [], visited: ["n1"],
+      action: "cur = dummy.next → node 2. Drop down to level 1. (The dummy is now “spent”.)", kind: "step" },
+
+    { line: [4, 5], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n2", tail: "dummyL2", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23"], justSet: [], visited: ["n1"],
+      action: "OUTER ITER 2. New dummy for level 2. tail = dummy.", kind: "call" },
+
+    { line: [6], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n2", tail: "dummyL2", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23"], justSet: [], visited: ["n1"],
+      action: "Inner while: cur = node 2 ≠ null → enter.", kind: "call" },
+
+    { line: [7, 8], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n2", tail: "dummyL2", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4"], justSet: ["l_dL2_4"], visited: ["n1"],
+      action: "cur.left = node 4 ≠ null. tail.next = cur.left → dummy.next = node 4.", kind: "wire" },
+
+    { line: [9], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n2", tail: "n4", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4"], justSet: [], visited: ["n1"],
+      action: "tail = tail.next → tail at node 4.", kind: "step" },
+
+    { line: [11, 12], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n2", tail: "n4", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45"], justSet: ["l_45"], visited: ["n1"],
+      action: "cur.right = node 5 ≠ null. tail.next = cur.right → node 4.next = node 5.", kind: "wire" },
+
+    { line: [13], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n2", tail: "n5", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45"], justSet: [], visited: ["n1"],
+      action: "tail = tail.next → tail at node 5.", kind: "step" },
+
+    { line: [15], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n3", tail: "n5", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45"], justSet: [], visited: ["n1", "n2"],
+      action: "cur = cur.next → node 3 (set during OUTER ITER 1!). ★ This is where last iteration’s work pays off.", kind: "step" },
+
+    { line: [6], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n3", tail: "n5", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45"], justSet: [], visited: ["n1", "n2"],
+      action: "Inner while re-check: cur = node 3 ≠ null → continue.", kind: "call" },
+
+    { line: [7], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n3", tail: "n5", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45"], justSet: [], visited: ["n1", "n2"],
+      action: "cur.left = null → skip. (The imperfect-tree case the dummy approach handles cleanly.)", kind: "skip" },
+
+    { line: [11, 12], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n3", tail: "n5", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: ["l_57"], visited: ["n1", "n2"],
+      action: "cur.right = node 7 ≠ null. tail.next = cur.right → node 5.next = node 7.", kind: "wire" },
+
+    { line: [13], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n3", tail: "n7", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2"],
+      action: "tail = tail.next → tail at node 7.", kind: "step" },
+
+    { line: [15], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: null, tail: "n7", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3"],
+      action: "cur = cur.next → node 3.next was never set (node 3 is rightmost of level 1) → cur = null. Exit inner.", kind: "step" },
+
+    { line: [17], outer: 2, activeDummy: "dummyL2", spentDummies: ["dummyL1"],
+      cur: "n4", tail: "n7", dummyNext: "n4",
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3"],
+      action: "cur = dummy.next → node 4. Drop down to level 2.", kind: "step" },
+
+    { line: [4, 5], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: "n4", tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3"],
+      action: "OUTER ITER 3. New dummy for level 3 (which turns out not to exist). tail = dummy.", kind: "call" },
+
+    { line: [6], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: "n4", tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3"],
+      action: "Inner while: cur = node 4 ≠ null → enter.", kind: "call" },
+
+    { line: [7], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: "n4", tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3"],
+      action: "4.left = null → skip.", kind: "skip" },
+
+    { line: [11], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: "n4", tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3"],
+      action: "4.right = null → skip.", kind: "skip" },
+
+    { line: [15], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: "n5", tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3", "n4"],
+      action: "cur = cur.next → node 5 (threaded in OUTER ITER 2).", kind: "step" },
+
+    { line: [6, 7], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: "n5", tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3", "n4"],
+      action: "cur = node 5 ≠ null. 5.left = null → skip.", kind: "skip" },
+
+    { line: [11], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: "n5", tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3", "n4"],
+      action: "5.right = null → skip.", kind: "skip" },
+
+    { line: [15], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: "n7", tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3", "n4", "n5"],
+      action: "cur = cur.next → node 7 (threaded in OUTER ITER 2).", kind: "step" },
+
+    { line: [6, 7], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: "n7", tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3", "n4", "n5"],
+      action: "cur = node 7 ≠ null. 7.left = null → skip.", kind: "skip" },
+
+    { line: [11], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: "n7", tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3", "n4", "n5"],
+      action: "7.right = null → skip.", kind: "skip" },
+
+    { line: [15], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: null, tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3", "n4", "n5", "n7"],
+      action: "cur = cur.next → null (node 7 is rightmost of level 2). Exit inner.", kind: "step" },
+
+    { line: [17], outer: 3, activeDummy: "dummyL3", spentDummies: ["dummyL1", "dummyL2"],
+      cur: null, tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3", "n4", "n5", "n7"],
+      action: "cur = dummy.next → null (dummy was never updated; level 2 nodes had no children). ★ The null-return from the dummy is what terminates the outer loop.", kind: "step" },
+
+    { line: [3], outer: 3, activeDummy: null, spentDummies: ["dummyL1", "dummyL2", "dummyL3"],
+      cur: null, tail: "dummyL3", dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3", "n4", "n5", "n7"],
+      action: "Outer while: cur = null → exit.", kind: "step" },
+
+    { line: [19], outer: null, activeDummy: null, spentDummies: ["dummyL1", "dummyL2", "dummyL3"],
+      cur: null, tail: null, dummyNext: null,
+      setNext: ["l_dL1_2", "l_23", "l_dL2_4", "l_45", "l_57"], justSet: [], visited: ["n1", "n2", "n3", "n4", "n5", "n7"],
+      action: "Return root. ★ Done. Every node’s next points to its right neighbour (or null) — in O(1) extra space.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const outerVEl = document.getElementById('outerV');
+  const curVEl = document.getElementById('curV');
+  const tailVEl = document.getElementById('tailV');
+  const dummyNextVEl = document.getElementById('dummyNextV');
+  const stateCur = document.getElementById('stateCur');
+  const stateTail = document.getElementById('stateTail');
+  const stateDummy = document.getElementById('stateDummy');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function labelFor(key) {
+    if (!key) return 'null';
+    const n = nodes[key];
+    if (!n) return key;
+    return n.isDummy ? `dummy (${n.val})` : `node ${n.val}`;
+  }
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    outerVEl.textContent = s.outer !== null ? s.outer : '—';
+    curVEl.textContent = s.cur ? (nodes[s.cur].isDummy ? 'dummy' : nodes[s.cur].val) : 'null';
+    tailVEl.textContent = s.tail ? (nodes[s.tail].isDummy ? 'dummy' : nodes[s.tail].val) : '—';
+    dummyNextVEl.textContent = s.dummyNext ? nodes[s.dummyNext].val : 'null';
+    stateCur.textContent = labelFor(s.cur);
+    stateTail.textContent = labelFor(s.tail);
+    stateDummy.textContent = s.dummyNext ? labelFor(s.dummyNext) : 'null';
+    // Nodes
+    const visitedSet = new Set(s.visited);
+    const spentSet = new Set(s.spentDummies);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      const n = nodes[key];
+      el.classList.remove('cur', 'tail', 'visited', 'active', 'spent');
+      if (n.isDummy) {
+        if (key === s.activeDummy) { el.classList.add('active'); }
+        if (spentSet.has(key)) { el.classList.add('spent'); }
+      }
+      if (key === s.cur) { el.classList.add('cur'); }
+      if (key === s.tail) { el.classList.add('tail'); }
+      if (visitedSet.has(key) && key !== s.cur && key !== s.tail) {
+        el.classList.add('visited');
+      }
+    });
+    // Next arrows
+    const setSet = new Set(s.setNext);
+    const justSet = new Set(s.justSet);
+    Object.entries(nextEls).forEach(([id, group]) => {
+      const { arrow, head, label } = group;
+      arrow.classList.remove('set', 'just-set');
+      if (head) { head.classList.remove('set', 'just-set'); }
+      if (label) { label.classList.remove('set', 'just-set'); }
+      if (justSet.has(id)) {
+        arrow.classList.add('just-set');
+        if (head) { head.classList.add('just-set'); }
+        if (label) { label.classList.add('just-set'); }
+      } else if (setSet.has(id)) {
+        arrow.classList.add('set');
+        if (head) { head.classList.add('set'); }
+        if (label) { label.classList.add('set'); }
+      }
+    });
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
