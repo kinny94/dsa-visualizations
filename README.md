@@ -38,6 +38,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [637](https://kinny94.github.io/dsa-visualizations/lc637-average-of-levels-in-binary-tree.html) | Average of Levels in Binary Tree | Binary Tree · BFS |
 | [102](https://kinny94.github.io/dsa-visualizations/lc102-binary-tree-level-order-traversal.html) | Binary Tree Level Order Traversal | Binary Tree · BFS |
 | [199](https://kinny94.github.io/dsa-visualizations/lc199-binary-tree-right-side-view.html) | Binary Tree Right Side View | Binary Tree · BFS |
+| [103](https://kinny94.github.io/dsa-visualizations/lc103-binary-tree-zigzag-level-order-traversal.html) | Binary Tree Zigzag Level Order Traversal | Binary Tree · BFS |
 
 ## Adding a new animation
 
