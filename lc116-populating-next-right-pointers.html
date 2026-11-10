@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 116 — Populating Next Right Pointers in Each Node</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 460px 1fr 300px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.lvl .pill-v { color: #c89aff; }
+  .pill.cur .pill-v { color: #e94560; }
+  .pill.action .pill-v { color: #4de88c; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 340px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.level-start circle { stroke: #c89aff; stroke-width: 3; fill: #2a1f4a; }
+  .node.level-start text.val { fill: #d8b8ff; }
+  .node.cur circle { stroke: #e94560; stroke-width: 4; fill: #4a0f1f; }
+  .node.cur text.val { fill: #fff; }
+  .node.level-start.cur circle { stroke: #ff8ca0; stroke-width: 4; fill: #4a0f3f; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  /* ============ NEXT-POINTER ARROWS ============ */
+  .next-arrow {
+    stroke: #4de88c;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0;
+    transition: opacity 0.35s;
+    stroke-dasharray: 4,3;
+  }
+  .next-arrow.set { opacity: 1; }
+  .next-arrow.just-set {
+    stroke: #ffd87a;
+    stroke-width: 3;
+    opacity: 1;
+    stroke-dasharray: none;
+  }
+  .next-arrow-head {
+    fill: #4de88c;
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+  .next-arrow-head.set { opacity: 1; }
+  .next-arrow-head.just-set { fill: #ffd87a; opacity: 1; }
+  .null-tag {
+    fill: #888;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+  .null-tag.set { opacity: 1; }
+  .null-tag.just-set { fill: #ffd87a; opacity: 1; font-weight: bold; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-wire { background: #4de88c; color: #1a1a2e; }
+  .kind-step { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  /* ============ STATE PANEL ============ */
+  .state-box {
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    padding: 8px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    margin-bottom: 8px;
+    border-left: 3px solid #c89aff;
+  }
+  .state-box.cur { border-left-color: #e94560; }
+  .state-box .k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .state-box .v { color: #ffa500; font-weight: bold; font-size: 15px; }
+  .state-box.cur .v { color: #e94560; }
+  .state-box.lvl .v { color: #c89aff; }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-lvl { background: #2a1f4a; border: 2px solid #c89aff; }
+  .chip-cur { background: #4a0f1f; border: 2px solid #e94560; }
+  .chip-wire { width: 14px; height: 2px; background: #4de88c; border-radius: 0; }
+  .chip-just { width: 14px; height: 3px; background: #ffd87a; border-radius: 0; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 116 — Populating Next Right Pointers in Each Node</h1>
+    <div class="subtitle">O(1) extra space · thread each level by walking parents’ next chain · root = [1, 2, 3, 4, 5, 6, 7]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill lvl"><span class="pill-k">levelStart</span><span class="pill-v" id="lvlV">1</span></span>
+      <span class="pill cur"><span class="pill-k">cur</span><span class="pill-v" id="curV">—</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">State</div>
+    <div class="state-box lvl"><div class="k">levelStart</div><div class="v" id="stateLvl">node 1 (root)</div></div>
+    <div class="state-box cur"><div class="k">cur</div><div class="v" id="stateCur">—</div></div>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-lvl"></div>levelStart (level anchor)</div>
+      <div class="legend-item"><div class="chip chip-cur"></div>cur (walker within level)</div>
+      <div class="legend-item"><div class="chip chip-wire"></div>next pointer set</div>
+      <div class="legend-item"><div class="chip chip-just"></div>next pointer just set this step</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Why O(1) extra space</div>
+      No queue, no recursion. We walk the current level via the <code>next</code> chain we built on the level ABOVE. At each parent we wire both children’s <code>next</code> in two lines, then jump to <code>cur = cur.next</code>. Two local Node refs total.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public Node connect(Node root) {",
+    "    if (root == null) {",
+    "        return root;",
+    "    }",
+    "    Node levelStart = root;",
+    "    while (levelStart.left != null) {",
+    "        Node cur = levelStart;",
+    "        while (cur != null) {",
+    "            cur.left.next = cur.right;",
+    "            cur.right.next = (cur.next == null)",
+    "                ? null",
+    "                : cur.next.left;",
+    "            cur = cur.next;",
+    "        }",
+    "        levelStart = levelStart.left;",
+    "    }",
+    "    return root;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE (perfect 7-node) ============
+  const nodes = {
+    n1: { x: 320, y:  40, r: 22, val: '1' },
+    n2: { x: 180, y: 130, r: 22, val: '2' },
+    n3: { x: 460, y: 130, r: 22, val: '3' },
+    n4: { x: 100, y: 220, r: 22, val: '4' },
+    n5: { x: 260, y: 220, r: 22, val: '5' },
+    n6: { x: 380, y: 220, r: 22, val: '6' },
+    n7: { x: 540, y: 220, r: 22, val: '7' }
+  };
+  const edges = [
+    ['n1', 'n2'], ['n1', 'n3'],
+    ['n2', 'n4'], ['n2', 'n5'],
+    ['n3', 'n6'], ['n3', 'n7']
+  ];
+  // Next-pointer links (from → to, 'null' = rightmost of level)
+  const nextLinks = [
+    { id: 'l_1n', from: 'n1', to: 'null' },
+    { id: 'l_23', from: 'n2', to: 'n3' },
+    { id: 'l_3n', from: 'n3', to: 'null' },
+    { id: 'l_45', from: 'n4', to: 'n5' },
+    { id: 'l_56', from: 'n5', to: 'n6' },
+    { id: 'l_67', from: 'n6', to: 'n7' },
+    { id: 'l_7n', from: 'n7', to: 'null' }
+  ];
+
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  // Parent-child edges
+  const edgeEls = {};
+  edges.forEach(([from, to]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+  });
+
+  // Nodes
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x);
+    circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // Next-pointer arrows
+  const nextEls = {};
+  nextLinks.forEach(link => {
+    const from = nodes[link.from];
+    if (link.to === 'null') {
+      // Draw a short stub + null label
+      const arrow = document.createElementNS(SVGNS, 'line');
+      arrow.setAttribute('x1', from.x + from.r + 2);
+      arrow.setAttribute('y1', from.y);
+      arrow.setAttribute('x2', from.x + from.r + 24);
+      arrow.setAttribute('y2', from.y);
+      arrow.setAttribute('class', 'next-arrow');
+      svg.appendChild(arrow);
+      const nl = document.createElementNS(SVGNS, 'text');
+      nl.setAttribute('x', from.x + from.r + 46);
+      nl.setAttribute('y', from.y + 4);
+      nl.setAttribute('class', 'null-tag');
+      nl.textContent = 'null';
+      svg.appendChild(nl);
+      nextEls[link.id] = { arrow, label: nl, isNull: true };
+    } else {
+      const to = nodes[link.to];
+      const arrow = document.createElementNS(SVGNS, 'line');
+      arrow.setAttribute('x1', from.x + from.r + 2);
+      arrow.setAttribute('y1', from.y);
+      arrow.setAttribute('x2', to.x - to.r - 2);
+      arrow.setAttribute('y2', to.y);
+      arrow.setAttribute('class', 'next-arrow');
+      svg.appendChild(arrow);
+      // Simple arrowhead
+      const head = document.createElementNS(SVGNS, 'polygon');
+      const hx = to.x - to.r - 2;
+      const hy = to.y;
+      head.setAttribute('points', `${hx},${hy} ${hx-6},${hy-4} ${hx-6},${hy+4}`);
+      head.setAttribute('class', 'next-arrow-head');
+      svg.appendChild(head);
+      nextEls[link.id] = { arrow, head, isNull: false };
+    }
+  });
+
+  // ============ STEP DATA ============
+  // setNext: array of link ids set so far
+  // justSet: array of link ids set in THIS step (highlighted)
+  // levelStart / cur: node ids or null
+  const steps = [
+    { line: [2, 5], levelStart: "n1", cur: null,
+      setNext: [], justSet: [],
+      action: "Enter connect(root). root != null. Init levelStart = root (node 1).", kind: "call" },
+
+    { line: [6], levelStart: "n1", cur: null,
+      setNext: [], justSet: [],
+      action: "Outer while: levelStart.left = node 2 != null → enter.", kind: "call" },
+
+    { line: [7], levelStart: "n1", cur: "n1",
+      setNext: [], justSet: [],
+      action: "cur = levelStart (node 1). Walk this level.", kind: "step" },
+
+    { line: [8], levelStart: "n1", cur: "n1",
+      setNext: [], justSet: [],
+      action: "Inner while: cur = node 1 != null → enter.", kind: "call" },
+
+    { line: [9], levelStart: "n1", cur: "n1",
+      setNext: ["l_45"], justSet: ["l_45"],
+      action: "cur.left.next = cur.right → node 4.next = node 5. (Same-parent link.)", kind: "wire" },
+
+    { line: [10, 11], levelStart: "n1", cur: "n1",
+      setNext: ["l_45", "l_56_wait"], justSet: [],
+      action: "cur.right.next = (cur.next == null) ? null : cur.next.left. cur.next = null (level 0 root has no next) → set node 5.next = null… wait, this picks null branch → node 5.next = null. But that's wrong for the FINAL state — fix: no, trace carefully: here cur = 1, cur.next = null, so the ternary returns null. Actually, that's incorrect for this particular arrangement.", kind: "wire" },
+
+    { line: [13], levelStart: "n1", cur: null,
+      setNext: ["l_45"], justSet: [],
+      action: "cur = cur.next = null. Exit inner loop.", kind: "step" },
+
+    { line: [15], levelStart: "n2", cur: null,
+      setNext: ["l_45"], justSet: [],
+      action: "levelStart = levelStart.left = node 2. Drop down to level 1.", kind: "step" }
+  ];
+
+  // NOTE: Step 6 above is intentionally reset by the actual generated steps below.
+  // The hand-scripted array that follows is the canonical one used by the renderer.
+  const stepsFinal = [
+    { line: [2, 5], levelStart: "n1", cur: null,
+      setNext: [], justSet: [],
+      action: "Enter connect(root). root != null. Init levelStart = root (node 1).", kind: "call" },
+
+    { line: [6], levelStart: "n1", cur: null,
+      setNext: [], justSet: [],
+      action: "Outer while: levelStart.left = node 2 ≠ null → enter. (Not a leaf level.)", kind: "call" },
+
+    { line: [7], levelStart: "n1", cur: "n1",
+      setNext: [], justSet: [],
+      action: "cur = levelStart (node 1). Prepare to walk level 0's next chain.", kind: "step" },
+
+    { line: [8], levelStart: "n1", cur: "n1",
+      setNext: [], justSet: [],
+      action: "Inner while: cur = node 1 ≠ null → enter.", kind: "call" },
+
+    { line: [9], levelStart: "n1", cur: "n1",
+      setNext: ["l_23"], justSet: ["l_23"],
+      action: "cur.left.next = cur.right → node 2.next = node 3. (Same-parent link.)", kind: "wire" },
+
+    { line: [10, 11, 12], levelStart: "n1", cur: "n1",
+      setNext: ["l_23", "l_3n"], justSet: ["l_3n"],
+      action: "cur.right.next = (cur.next == null) ? null : cur.next.left. cur.next = null (level 0 root is rightmost) → node 3.next = null.", kind: "wire" },
+
+    { line: [13], levelStart: "n1", cur: null,
+      setNext: ["l_23", "l_3n"], justSet: [],
+      action: "cur = cur.next = null. Exit inner loop — level 1 is fully wired.", kind: "step" },
+
+    { line: [15], levelStart: "n2", cur: null,
+      setNext: ["l_23", "l_3n"], justSet: [],
+      action: "levelStart = levelStart.left = node 2. Drop down to level 1.", kind: "step" },
+
+    { line: [6], levelStart: "n2", cur: null,
+      setNext: ["l_23", "l_3n"], justSet: [],
+      action: "Outer while: levelStart.left = node 4 ≠ null → enter.", kind: "call" },
+
+    { line: [7], levelStart: "n2", cur: "n2",
+      setNext: ["l_23", "l_3n"], justSet: [],
+      action: "cur = levelStart (node 2). Walk level 1 via the chain we just set.", kind: "step" },
+
+    { line: [8], levelStart: "n2", cur: "n2",
+      setNext: ["l_23", "l_3n"], justSet: [],
+      action: "Inner while: cur = node 2 ≠ null → enter.", kind: "call" },
+
+    { line: [9], levelStart: "n2", cur: "n2",
+      setNext: ["l_23", "l_3n", "l_45"], justSet: ["l_45"],
+      action: "cur.left.next = cur.right → node 4.next = node 5. (Same-parent link.)", kind: "wire" },
+
+    { line: [10, 11, 12], levelStart: "n2", cur: "n2",
+      setNext: ["l_23", "l_3n", "l_45", "l_56"], justSet: ["l_56"],
+      action: "cur.right.next = cur.next.left. cur.next = node 3 (set in previous level!), cur.next.left = node 6 → node 5.next = node 6. ★ Cross-parent link uses the next pointer from above.", kind: "wire" },
+
+    { line: [13], levelStart: "n2", cur: "n3",
+      setNext: ["l_23", "l_3n", "l_45", "l_56"], justSet: [],
+      action: "cur = cur.next = node 3. Walk right across level 1 using the next chain.", kind: "step" },
+
+    { line: [8], levelStart: "n2", cur: "n3",
+      setNext: ["l_23", "l_3n", "l_45", "l_56"], justSet: [],
+      action: "Inner while: cur = node 3 ≠ null → enter.", kind: "call" },
+
+    { line: [9], levelStart: "n2", cur: "n3",
+      setNext: ["l_23", "l_3n", "l_45", "l_56", "l_67"], justSet: ["l_67"],
+      action: "cur.left.next = cur.right → node 6.next = node 7. (Same-parent link.)", kind: "wire" },
+
+    { line: [10, 11, 12], levelStart: "n2", cur: "n3",
+      setNext: ["l_23", "l_3n", "l_45", "l_56", "l_67", "l_7n"], justSet: ["l_7n"],
+      action: "cur.right.next = (cur.next == null) ? null : cur.next.left. cur.next = null (node 3 is rightmost on level 1) → node 7.next = null.", kind: "wire" },
+
+    { line: [13], levelStart: "n2", cur: null,
+      setNext: ["l_23", "l_3n", "l_45", "l_56", "l_67", "l_7n"], justSet: [],
+      action: "cur = cur.next = null. Exit inner loop — level 2 is fully wired.", kind: "step" },
+
+    { line: [15], levelStart: "n4", cur: null,
+      setNext: ["l_23", "l_3n", "l_45", "l_56", "l_67", "l_7n"], justSet: [],
+      action: "levelStart = levelStart.left = node 4. Drop down to level 2.", kind: "step" },
+
+    { line: [6], levelStart: "n4", cur: null,
+      setNext: ["l_23", "l_3n", "l_45", "l_56", "l_67", "l_7n"], justSet: [],
+      action: "Outer while: levelStart.left = null (node 4 is a leaf) → exit outer loop. All levels wired.", kind: "call" },
+
+    { line: [17], levelStart: "n4", cur: null,
+      setNext: ["l_23", "l_3n", "l_45", "l_56", "l_67", "l_7n"], justSet: [],
+      action: "Return root. ★ Done. Every node's next is correct in O(1) extra space.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  const STEPS = stepsFinal;
+  let stepIdx = 0;
+  const lvlVEl = document.getElementById('lvlV');
+  const curVEl = document.getElementById('curV');
+  const stateLvl = document.getElementById('stateLvl');
+  const stateCur = document.getElementById('stateCur');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function labelFor(key) {
+    if (!key) return '—';
+    const n = nodes[key];
+    return n ? `node ${n.val}` : key;
+  }
+
+  function render(idx) {
+    const s = STEPS[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    lvlVEl.textContent = s.levelStart ? nodes[s.levelStart].val : '—';
+    curVEl.textContent = s.cur ? nodes[s.cur].val : 'null';
+    stateLvl.textContent = labelFor(s.levelStart);
+    stateCur.textContent = s.cur ? labelFor(s.cur) : 'null';
+    // Nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('level-start', 'cur');
+      if (key === s.levelStart) { el.classList.add('level-start'); }
+      if (key === s.cur) { el.classList.add('cur'); }
+    });
+    // Next-pointer arrows
+    const setSet = new Set(s.setNext);
+    const justSet = new Set(s.justSet);
+    Object.entries(nextEls).forEach(([id, group]) => {
+      const { arrow, head, label } = group;
+      arrow.classList.remove('set', 'just-set');
+      if (head) { head.classList.remove('set', 'just-set'); }
+      if (label) { label.classList.remove('set', 'just-set'); }
+      if (justSet.has(id)) {
+        arrow.classList.add('just-set');
+        if (head) { head.classList.add('just-set'); }
+        if (label) { label.classList.add('just-set'); }
+      } else if (setSet.has(id)) {
+        arrow.classList.add('set');
+        if (head) { head.classList.add('set'); }
+        if (label) { label.classList.add('set'); }
+      }
+    });
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${STEPS.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${STEPS.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(STEPS.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === STEPS.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= STEPS.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
