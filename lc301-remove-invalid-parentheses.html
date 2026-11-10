@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 301 — Remove Invalid Parentheses</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 500px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.bal .pill-v { color: #9ad4ff; }
+  .pill.bal.zero .pill-v { color: #4de88c; }
+  .pill.left .pill-v { color: #ffd87a; }
+  .pill.right .pill-v { color: #e994a0; }
+  .pill.phase {
+    background: #0a3a1a;
+    color: #4de88c;
+    font-weight: bold;
+  }
+  .pill.phase.dfs { background: #3a2a0a; color: #ffd87a; }
+  .label { width: 72px; font-size: 11px; color: #aaa; text-align: right; }
+  .char-row { display: flex; gap: 5px; align-items: center; min-height: 48px; }
+  .char-cell {
+    width: 36px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.25s;
+    font-family: 'Monaco', monospace;
+    font-size: 16px;
+    position: relative;
+  }
+  .char-cell.open { color: #ffd87a; }
+  .char-cell.close { color: #9ad4ff; }
+  .char-cell.letter { color: #4de88c; }
+  .char-cell.pre-at {
+    border-color: #4de88c;
+    box-shadow: 0 0 6px rgba(77, 232, 140, 0.6);
+  }
+  .char-cell.dfs-at {
+    border-color: #e94560;
+    box-shadow: 0 0 8px rgba(233, 69, 96, 0.6);
+  }
+  .char-cell .idx-num {
+    position: absolute;
+    top: -14px; left: 0; right: 0;
+    text-align: center;
+    font-size: 9px;
+    color: #666;
+    font-weight: normal;
+  }
+  .current-wrap { display: flex; align-items: center; gap: 6px; min-height: 40px; }
+  .current-box {
+    display: inline-flex;
+    gap: 3px;
+    padding: 4px 8px;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 6px;
+    min-height: 36px;
+    align-items: center;
+    font-family: 'Monaco', monospace;
+    min-width: 72px;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  .current-box.empty { color: #6a7a9a; font-size: 12px; font-style: italic; }
+  .current-box .cc {
+    display: inline-flex;
+    width: 20px; height: 24px;
+    align-items: center;
+    justify-content: center;
+    background: #0f6b3a;
+    border-radius: 2px;
+    color: #fff;
+  }
+  .current-box .cc.close { background: #6b3a0f; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .node-box rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node-box text {
+    fill: #bbb;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transition: fill 0.25s;
+  }
+  .node-box .sub-text { fill: #888; font-size: 9px; }
+  .node-box.on-path rect { stroke: #ffa500; stroke-width: 3; fill: #1f3a5e; }
+  .node-box.on-path text { fill: #fff; }
+  .node-box.active rect { fill: #e94560; stroke: #ff8ca0; stroke-width: 3; }
+  .node-box.active text { fill: #fff; font-weight: bold; }
+  .node-box.success rect { fill: #0f9950; stroke: #4de88c; stroke-width: 3; }
+  .node-box.success text { fill: #fff; font-weight: bold; }
+  .node-box.dup rect { fill: #7a5a0f; stroke: #c08020; stroke-width: 2; }
+  .node-box.dup text { fill: #fff; }
+  .node-box.done rect { fill: #0a1a35; stroke: #3a3a4a; }
+  .node-box.done text { fill: #888; }
+  .edge { stroke: #3a3a4a; stroke-width: 1.5; fill: none; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 2.5; }
+  .edge-label {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: middle;
+  }
+  .edge-label.on-path { fill: #ffd87a; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 72px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-pick { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .kind-record { background: #0f9950; color: white; }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+  }
+  .result-list li {
+    padding: 4px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #0f9950;
+    font-weight: bold;
+  }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 2px; }
+  .chip-active { background: #e94560; }
+  .chip-onpath { background: #1f3a5e; border: 2px solid #ffa500; }
+  .chip-success { background: #0f9950; }
+  .chip-dup { background: #7a5a0f; }
+  .chip-done { background: #0a1a35; border: 1px solid #3a3a4a; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 301 — Remove Invalid Parentheses</h1>
+    <div class="subtitle">Pre-pass counts excess + DFS binary keep/delete · dedup via Set &nbsp;·&nbsp; s = "()())"</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill phase" id="phasePill">pre-pass</span>
+      <span class="pill left"><span class="pill-k" id="leftK">left</span><span class="pill-v" id="leftV">0</span></span>
+      <span class="pill right"><span class="pill-k" id="rightK">right</span><span class="pill-v" id="rightV">0</span></span>
+      <span class="pill bal zero" id="balPill"><span class="pill-k">balance</span><span class="pill-v" id="balV">0</span></span>
+      <span class="pill"><span class="pill-k">index</span><span class="pill-v" id="idxV">—</span></span>
+    </div>
+    <div class="row">
+      <span class="label">s:</span>
+      <div class="char-row" id="chars"></div>
+    </div>
+    <div class="row current-wrap">
+      <span class="label">current:</span>
+      <div class="current-box empty" id="currentBox">[empty]</div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 920 500" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Result (Set&lt;String&gt;)</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-onpath"></div>on call stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-success"></div>recorded (unique)</div>
+      <div class="legend-item"><div class="chip chip-dup"></div>recorded but dup (ignored)</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Phases</div>
+      <div><strong style="color:#4de88c;">Steps 1–7:</strong> pre-pass (count excess `(` and `)`)</div>
+      <div><strong style="color:#ffd87a;">Steps 8–34:</strong> backtracking DFS</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const S = "()())";
+
+  // ============ CHARS ============
+  const charsEl = document.getElementById('chars');
+  const charCells = [];
+  for (let i = 0; i < S.length; i++) {
+    const cell = document.createElement('div');
+    const ch = S[i];
+    cell.className = 'char-cell ' + (ch === '(' ? 'open' : ch === ')' ? 'close' : 'letter');
+    cell.textContent = ch;
+    const idxLbl = document.createElement('span');
+    idxLbl.className = 'idx-num';
+    idxLbl.textContent = i;
+    cell.appendChild(idxLbl);
+    charsEl.appendChild(cell);
+    charCells.push(cell);
+  }
+
+  // ============ CODE ============
+  const codeText = [
+    "public List<String> removeInvalidParentheses(String s) {",
+    "    int leftRem = 0, rightRem = 0;",
+    "    for (int i = 0; i < s.length(); i++) {",
+    "        char c = s.charAt(i);",
+    "        if (c == '(') {",
+    "            leftRem++;",
+    "        } else if (c == ')') {",
+    "            if (leftRem > 0) {",
+    "                leftRem--;",
+    "            } else {",
+    "                rightRem++;",
+    "            }",
+    "        }",
+    "    }",
+    "    Set<String> result = new HashSet<>();",
+    "    dfs(s, 0, new StringBuilder(), leftRem, rightRem, 0, result);",
+    "    return new ArrayList<>(result);",
+    "}",
+    "",
+    "private void dfs(String s, int index, StringBuilder current,",
+    "                 int leftRem, int rightRem, int balance, Set<String> result) {",
+    "    if (index == s.length()) {",
+    "        if (leftRem == 0 && rightRem == 0 && balance == 0) {",
+    "            result.add(current.toString());",
+    "        }",
+    "        return;",
+    "    }",
+    "    char ch = s.charAt(index);",
+    "    if (ch != '(' && ch != ')') {",
+    "        current.append(ch);",
+    "        dfs(s, index + 1, current, leftRem, rightRem, balance, result);",
+    "        current.deleteCharAt(current.length() - 1);",
+    "        return;",
+    "    }",
+    "    if (ch == '(') {",
+    "        if (leftRem > 0) {",
+    "            dfs(s, index + 1, current, leftRem - 1, rightRem, balance, result);",
+    "        }",
+    "        current.append('(');",
+    "        dfs(s, index + 1, current, leftRem, rightRem, balance + 1, result);",
+    "        current.deleteCharAt(current.length() - 1);",
+    "        return;",
+    "    }",
+    "    if (ch == ')') {",
+    "        if (rightRem > 0) {",
+    "            dfs(s, index + 1, current, leftRem, rightRem - 1, balance, result);",
+    "        }",
+    "        if (balance > 0) {",
+    "            current.append(')');",
+    "            dfs(s, index + 1, current, leftRem, rightRem, balance - 1, result);",
+    "            current.deleteCharAt(current.length() - 1);",
+    "        }",
+    "        return;",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ CALL TREE ============
+  const nodes = {
+    n0:  { x: 460, y:  40, w: 190, label: 'dfs(0, "", 0, 1, 0)',  sub: '' },
+    n1:  { x: 460, y: 120, w: 190, label: 'dfs(1, "(", 0, 1, 1)', sub: 'keep (' },
+    n2a: { x: 220, y: 200, w: 180, label: 'dfs(2, "(", 0, 0, 1)', sub: 'DEL ) @1' },
+    n2b: { x: 700, y: 200, w: 180, label: 'dfs(2, "()", 0, 1, 0)',sub: 'KEEP ) @1' },
+    n3a: { x: 220, y: 280, w: 190, label: 'dfs(3, "((", 0, 0, 2)',sub: 'keep (' },
+    n3b: { x: 700, y: 280, w: 190, label: 'dfs(3, "()(", 0, 1, 1)', sub: 'keep (' },
+    n4a: { x: 220, y: 360, w: 190, label: 'dfs(4, "(()", 0, 0, 1)', sub: 'keep ) @3' },
+    n4b: { x: 580, y: 360, w: 190, label: 'dfs(4, "()(", 0, 0, 1)', sub: 'DEL ) @3' },
+    n4c: { x: 800, y: 360, w: 200, label: 'dfs(4, "()()", 0, 1, 0)', sub: 'KEEP ) @3' },
+    n5a: { x: 220, y: 440, w: 190, label: 'END "(())" ★',          sub: 'RECORD' },
+    n5b: { x: 580, y: 440, w: 190, label: 'END "()()" ★',          sub: 'RECORD' },
+    n5c: { x: 800, y: 440, w: 220, label: 'END "()()" ✗ dup',      sub: 'skipped by Set' }
+  };
+  const edges = [
+    ["n0", "n1", "keep ( @0"],
+    ["n1", "n2a", "DELETE ) @1"],
+    ["n1", "n2b", "KEEP ) @1"],
+    ["n2a", "n3a", "keep ( @2"],
+    ["n2b", "n3b", "keep ( @2"],
+    ["n3a", "n4a", "keep ) @3"],
+    ["n3b", "n4b", "DELETE ) @3"],
+    ["n3b", "n4c", "KEEP ) @3"],
+    ["n4a", "n5a", "keep ) @4"],
+    ["n4b", "n5b", "keep ) @4"],
+    ["n4c", "n5c", "DEL ) @4"]
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  const edgeLabelEls = {};
+  edges.forEach(([from, to, lbl]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + 20);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - 20);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+
+    const t = document.createElementNS(SVGNS, 'text');
+    const mx = (a.x + b.x) / 2 + (b.x < a.x ? -4 : (b.x > a.x ? 4 : 0));
+    const my = (a.y + b.y) / 2 + 3;
+    t.setAttribute('x', mx);
+    t.setAttribute('y', my);
+    t.setAttribute('class', 'edge-label');
+    t.textContent = lbl;
+    svg.appendChild(t);
+    edgeLabelEls[`${from}-${to}`] = t;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node-box');
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', n.x - n.w / 2);
+    rect.setAttribute('y', n.y - 20);
+    rect.setAttribute('width', n.w);
+    rect.setAttribute('height', 40);
+    rect.setAttribute('rx', 5);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y - 5);
+    t.textContent = n.label;
+    g.appendChild(t);
+    const s = document.createElementNS(SVGNS, 'text');
+    s.setAttribute('x', n.x);
+    s.setAttribute('y', n.y + 10);
+    s.setAttribute('class', 'sub-text');
+    s.textContent = n.sub;
+    g.appendChild(s);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA (generated) ============
+  const steps = [
+    {"line": [2, 3], "s": "()())", "phase": "pre", "pre_i": null, "dfs_i": null, "left": 0, "right": 0, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "", "activeNode": null, "onPath": [], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "Enter removeInvalidParentheses(\"()())\"). Init leftRem = rightRem = 0.", "kind": "call", "result": null},
+    {"line": [4, 5, 6], "s": "()())", "phase": "pre", "pre_i": 0, "dfs_i": null, "left": 1, "right": 0, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "", "activeNode": null, "onPath": [], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "Pre-pass i=0: s[0]='('. leftRem++ → 1.", "kind": "call", "result": null},
+    {"line": [4, 5, 7, 8, 9], "s": "()())", "phase": "pre", "pre_i": 1, "dfs_i": null, "left": 0, "right": 0, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "", "activeNode": null, "onPath": [], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "Pre-pass i=1: s[1]=')'. leftRem>0, so leftRem-- → 0 (this ')' matches a prior '(').", "kind": "call", "result": null},
+    {"line": [4, 5, 6], "s": "()())", "phase": "pre", "pre_i": 2, "dfs_i": null, "left": 1, "right": 0, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "", "activeNode": null, "onPath": [], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "Pre-pass i=2: s[2]='('. leftRem++ → 1.", "kind": "call", "result": null},
+    {"line": [4, 5, 7, 8, 9], "s": "()())", "phase": "pre", "pre_i": 3, "dfs_i": null, "left": 0, "right": 0, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "", "activeNode": null, "onPath": [], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "Pre-pass i=3: s[3]=')'. leftRem>0, so leftRem-- → 0 (this ')' matches a prior '(').", "kind": "call", "result": null},
+    {"line": [4, 5, 7, 8, 10, 11], "s": "()())", "phase": "pre", "pre_i": 4, "dfs_i": null, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "", "activeNode": null, "onPath": [], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "Pre-pass i=4: s[4]=')'. leftRem==0, so rightRem++ → 1 (this ')' is EXCESS, must delete).", "kind": "call", "result": null},
+    {"line": [16], "s": "()())", "phase": "pre", "pre_i": null, "dfs_i": null, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 0, "current": "", "activeNode": null, "onPath": [], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "Pre-pass done. leftRem=0, rightRem=1. Call dfs(s, 0, [], 0, 1, 0, result).", "kind": "call", "result": null},
+    {"line": [18, 23], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 0, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 0, "current": "", "activeNode": "n0", "onPath": [], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "dfs(index=0, current=\"\", leftRem=0, rightRem=1, balance=0). Not at end.", "kind": "call", "result": null},
+    {"line": [23, 29, 30, 31, 32], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 1, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 1, "current": "(", "activeNode": "n1", "onPath": ["n0"], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "s[0]='('. leftRem==0 → no delete option. KEEP: append '(' → current=\"(\", balance=1. Recurse to n1.", "kind": "pick", "result": null},
+    {"line": [23, 40, 41], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 2, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 1, "current": "(", "activeNode": "n2a", "onPath": ["n0", "n1"], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "n1: s[1]=')'. Try DELETE: rightRem-- → 0. Recurse. current=\"(\", balance=1.", "kind": "pick", "result": null},
+    {"line": [29, 30, 31, 32], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 3, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 2, "current": "((", "activeNode": "n3a", "onPath": ["n0", "n1", "n2a"], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "n2a: s[2]='('. leftRem==0 → keep. current=\"((\", balance=2. Recurse.", "kind": "pick", "result": null},
+    {"line": [40, 44, 45, 46], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 4, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 1, "current": "(()", "activeNode": "n4a", "onPath": ["n0", "n1", "n2a", "n3a"], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "n3a: s[3]=')'. rightRem==0, can't delete. KEEP (balance=2>0): append → current=\"(()\", balance=1. Recurse.", "kind": "pick", "result": null},
+    {"line": [44, 45, 46], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 5, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "(())", "activeNode": "n5a", "onPath": ["n0", "n1", "n2a", "n3a", "n4a"], "doneNodes": [], "successNodes": [], "dupNodes": [], "resultList": [], "action": "n4a: s[4]=')'. KEEP (balance=1>0): current=\"(())\", balance=0. Recurse.", "kind": "pick", "result": null},
+    {"line": [19, 20, 21], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 5, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "(())", "activeNode": "n5a", "onPath": ["n0", "n1", "n2a", "n3a", "n4a"], "doneNodes": [], "successNodes": ["n5a"], "dupNodes": [], "resultList": ["(())"], "action": "n5a: index==len. leftRem=0 ✓ rightRem=0 ✓ balance=0 ✓. RECORD \"(())\" ★.", "kind": "record", "result": null},
+    {"line": [47], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 4, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 1, "current": "(()", "activeNode": "n4a", "onPath": ["n0", "n1", "n2a", "n3a", "n4a"], "doneNodes": ["n5a"], "successNodes": ["n5a"], "dupNodes": [], "resultList": ["(())"], "action": "Return from n5a. Backtrack: pop ')' → current=\"(()\", balance=1. n4a has no other option (rightRem=0 so delete was skipped). Return.", "kind": "return", "result": null},
+    {"line": [47], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 3, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 2, "current": "((", "activeNode": "n3a", "onPath": ["n0", "n1", "n2a", "n3a"], "doneNodes": ["n5a", "n4a"], "successNodes": ["n5a"], "dupNodes": [], "resultList": ["(())"], "action": "Return from n4a. Backtrack: pop ')' → current=\"((\", balance=2. n3a has no delete option (rightRem=0). Return.", "kind": "return", "result": null},
+    {"line": [34], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 2, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 1, "current": "(", "activeNode": "n2a", "onPath": ["n0", "n1", "n2a"], "doneNodes": ["n5a", "n4a", "n3a"], "successNodes": ["n5a"], "dupNodes": [], "resultList": ["(())"], "action": "Return from n3a. Backtrack: pop '(' → current=\"(\", balance=1. n2a loop done. Return.", "kind": "return", "result": null},
+    {"line": [42], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 1, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 1, "current": "(", "activeNode": "n1", "onPath": ["n0", "n1"], "doneNodes": ["n5a", "n4a", "n3a", "n2a"], "successNodes": ["n5a"], "dupNodes": [], "resultList": ["(())"], "action": "Return from n2a. Back in n1. Delete-branch complete. Now try KEEP option.", "kind": "return", "result": null},
+    {"line": [44, 45, 46], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 2, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 0, "current": "()", "activeNode": "n2b", "onPath": ["n0", "n1"], "doneNodes": ["n5a", "n4a", "n3a", "n2a"], "successNodes": ["n5a"], "dupNodes": [], "resultList": ["(())"], "action": "n1: KEEP ')' (balance=1>0): append → current=\"()\", balance=0. Recurse.", "kind": "pick", "result": null},
+    {"line": [29, 30, 31, 32], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 3, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 1, "current": "()(", "activeNode": "n3b", "onPath": ["n0", "n1", "n1", "n2b"], "doneNodes": ["n5a", "n4a", "n3a", "n2a"], "successNodes": ["n5a"], "dupNodes": [], "resultList": ["(())"], "action": "n2b: s[2]='('. leftRem==0 → keep. current=\"()(\", balance=1. Recurse.", "kind": "pick", "result": null},
+    {"line": [40, 41], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 4, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 1, "current": "()(", "activeNode": "n4b", "onPath": ["n0", "n1", "n1", "n2b", "n3b"], "doneNodes": ["n5a", "n4a", "n3a", "n2a"], "successNodes": ["n5a"], "dupNodes": [], "resultList": ["(())"], "action": "n3b: s[3]=')'. DELETE: rightRem-- → 0. Recurse. current=\"()(\", balance=1.", "kind": "pick", "result": null},
+    {"line": [44, 45, 46], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 5, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "()()", "activeNode": "n5b", "onPath": ["n0", "n1", "n1", "n2b", "n3b", "n4b"], "doneNodes": ["n5a", "n4a", "n3a", "n2a"], "successNodes": ["n5a"], "dupNodes": [], "resultList": ["(())"], "action": "n4b: s[4]=')'. rightRem=0 → no delete. KEEP (bal=1>0): current=\"()()\", balance=0. Recurse.", "kind": "pick", "result": null},
+    {"line": [19, 20, 21], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 5, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "()()", "activeNode": "n5b", "onPath": ["n0", "n1", "n1", "n2b", "n3b", "n4b"], "doneNodes": ["n5a", "n4a", "n3a", "n2a"], "successNodes": ["n5a", "n5b"], "dupNodes": [], "resultList": ["(())", "()()"], "action": "n5b: index==len. All zero ✓. RECORD \"()()\" ★.", "kind": "record", "result": null},
+    {"line": [47], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 4, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 1, "current": "()(", "activeNode": "n4b", "onPath": ["n0", "n1", "n1", "n2b", "n3b", "n4b"], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b"], "successNodes": ["n5a", "n5b"], "dupNodes": [], "resultList": ["(())", "()()"], "action": "Return from n5b. Pop ')' → current=\"()(\", balance=1. n4b no other option. Return.", "kind": "return", "result": null},
+    {"line": [42], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 3, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 1, "current": "()(", "activeNode": "n3b", "onPath": ["n0", "n1", "n1", "n2b", "n3b"], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b", "n4b"], "successNodes": ["n5a", "n5b"], "dupNodes": [], "resultList": ["(())", "()()"], "action": "Return from n4b. Back in n3b. Delete-branch done. Now try KEEP option (balance=1>0).", "kind": "return", "result": null},
+    {"line": [44, 45, 46], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 4, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 0, "current": "()()", "activeNode": "n4c", "onPath": ["n0", "n1", "n1", "n2b", "n3b"], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b", "n4b"], "successNodes": ["n5a", "n5b"], "dupNodes": [], "resultList": ["(())", "()()"], "action": "n3b: KEEP ')': current=\"()()\", balance=0. Recurse.", "kind": "pick", "result": null},
+    {"line": [40, 41], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 5, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "()()", "activeNode": "n5c", "onPath": ["n0", "n1", "n1", "n2b", "n3b", "n4c"], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b", "n4b"], "successNodes": ["n5a", "n5b"], "dupNodes": [], "resultList": ["(())", "()()"], "action": "n4c: s[4]=')'. DELETE: rightRem-- → 0. Recurse. current=\"()()\", balance=0.", "kind": "pick", "result": null},
+    {"line": [19, 20, 21], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 5, "left": 0, "right": 1, "leftRem": 0, "rightRem": 0, "balance": 0, "current": "()()", "activeNode": "n5c", "onPath": ["n0", "n1", "n1", "n2b", "n3b", "n4c"], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b", "n4b"], "successNodes": ["n5a", "n5b"], "dupNodes": ["n5c"], "resultList": ["(())", "()()"], "action": "n5c: index==len. All zero ✓. RECORD \"()()\" — but Set dedup! Already present; no change to result.", "kind": "record", "result": null},
+    {"line": [42], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 4, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 0, "current": "()()", "activeNode": "n4c", "onPath": ["n0", "n1", "n1", "n2b", "n3b", "n4c"], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b", "n4b", "n5c"], "successNodes": ["n5a", "n5b"], "dupNodes": ["n5c"], "resultList": ["(())", "()()"], "action": "Return from n5c. n4c delete-branch done. Keep option: balance==0, can't keep ')'. Return.", "kind": "return", "result": null},
+    {"line": [47], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 3, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 1, "current": "()(", "activeNode": "n3b", "onPath": ["n0", "n1", "n1", "n2b", "n3b"], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b", "n4b", "n5c", "n4c"], "successNodes": ["n5a", "n5b"], "dupNodes": ["n5c"], "resultList": ["(())", "()()"], "action": "Return from n4c. Pop ')' → current=\"()(\", balance=1. n3b loop done. Return.", "kind": "return", "result": null},
+    {"line": [34], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 2, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 0, "current": "()", "activeNode": "n2b", "onPath": ["n0", "n1", "n1", "n2b"], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b", "n4b", "n5c", "n4c", "n3b"], "successNodes": ["n5a", "n5b"], "dupNodes": ["n5c"], "resultList": ["(())", "()()"], "action": "Return from n3b. Pop '(' → current=\"()\", balance=0. n2b loop done. Return.", "kind": "return", "result": null},
+    {"line": [47], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 1, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 1, "current": "(", "activeNode": "n1", "onPath": ["n0", "n1", "n1"], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b", "n4b", "n5c", "n4c", "n3b", "n2b"], "successNodes": ["n5a", "n5b"], "dupNodes": ["n5c"], "resultList": ["(())", "()()"], "action": "Return from n2b. Pop ')' → current=\"(\", balance=1. n1 keep-branch done. Return.", "kind": "return", "result": null},
+    {"line": [34], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 0, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 0, "current": "", "activeNode": "n0", "onPath": ["n0", "n1"], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b", "n4b", "n5c", "n4c", "n3b", "n2b", "n1"], "successNodes": ["n5a", "n5b"], "dupNodes": ["n5c"], "resultList": ["(())", "()()"], "action": "Return from n1. Pop '(' → current=\"\", balance=0. n0 keep-branch done. Return.", "kind": "return", "result": null},
+    {"line": [24], "s": "()())", "phase": "dfs", "pre_i": null, "dfs_i": 0, "left": 0, "right": 1, "leftRem": 0, "rightRem": 1, "balance": 0, "current": "", "activeNode": null, "onPath": [], "doneNodes": ["n5a", "n4a", "n3a", "n2a", "n5b", "n4b", "n5c", "n4c", "n3b", "n2b", "n1", "n0"], "successNodes": ["n5a", "n5b"], "dupNodes": ["n5c"], "resultList": ["(())", "()()"], "action": "Final. result = {\"(())\", \"()()\"}. Return 2 unique strings.", "kind": "return", "result": ["(())", "()()"]}
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const phasePillEl = document.getElementById('phasePill');
+  const leftKEl = document.getElementById('leftK');
+  const leftVEl = document.getElementById('leftV');
+  const rightKEl = document.getElementById('rightK');
+  const rightVEl = document.getElementById('rightV');
+  const balVEl = document.getElementById('balV');
+  const balPillEl = document.getElementById('balPill');
+  const idxVEl = document.getElementById('idxV');
+  const currentBoxEl = document.getElementById('currentBox');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    // Code
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Phase pill
+    if (s.phase === 'pre') {
+      phasePillEl.textContent = 'pre-pass';
+      phasePillEl.className = 'pill phase';
+      leftKEl.textContent = 'left';
+      rightKEl.textContent = 'right';
+      leftVEl.textContent = s.left;
+      rightVEl.textContent = s.right;
+    } else {
+      phasePillEl.textContent = 'DFS';
+      phasePillEl.className = 'pill phase dfs';
+      leftKEl.textContent = 'leftRem';
+      rightKEl.textContent = 'rightRem';
+      leftVEl.textContent = s.leftRem;
+      rightVEl.textContent = s.rightRem;
+    }
+    balVEl.textContent = s.balance;
+    balPillEl.classList.toggle('zero', s.balance === 0);
+    if (s.phase === 'pre') {
+      idxVEl.textContent = s.pre_i !== null && s.pre_i !== undefined ? s.pre_i : '—';
+    } else {
+      idxVEl.textContent = s.dfs_i !== null && s.dfs_i !== undefined ? s.dfs_i : '—';
+    }
+    // Chars
+    charCells.forEach((cell, i) => {
+      cell.classList.remove('pre-at', 'dfs-at');
+      if (s.phase === 'pre' && s.pre_i === i) { cell.classList.add('pre-at'); }
+      if (s.phase === 'dfs' && s.dfs_i === i) { cell.classList.add('dfs-at'); }
+    });
+    // Current
+    if (s.current.length === 0) {
+      currentBoxEl.className = 'current-box empty';
+      currentBoxEl.textContent = '[empty]';
+    } else {
+      currentBoxEl.className = 'current-box';
+      currentBoxEl.innerHTML = '';
+      for (const c of s.current) {
+        const el = document.createElement('span');
+        el.className = 'cc' + (c === ')' ? ' close' : '');
+        el.textContent = c;
+        currentBoxEl.appendChild(el);
+      }
+    }
+    // Tree
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-path', 'done', 'success', 'dup');
+      if (s.successNodes.includes(key)) { el.classList.add('success'); }
+      else if (s.dupNodes.includes(key)) { el.classList.add('dup'); }
+      if (s.activeNode === key) { el.classList.add('active'); }
+      else if (s.doneNodes.includes(key)) { el.classList.add('done'); }
+      else if (s.onPath.includes(key)) { el.classList.add('on-path'); }
+    });
+    edges.forEach(([from, to]) => {
+      const e = edgeEls[`${from}-${to}`];
+      const lbl = edgeLabelEls[`${from}-${to}`];
+      e.classList.remove('on-path');
+      lbl.classList.remove('on-path');
+      const pathSet = new Set([...s.onPath, s.activeNode]);
+      if (pathSet.has(from) && pathSet.has(to)) {
+        e.classList.add('on-path');
+        lbl.classList.add('on-path');
+      }
+    });
+    // Result list
+    resultEl.innerHTML = '';
+    s.resultList.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.textContent = '"' + r + '"';
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.resultList.length;
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].resultList.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
