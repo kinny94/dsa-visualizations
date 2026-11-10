@@ -40,6 +40,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [199](https://kinny94.github.io/dsa-visualizations/lc199-binary-tree-right-side-view.html) | Binary Tree Right Side View | Binary Tree · BFS |
 | [103](https://kinny94.github.io/dsa-visualizations/lc103-binary-tree-zigzag-level-order-traversal.html) | Binary Tree Zigzag Level Order Traversal | Binary Tree · BFS |
 | [116](https://kinny94.github.io/dsa-visualizations/lc116-populating-next-right-pointers.html) | Populating Next Right Pointers in Each Node | Binary Tree · O(1) threading |
+| [662](https://kinny94.github.io/dsa-visualizations/lc662-maximum-width-of-binary-tree.html) | Maximum Width of Binary Tree | Binary Tree · BFS · heap indexing |
 
 ## Adding a new animation
 
