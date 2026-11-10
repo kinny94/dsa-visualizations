@@ -36,6 +36,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [37](https://kinny94.github.io/dsa-visualizations/lc37-sudoku-solver.html) | Sudoku Solver | Recursion · Backtracking |
 | [104](https://kinny94.github.io/dsa-visualizations/lc104-maximum-depth-of-binary-tree.html) | Maximum Depth of Binary Tree | Binary Tree · Recursion |
 | [637](https://kinny94.github.io/dsa-visualizations/lc637-average-of-levels-in-binary-tree.html) | Average of Levels in Binary Tree | Binary Tree · BFS |
+| [102](https://kinny94.github.io/dsa-visualizations/lc102-binary-tree-level-order-traversal.html) | Binary Tree Level Order Traversal | Binary Tree · BFS |
 
 ## Adding a new animation
 
