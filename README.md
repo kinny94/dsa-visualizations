@@ -33,6 +33,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [761](https://kinny94.github.io/dsa-visualizations/lc761-special-binary-string.html) | Special Binary String | Recursion · Greedy |
 | [980](https://kinny94.github.io/dsa-visualizations/lc980-unique-paths-iii.html) | Unique Paths III | Recursion · Backtracking |
 | [301](https://kinny94.github.io/dsa-visualizations/lc301-remove-invalid-parentheses.html) | Remove Invalid Parentheses | Recursion · Backtracking |
+| [37](https://kinny94.github.io/dsa-visualizations/lc37-sudoku-solver.html) | Sudoku Solver | Recursion · Backtracking |
 
 ## Adding a new animation
 
