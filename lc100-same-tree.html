@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 100 — Same Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.p .pill-v { color: #9ad4ff; }
+  .pill.q .pill-v { color: #ffd87a; }
+  .pill.verdict .pill-v { color: #4de88c; }
+  .pill.verdict.fail .pill-v { color: #ff8ca0; }
+  .trees-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 280px; }
+  .tree-label {
+    fill: #aaa;
+    font-size: 12px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    font-weight: bold;
+  }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.match-ok circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.match-ok text.val { fill: #4de88c; }
+  .node.mismatch circle { stroke: #ff5570; stroke-width: 4; fill: #4a0f1f; }
+  .node.mismatch text.val { fill: #ff8ca0; }
+  .node.null-ghost circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 10; }
+  .node.null-ghost text.val { fill: #8a6a6a; font-size: 10px; }
+  .node.null-ghost.active circle { stroke: #9ad4ff; }
+  .node.null-ghost.match-ok circle { stroke: #4de88c; fill: #1a3a2a; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.null { stroke-dasharray: 3,3; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #e94560; color: white; }
+  .kind-return { background: #4de88c; color: #1a1a2e; }
+  .kind-fail { background: #ff5570; color: white; }
+  .kind-skip { background: #666; color: white; }
+  /* Call stack panel */
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-stack { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-match { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-mis { background: #4a0f1f; border: 2px solid #ff5570; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 100 — Same Tree</h1>
+    <div class="subtitle">Parallel recursive walk · short-circuit on first mismatch · p = [1, 2, 3], q = [1, 2, 4] (differ at root.right)</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill p"><span class="pill-k">p</span><span class="pill-v" id="pV">—</span></span>
+      <span class="pill q"><span class="pill-k">q</span><span class="pill-v" id="qV">—</span></span>
+      <span class="pill verdict" id="verdictPill"><span class="pill-k">verdict</span><span class="pill-v" id="verdictV">—</span></span>
+    </div>
+    <div class="trees-wrap">
+      <svg id="trees" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-stack"></div>on call stack (waiting)</div>
+      <div class="legend-item"><div class="chip chip-match"></div>frame returned true</div>
+      <div class="legend-item"><div class="chip chip-mis"></div>mismatch (returned false)</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Short-circuit</div>
+      <code>isSameTree(L) && isSameTree(R)</code> is left-to-right: if L returns false, R is never called. Any mismatch anywhere propagates up and skips the rest of the walk.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public boolean isSameTree(TreeNode p, TreeNode q) {",
+    "    if (p == null && q == null) {",
+    "        return true;",
+    "    }",
+    "    if (p == null || q == null) {",
+    "        return false;",
+    "    }",
+    "    if (p.val != q.val) {",
+    "        return false;",
+    "    }",
+    "    return isSameTree(p.left, q.left)",
+    "        && isSameTree(p.right, q.right);",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TWO TREES ============
+  // p = [1, 2, 3], q = [1, 2, 4]
+  //   P:        Q:
+  //    1          1
+  //   / \        / \
+  //  2   3      2   4
+  const nodes = {
+    // tree p (left half of SVG)
+    p1:    { x: 130, y:  60, r: 22, val: '1', tree: 'p' },
+    p2:    { x:  70, y: 150, r: 22, val: '2', tree: 'p' },
+    p3:    { x: 190, y: 150, r: 22, val: '3', tree: 'p' },
+    p2L:   { x:  35, y: 220, r: 10, val: 'null', tree: 'p', isNull: true },
+    p2R:   { x: 100, y: 220, r: 10, val: 'null', tree: 'p', isNull: true },
+    p3L:   { x: 160, y: 220, r: 10, val: 'null', tree: 'p', isNull: true },
+    p3R:   { x: 225, y: 220, r: 10, val: 'null', tree: 'p', isNull: true },
+    // tree q (right half of SVG)
+    q1:    { x: 490, y:  60, r: 22, val: '1', tree: 'q' },
+    q2:    { x: 430, y: 150, r: 22, val: '2', tree: 'q' },
+    q4:    { x: 550, y: 150, r: 22, val: '4', tree: 'q' },
+    q2L:   { x: 395, y: 220, r: 10, val: 'null', tree: 'q', isNull: true },
+    q2R:   { x: 460, y: 220, r: 10, val: 'null', tree: 'q', isNull: true },
+    q4L:   { x: 520, y: 220, r: 10, val: 'null', tree: 'q', isNull: true },
+    q4R:   { x: 585, y: 220, r: 10, val: 'null', tree: 'q', isNull: true }
+  };
+  const edges = [
+    { from: 'p1', to: 'p2' }, { from: 'p1', to: 'p3' },
+    { from: 'p2', to: 'p2L', isNull: true }, { from: 'p2', to: 'p2R', isNull: true },
+    { from: 'p3', to: 'p3L', isNull: true }, { from: 'p3', to: 'p3R', isNull: true },
+    { from: 'q1', to: 'q2' }, { from: 'q1', to: 'q4' },
+    { from: 'q2', to: 'q2L', isNull: true }, { from: 'q2', to: 'q2R', isNull: true },
+    { from: 'q4', to: 'q4L', isNull: true }, { from: 'q4', to: 'q4R', isNull: true }
+  ];
+
+  const svg = document.getElementById('trees');
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  // Tree labels
+  const pLbl = document.createElementNS(SVGNS, 'text');
+  pLbl.setAttribute('x', 130); pLbl.setAttribute('y', 20);
+  pLbl.setAttribute('class', 'tree-label'); pLbl.textContent = 'p';
+  svg.appendChild(pLbl);
+  const qLbl = document.createElementNS(SVGNS, 'text');
+  qLbl.setAttribute('x', 490); qLbl.setAttribute('y', 20);
+  qLbl.setAttribute('class', 'tree-label'); qLbl.textContent = 'q';
+  svg.appendChild(qLbl);
+
+  // Edges
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge' + (e.isNull ? ' null' : ''));
+    svg.appendChild(line);
+  });
+  // Nodes
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.isNull ? ' null-ghost' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // frame id: paired p/q node keys (e.g. "p1:q1", or "p2L:q2L" for null-null)
+  // stack: ordered array of frames, each with { id, pKey, qKey, label, sub }
+  // activeP / activeQ: current nodes being inspected (keys, may be null for null-null frames)
+  // matchedFrames: frame ids that returned true (for stack history coloring)
+  // failedFrame: frame id that returned false
+  // nodeState: map of nodeKey → "active" | "match-ok" | "mismatch" | "on-stack" (on-stack handled via stack below)
+  // verdict: null | true | false
+  const steps = [
+    { line: [1], stack: [{ id: "f1", pKey: "p1", qKey: "q1", sub: "entry" }],
+      activeP: "p1", activeQ: "q1", nodeState: { p1: "active", q1: "active" },
+      matched: [], failed: null, verdict: null,
+      action: "Call isSameTree(p = node 1, q = node 1).", kind: "call" },
+
+    { line: [2], stack: [{ id: "f1", pKey: "p1", qKey: "q1", sub: "both-null?" }],
+      activeP: "p1", activeQ: "q1", nodeState: { p1: "active", q1: "active" },
+      matched: [], failed: null, verdict: null,
+      action: "Check: p == null && q == null? No (both are real).", kind: "check" },
+
+    { line: [5], stack: [{ id: "f1", pKey: "p1", qKey: "q1", sub: "one-null?" }],
+      activeP: "p1", activeQ: "q1", nodeState: { p1: "active", q1: "active" },
+      matched: [], failed: null, verdict: null,
+      action: "Check: p == null || q == null? No (neither is null).", kind: "check" },
+
+    { line: [8], stack: [{ id: "f1", pKey: "p1", qKey: "q1", sub: "p.val != q.val?" }],
+      activeP: "p1", activeQ: "q1", nodeState: { p1: "active", q1: "active" },
+      matched: [], failed: null, verdict: null,
+      action: "Check: p.val (1) != q.val (1)? No, values match.", kind: "check" },
+
+    { line: [11], stack: [{ id: "f1", pKey: "p1", qKey: "q1", sub: "recurse LEFT" }],
+      activeP: "p1", activeQ: "q1", nodeState: { p1: "active", q1: "active" },
+      matched: [], failed: null, verdict: null,
+      action: "Reach the && line. Evaluate LHS: isSameTree(p.left, q.left) → call with (node 2, node 2).", kind: "call" },
+
+    { line: [1], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "waiting on LEFT" },
+        { id: "f2", pKey: "p2", qKey: "q2", sub: "entry" }
+      ],
+      activeP: "p2", activeQ: "q2",
+      nodeState: { p1: "on-stack", q1: "on-stack", p2: "active", q2: "active" },
+      matched: [], failed: null, verdict: null,
+      action: "Enter isSameTree(p = node 2, q = node 2). New frame.", kind: "call" },
+
+    { line: [2, 5, 8], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "waiting on LEFT" },
+        { id: "f2", pKey: "p2", qKey: "q2", sub: "checks" }
+      ],
+      activeP: "p2", activeQ: "q2",
+      nodeState: { p1: "on-stack", q1: "on-stack", p2: "active", q2: "active" },
+      matched: [], failed: null, verdict: null,
+      action: "All three guards pass: both non-null, values equal (2 == 2).", kind: "check" },
+
+    { line: [11], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "waiting on LEFT" },
+        { id: "f2", pKey: "p2", qKey: "q2", sub: "recurse LEFT" }
+      ],
+      activeP: "p2", activeQ: "q2",
+      nodeState: { p1: "on-stack", q1: "on-stack", p2: "active", q2: "active" },
+      matched: [], failed: null, verdict: null,
+      action: "Call isSameTree(p.left, q.left) → both nulls.", kind: "call" },
+
+    { line: [1, 2, 3], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "waiting on LEFT" },
+        { id: "f2", pKey: "p2", qKey: "q2", sub: "waiting on LEFT" },
+        { id: "f3", pKey: "p2L", qKey: "q2L", sub: "both null → true" }
+      ],
+      activeP: "p2L", activeQ: "q2L",
+      nodeState: { p1: "on-stack", q1: "on-stack", p2: "on-stack", q2: "on-stack",
+                   p2L: "active", q2L: "active" },
+      matched: [], failed: null, verdict: null,
+      action: "Enter isSameTree(null, null). Check: p == null && q == null → YES. Return true.", kind: "return" },
+
+    { line: [12], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "waiting on LEFT" },
+        { id: "f2", pKey: "p2", qKey: "q2", sub: "LEFT=true, recurse RIGHT" }
+      ],
+      activeP: "p2", activeQ: "q2",
+      nodeState: { p1: "on-stack", q1: "on-stack", p2: "active", q2: "active",
+                   p2L: "match-ok", q2L: "match-ok" },
+      matched: ["f3"], failed: null, verdict: null,
+      action: "LEFT of frame (2,2) returned true. Short-circuit && continues → evaluate RHS: isSameTree(p.right, q.right) → both nulls.", kind: "call" },
+
+    { line: [1, 2, 3], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "waiting on LEFT" },
+        { id: "f2", pKey: "p2", qKey: "q2", sub: "waiting on RIGHT" },
+        { id: "f4", pKey: "p2R", qKey: "q2R", sub: "both null → true" }
+      ],
+      activeP: "p2R", activeQ: "q2R",
+      nodeState: { p1: "on-stack", q1: "on-stack", p2: "on-stack", q2: "on-stack",
+                   p2L: "match-ok", q2L: "match-ok",
+                   p2R: "active", q2R: "active" },
+      matched: ["f3"], failed: null, verdict: null,
+      action: "Enter isSameTree(null, null). Return true.", kind: "return" },
+
+    { line: [11, 12], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "LEFT=?, awaiting" },
+        { id: "f2", pKey: "p2", qKey: "q2", sub: "LEFT=true && RIGHT=true → true" }
+      ],
+      activeP: "p2", activeQ: "q2",
+      nodeState: { p1: "on-stack", q1: "on-stack", p2: "active", q2: "active",
+                   p2L: "match-ok", q2L: "match-ok", p2R: "match-ok", q2R: "match-ok" },
+      matched: ["f3", "f4"], failed: null, verdict: null,
+      action: "Frame (2,2) returns true && true = true to its caller.", kind: "return" },
+
+    { line: [12], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "LEFT=true, recurse RIGHT" }
+      ],
+      activeP: "p1", activeQ: "q1",
+      nodeState: { p1: "active", q1: "active",
+                   p2: "match-ok", q2: "match-ok",
+                   p2L: "match-ok", q2L: "match-ok", p2R: "match-ok", q2R: "match-ok" },
+      matched: ["f3", "f4", "f2"], failed: null, verdict: null,
+      action: "Back in frame (1,1). LEFT = true. Short-circuit && continues → evaluate RHS: isSameTree(p.right, q.right) → (node 3, node 4).", kind: "call" },
+
+    { line: [1], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "waiting on RIGHT" },
+        { id: "f5", pKey: "p3", qKey: "q4", sub: "entry" }
+      ],
+      activeP: "p3", activeQ: "q4",
+      nodeState: { p1: "on-stack", q1: "on-stack", p3: "active", q4: "active",
+                   p2: "match-ok", q2: "match-ok",
+                   p2L: "match-ok", q2L: "match-ok", p2R: "match-ok", q2R: "match-ok" },
+      matched: ["f3", "f4", "f2"], failed: null, verdict: null,
+      action: "Enter isSameTree(p = node 3, q = node 4). New frame.", kind: "call" },
+
+    { line: [2], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "waiting on RIGHT" },
+        { id: "f5", pKey: "p3", qKey: "q4", sub: "both-null?" }
+      ],
+      activeP: "p3", activeQ: "q4",
+      nodeState: { p1: "on-stack", q1: "on-stack", p3: "active", q4: "active",
+                   p2: "match-ok", q2: "match-ok",
+                   p2L: "match-ok", q2L: "match-ok", p2R: "match-ok", q2R: "match-ok" },
+      matched: ["f3", "f4", "f2"], failed: null, verdict: null,
+      action: "Check: both null? No.", kind: "check" },
+
+    { line: [5], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "waiting on RIGHT" },
+        { id: "f5", pKey: "p3", qKey: "q4", sub: "one-null?" }
+      ],
+      activeP: "p3", activeQ: "q4",
+      nodeState: { p1: "on-stack", q1: "on-stack", p3: "active", q4: "active",
+                   p2: "match-ok", q2: "match-ok",
+                   p2L: "match-ok", q2L: "match-ok", p2R: "match-ok", q2R: "match-ok" },
+      matched: ["f3", "f4", "f2"], failed: null, verdict: null,
+      action: "Check: one null? No.", kind: "check" },
+
+    { line: [8, 9], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "waiting on RIGHT" },
+        { id: "f5", pKey: "p3", qKey: "q4", sub: "p.val != q.val → false" }
+      ],
+      activeP: "p3", activeQ: "q4",
+      nodeState: { p1: "on-stack", q1: "on-stack", p3: "mismatch", q4: "mismatch",
+                   p2: "match-ok", q2: "match-ok",
+                   p2L: "match-ok", q2L: "match-ok", p2R: "match-ok", q2R: "match-ok" },
+      matched: ["f3", "f4", "f2"], failed: "f5", verdict: null,
+      action: "Check: p.val (3) != q.val (4) → YES, mismatch! Return false. ★", kind: "fail" },
+
+    { line: [11, 12], stack: [
+        { id: "f1", pKey: "p1", qKey: "q1", sub: "LEFT=true && RIGHT=false → false" }
+      ],
+      activeP: "p1", activeQ: "q1",
+      nodeState: { p1: "mismatch", q1: "mismatch", p3: "mismatch", q4: "mismatch",
+                   p2: "match-ok", q2: "match-ok",
+                   p2L: "match-ok", q2L: "match-ok", p2R: "match-ok", q2R: "match-ok" },
+      matched: ["f3", "f4", "f2"], failed: "f5", verdict: false,
+      action: "Back in frame (1,1). RIGHT returned false. true && false = false. Frame returns false.", kind: "fail" },
+
+    { line: [], stack: [],
+      activeP: null, activeQ: null,
+      nodeState: { p1: "mismatch", q1: "mismatch", p3: "mismatch", q4: "mismatch",
+                   p2: "match-ok", q2: "match-ok",
+                   p2L: "match-ok", q2L: "match-ok", p2R: "match-ok", q2R: "match-ok" },
+      matched: ["f3", "f4", "f2"], failed: "f5", verdict: false,
+      action: "Final: return false. Trees are NOT the same (differ at root.right: 3 vs 4).", kind: "fail" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const pVEl = document.getElementById('pV');
+  const qVEl = document.getElementById('qV');
+  const verdictVEl = document.getElementById('verdictV');
+  const verdictPillEl = document.getElementById('verdictPill');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function labelFor(key) {
+    if (!key) return 'null';
+    const n = nodes[key];
+    return n.isNull ? 'null' : `node ${n.val}`;
+  }
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    pVEl.textContent = labelFor(s.activeP);
+    qVEl.textContent = labelFor(s.activeQ);
+    if (s.verdict === null) {
+      verdictVEl.textContent = '—';
+      verdictPillEl.classList.remove('fail');
+    } else if (s.verdict === false) {
+      verdictVEl.textContent = 'false';
+      verdictPillEl.classList.add('fail');
+    } else {
+      verdictVEl.textContent = 'true';
+      verdictPillEl.classList.remove('fail');
+    }
+    // Tree nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-stack', 'match-ok', 'mismatch');
+      const state = s.nodeState[key];
+      if (state) { el.classList.add(state); }
+    });
+    // Call stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = `isSameTree(${labelFor(frame.pKey)}, ${labelFor(frame.qKey)})`;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — all returned]';
+      stackEl.appendChild(li);
+    }
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
