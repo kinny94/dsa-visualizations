@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 222 — Count Complete Tree Nodes</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.leftH .pill-v { color: #9ad4ff; }
+  .pill.rightH .pill-v { color: #ffd87a; }
+  .pill.verdict .pill-v { color: #4de88c; }
+  .pill.verdict.perfect .pill-v { color: #4de88c; }
+  .pill.verdict.imperfect .pill-v { color: #ff8ca0; }
+  .pill.total .pill-v { color: #c89aff; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 320px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.left-walker circle { stroke: #9ad4ff; stroke-width: 3; fill: #0f2a4a; }
+  .node.left-walker text.val { fill: #cde8ff; }
+  .node.right-walker circle { stroke: #ffd87a; stroke-width: 3; fill: #2a2010; }
+  .node.right-walker text.val { fill: #fff2bf; }
+  .node.perfect-counted circle { stroke: #4de88c; stroke-width: 3; fill: #0f3a1f; }
+  .node.perfect-counted text.val { fill: #4de88c; }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 2; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.returned circle { stroke: #4a6a8a; fill: #1a2e4a; opacity: 0.6; }
+  .node.returned text.val { opacity: 0.6; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.left-chain { stroke: #9ad4ff; stroke-width: 3; }
+  .edge.right-chain { stroke: #ffd87a; stroke-width: 3; }
+  .edge.perfect-bundle { stroke: #4de88c; stroke-width: 2.5; }
+  .ret-tag {
+    fill: #4de88c;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    font-weight: bold;
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-walk { background: #9ad4ff; color: #1a1a2e; }
+  .kind-walkR { background: #ffd87a; color: #1a1a2e; }
+  .kind-perfect { background: #4de88c; color: #1a1a2e; }
+  .kind-recurse { background: #e94560; color: white; }
+  .kind-return { background: #666; color: white; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-left { background: #0f2a4a; border: 2px solid #9ad4ff; }
+  .chip-right { background: #2a2010; border: 2px solid #ffd87a; }
+  .chip-perfect { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-stack { background: #2a2010; border: 2px solid #ffa500; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 222 — Count Complete Tree Nodes</h1>
+    <div class="subtitle">Binary-search-on-depth: leftH == rightH → perfect subtree → closed-form 2ᴴ − 1 · tree = complete, 6 nodes</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill leftH"><span class="pill-k">leftH</span><span class="pill-v" id="leftHV">—</span></span>
+      <span class="pill rightH"><span class="pill-k">rightH</span><span class="pill-v" id="rightHV">—</span></span>
+      <span class="pill verdict" id="verdictPill"><span class="pill-k">verdict</span><span class="pill-v" id="verdictV">—</span></span>
+      <span class="pill total"><span class="pill-k">total so far</span><span class="pill-v" id="totalV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active subtree root</div>
+      <div class="legend-item"><div class="chip chip-left"></div>leftHeight walker</div>
+      <div class="legend-item"><div class="chip chip-right"></div>rightHeight walker</div>
+      <div class="legend-item"><div class="chip chip-perfect"></div>perfect subtree (closed-form)</div>
+      <div class="legend-item"><div class="chip chip-stack"></div>on recursion stack</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">O(log² n)</div>
+      Recursion forms a <strong>chain</strong>, not a tree. At every frame one subtree is perfect (O(log n) count, no recursion) and only the other branches. Chain length × two height walks per frame = O(log n) × O(log n).
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public int countNodes(TreeNode root) {",
+    "    if (root == null) {",
+    "        return 0;",
+    "    }",
+    "    int leftH  = leftHeight(root);",
+    "    int rightH = rightHeight(root);",
+    "    if (leftH == rightH) {",
+    "        return (int) Math.pow(2, leftH) - 1;",
+    "    }",
+    "    return 1 + countNodes(root.left)",
+    "             + countNodes(root.right);",
+    "}",
+    "",
+    "private int leftHeight(TreeNode node) {",
+    "    int h = 0;",
+    "    while (node != null) {",
+    "        h++;",
+    "        node = node.left;",
+    "    }",
+    "    return h;",
+    "}",
+    "",
+    "private int rightHeight(TreeNode node) {",
+    "    int h = 0;",
+    "    while (node != null) {",
+    "        h++;",
+    "        node = node.right;",
+    "    }",
+    "    return h;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // Complete 6-node tree:
+  //        1
+  //       / \
+  //      2   3
+  //     /\   /
+  //    4  5 6
+  const nodes = {
+    n1: { x: 320, y:  50, r: 22, val: '1' },
+    n2: { x: 200, y: 140, r: 22, val: '2' },
+    n3: { x: 440, y: 140, r: 22, val: '3' },
+    n4: { x: 130, y: 230, r: 22, val: '4' },
+    n5: { x: 270, y: 230, r: 22, val: '5' },
+    n6: { x: 380, y: 230, r: 22, val: '6' }
+  };
+  const edges = [
+    { id: 'e_1_2', from: 'n1', to: 'n2' },
+    { id: 'e_1_3', from: 'n1', to: 'n3' },
+    { id: 'e_2_4', from: 'n2', to: 'n4' },
+    { id: 'e_2_5', from: 'n2', to: 'n5' },
+    { id: 'e_3_6', from: 'n3', to: 'n6' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  const retLabelEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    const rt = document.createElementNS(SVGNS, 'text');
+    rt.setAttribute('x', n.x + n.r + 12); rt.setAttribute('y', n.y + 4);
+    rt.setAttribute('class', 'ret-tag');
+    rt.textContent = '';
+    svg.appendChild(rt);
+    retLabelEls[key] = rt;
+  });
+
+  // ============ STEP DATA ============
+  // leftWalker / rightWalker: node ids of current height-walk cursor (highlighted)
+  // leftEdges / rightEdges: edge ids highlighted blue/yellow for the chain so far
+  // leftH / rightH: current partial h values
+  // verdict: null | "perfect" | "imperfect"
+  // perfectBundle: array of node ids counted as part of a perfect subtree shortcut (green glow)
+  // perfectEdges: edge ids inside that perfect subtree
+  // returned: map of node id → returned value (for ret-tag display)
+  // stack: list of frames
+  // activeNode: node id of current call's root
+  // total: running total count returned so far (for the "total so far" pill)
+  const steps = [
+    { line: [1, 2], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "entry" }],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Enter countNodes(node 1). root != null → proceed.", kind: "call" },
+
+    // ===== leftHeight(1) =====
+    { line: [14, 15, 16], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "leftHeight(1)" }],
+      leftWalker: "n1", rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: 0, rightH: null, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "leftHeight(node 1): h=0, node=1. Enter while loop.", kind: "walk" },
+
+    { line: [16, 17, 18], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "leftHeight(1)" }],
+      leftWalker: "n2", rightWalker: null, leftEdges: ["e_1_2"], rightEdges: [],
+      leftH: 1, rightH: null, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Iter 1: h=1, node = node.left = 2.", kind: "walk" },
+
+    { line: [16, 17, 18], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "leftHeight(1)" }],
+      leftWalker: "n4", rightWalker: null, leftEdges: ["e_1_2", "e_2_4"], rightEdges: [],
+      leftH: 2, rightH: null, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Iter 2: h=2, node = node.left = 4.", kind: "walk" },
+
+    { line: [16, 17, 18], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "leftHeight(1)" }],
+      leftWalker: null, rightWalker: null, leftEdges: ["e_1_2", "e_2_4"], rightEdges: [],
+      leftH: 3, rightH: null, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Iter 3: h=3, node = node.left = null. Exit while.", kind: "walk" },
+
+    { line: [20], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "leftH = 3" }],
+      leftWalker: null, rightWalker: null, leftEdges: ["e_1_2", "e_2_4"], rightEdges: [],
+      leftH: 3, rightH: null, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "leftHeight returns 3.", kind: "walk" },
+
+    // ===== rightHeight(1) =====
+    { line: [23, 24, 25], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "rightHeight(1)" }],
+      leftWalker: null, rightWalker: "n1", leftEdges: [], rightEdges: [],
+      leftH: 3, rightH: 0, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "rightHeight(node 1): h=0, node=1.", kind: "walkR" },
+
+    { line: [25, 26, 27], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "rightHeight(1)" }],
+      leftWalker: null, rightWalker: "n3", leftEdges: [], rightEdges: ["e_1_3"],
+      leftH: 3, rightH: 1, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Iter 1: h=1, node = node.right = 3.", kind: "walkR" },
+
+    { line: [25, 26, 27], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "rightHeight(1)" }],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: ["e_1_3"],
+      leftH: 3, rightH: 2, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Iter 2: h=2, node = node.right = null (3 has no right child). Exit while.", kind: "walkR" },
+
+    { line: [29], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "rightH = 2" }],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: ["e_1_3"],
+      leftH: 3, rightH: 2, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "rightHeight returns 2.", kind: "walkR" },
+
+    { line: [7], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "leftH=3, rightH=2" }],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: 3, rightH: 2, verdict: "imperfect",
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Check: leftH == rightH? 3 != 2 → NOT perfect. Enter else branch.", kind: "recurse" },
+
+    { line: [10], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "recurse LEFT" }],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Call countNodes(root.left = node 2).", kind: "call" },
+
+    // ===== countNodes(2) =====
+    { line: [1, 2], activeNode: "n2", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "countNodes(node 2)", sub: "entry" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Enter countNodes(node 2). root != null.", kind: "call" },
+
+    { line: [14, 15, 16, 17, 18], activeNode: "n2", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "countNodes(node 2)", sub: "leftHeight(2)" }
+      ],
+      leftWalker: "n4", rightWalker: null, leftEdges: ["e_2_4"], rightEdges: [],
+      leftH: 1, rightH: null, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "leftHeight(2): iter 1 → h=1, node=4.", kind: "walk" },
+
+    { line: [16, 17, 18, 20], activeNode: "n2", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "countNodes(node 2)", sub: "leftH = 2" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: ["e_2_4"], rightEdges: [],
+      leftH: 2, rightH: null, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Iter 2 → h=2, node=null. Exit. leftHeight returns 2.", kind: "walk" },
+
+    { line: [23, 24, 25, 26, 27], activeNode: "n2", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "countNodes(node 2)", sub: "rightHeight(2)" }
+      ],
+      leftWalker: null, rightWalker: "n5", leftEdges: [], rightEdges: ["e_2_5"],
+      leftH: 2, rightH: 1, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "rightHeight(2): iter 1 → h=1, node=5.", kind: "walkR" },
+
+    { line: [25, 26, 27, 29], activeNode: "n2", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "countNodes(node 2)", sub: "rightH = 2" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: ["e_2_5"],
+      leftH: 2, rightH: 2, verdict: null,
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Iter 2 → h=2, node=null. rightHeight returns 2.", kind: "walkR" },
+
+    { line: [7], activeNode: "n2", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "countNodes(node 2)", sub: "leftH=2, rightH=2" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: 2, rightH: 2, verdict: "perfect",
+      perfectBundle: [], perfectEdges: [], returned: {}, total: 0,
+      action: "Check: 2 == 2 → ★ PERFECT subtree. Short-circuit.", kind: "perfect" },
+
+    { line: [8], activeNode: "n2", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "countNodes(node 2)", sub: "return 2² − 1 = 3" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: 2, rightH: 2, verdict: "perfect",
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 0,
+      action: "Return (int) Math.pow(2, 2) − 1 = 3. Whole {2, 4, 5} subtree counted in O(1) — no recursion into 4 or 5!", kind: "perfect" },
+
+    { line: [11], activeNode: "n1", stack: [{ id: "f_n1", label: "countNodes(node 1)", sub: "LEFT=3, recurse RIGHT" }],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "countNodes(2) returned 3. Back in countNodes(1). Call countNodes(root.right = node 3).", kind: "call" },
+
+    // ===== countNodes(3) =====
+    { line: [1, 2], activeNode: "n3", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "entry" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "Enter countNodes(node 3). root != null.", kind: "call" },
+
+    { line: [14, 15, 16, 17, 18], activeNode: "n3", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "leftHeight(3)" }
+      ],
+      leftWalker: "n6", rightWalker: null, leftEdges: ["e_3_6"], rightEdges: [],
+      leftH: 1, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "leftHeight(3): iter 1 → h=1, node=6.", kind: "walk" },
+
+    { line: [16, 17, 18, 20], activeNode: "n3", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "leftH = 2" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: ["e_3_6"], rightEdges: [],
+      leftH: 2, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "Iter 2 → h=2, node=null. leftHeight returns 2.", kind: "walk" },
+
+    { line: [23, 24, 25, 26, 27], activeNode: "n3", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "rightHeight(3)" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: 2, rightH: 1, verdict: null,
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "rightHeight(3): iter 1 → h=1, node=null (3 has no right child). Exit.", kind: "walkR" },
+
+    { line: [29], activeNode: "n3", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "rightH = 1" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: 2, rightH: 1, verdict: null,
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "rightHeight returns 1.", kind: "walkR" },
+
+    { line: [7], activeNode: "n3", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "leftH=2, rightH=1" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: 2, rightH: 1, verdict: "imperfect",
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "Check: 2 != 1 → NOT perfect. Recurse on both children.", kind: "recurse" },
+
+    { line: [10], activeNode: "n3", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "recurse LEFT" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "Call countNodes(root.left = node 6).", kind: "call" },
+
+    // ===== countNodes(6) =====
+    { line: [1, 2], activeNode: "n6", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "waiting on LEFT" },
+        { id: "f_n6", label: "countNodes(node 6)", sub: "entry" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "Enter countNodes(node 6). Leaf.", kind: "call" },
+
+    { line: [14, 15, 16, 17, 18, 20], activeNode: "n6", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "waiting on LEFT" },
+        { id: "f_n6", label: "countNodes(node 6)", sub: "leftH = 1" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: 1, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "leftHeight(6): iter 1 → h=1, node=null. Return 1.", kind: "walk" },
+
+    { line: [23, 24, 25, 26, 27, 29], activeNode: "n6", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "waiting on LEFT" },
+        { id: "f_n6", label: "countNodes(node 6)", sub: "rightH = 1" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: 1, rightH: 1, verdict: null,
+      perfectBundle: ["n2", "n4", "n5"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3 }, total: 3,
+      action: "rightHeight(6): iter 1 → h=1, node=null. Return 1.", kind: "walkR" },
+
+    { line: [7, 8], activeNode: "n6", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "waiting on LEFT" },
+        { id: "f_n6", label: "countNodes(node 6)", sub: "return 2¹ − 1 = 1" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: 1, rightH: 1, verdict: "perfect",
+      perfectBundle: ["n2", "n4", "n5", "n6"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3, n6: 1 }, total: 3,
+      action: "1 == 1 → PERFECT (trivially). Return Math.pow(2, 1) − 1 = 1.", kind: "perfect" },
+
+    { line: [11], activeNode: "n3", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "LEFT=1, recurse RIGHT" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5", "n6"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3, n6: 1 }, total: 4,
+      action: "countNodes(6) returned 1. Back in countNodes(3). Call countNodes(root.right = null).", kind: "call" },
+
+    // ===== countNodes(null) =====
+    { line: [1, 2, 3], activeNode: null, stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "waiting on RIGHT" },
+        { id: "f_null", label: "countNodes(null)", sub: "root == null → 0" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5", "n6"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3, n6: 1 }, total: 4,
+      action: "Enter countNodes(null). root == null → return 0.", kind: "return" },
+
+    { line: [10], activeNode: "n3", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "countNodes(node 3)", sub: "return 1 + 1 + 0 = 2" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5", "n6"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3, n6: 1, n3: 2 }, total: 4,
+      action: "countNodes(3) = 1 + countNodes(6) + countNodes(null) = 1 + 1 + 0 = 2.", kind: "return" },
+
+    { line: [10], activeNode: "n1", stack: [
+        { id: "f_n1", label: "countNodes(node 1)", sub: "return 1 + 3 + 2 = 6" }
+      ],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5", "n6"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3, n6: 1, n3: 2, n1: 6 }, total: 6,
+      action: "countNodes(1) = 1 + countNodes(2) + countNodes(3) = 1 + 3 + 2 = 6. ★ Final answer.", kind: "return" },
+
+    { line: [], activeNode: null, stack: [],
+      leftWalker: null, rightWalker: null, leftEdges: [], rightEdges: [],
+      leftH: null, rightH: null, verdict: null,
+      perfectBundle: ["n2", "n4", "n5", "n6"], perfectEdges: ["e_2_4", "e_2_5"],
+      returned: { n2: 3, n6: 1, n3: 2, n1: 6 }, total: 6,
+      action: "Return 6. Done — nodes 4 and 5 were counted via the perfect-subtree shortcut; we never recursed into them.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const leftHVEl = document.getElementById('leftHV');
+  const rightHVEl = document.getElementById('rightHV');
+  const verdictVEl = document.getElementById('verdictV');
+  const verdictPillEl = document.getElementById('verdictPill');
+  const totalVEl = document.getElementById('totalV');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    leftHVEl.textContent = s.leftH !== null ? s.leftH : '—';
+    rightHVEl.textContent = s.rightH !== null ? s.rightH : '—';
+    if (s.verdict === "perfect") {
+      verdictVEl.textContent = 'perfect ★';
+      verdictPillEl.classList.add('perfect');
+      verdictPillEl.classList.remove('imperfect');
+    } else if (s.verdict === "imperfect") {
+      verdictVEl.textContent = 'not perfect';
+      verdictPillEl.classList.add('imperfect');
+      verdictPillEl.classList.remove('perfect');
+    } else {
+      verdictVEl.textContent = '—';
+      verdictPillEl.classList.remove('perfect', 'imperfect');
+    }
+    totalVEl.textContent = s.total;
+    // Tree nodes
+    const stackNodes = new Set(s.stack.filter(f => f.id.startsWith('f_n')).map(f => f.id.replace('f_', '')));
+    const perfectSet = new Set(s.perfectBundle);
+    const returnedKeys = Object.keys(s.returned);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'left-walker', 'right-walker', 'perfect-counted', 'on-stack', 'returned');
+      if (key === s.leftWalker) { el.classList.add('left-walker'); }
+      else if (key === s.rightWalker) { el.classList.add('right-walker'); }
+      else if (key === s.activeNode) { el.classList.add('active'); }
+      else if (perfectSet.has(key)) { el.classList.add('perfect-counted'); }
+      else if (stackNodes.has(key)) { el.classList.add('on-stack'); }
+      else if (returnedKeys.includes(key)) { el.classList.add('returned'); }
+      // Ret label
+      retLabelEls[key].textContent = s.returned[key] !== undefined ? `=${s.returned[key]}` : '';
+    });
+    // Edges
+    const leftSet = new Set(s.leftEdges);
+    const rightSet = new Set(s.rightEdges);
+    const perfectEdgeSet = new Set(s.perfectEdges);
+    Object.keys(edgeEls).forEach(id => {
+      const el = edgeEls[id];
+      el.classList.remove('left-chain', 'right-chain', 'perfect-bundle');
+      if (leftSet.has(id)) { el.classList.add('left-chain'); }
+      else if (rightSet.has(id)) { el.classList.add('right-chain'); }
+      else if (perfectEdgeSet.has(id)) { el.classList.add('perfect-bundle'); }
+    });
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
