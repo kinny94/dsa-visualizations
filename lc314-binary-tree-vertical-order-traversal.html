@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 314 — Binary Tree Vertical Order Traversal</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 460px 1fr 340px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.min .pill-v { color: #9ad4ff; }
+  .pill.max .pill-v { color: #ffd87a; }
+  .pill.col .pill-v { color: #c89aff; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 320px; }
+  .col-lane {
+    fill: none;
+    stroke: #2a4a7a;
+    stroke-width: 1;
+    stroke-dasharray: 2,4;
+    opacity: 0.4;
+  }
+  .col-lane.highlight { opacity: 1; stroke: #c89aff; stroke-dasharray: none; stroke-width: 1.5; }
+  .col-label {
+    fill: #8a9ac4;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+  }
+  .col-label.highlight { fill: #c89aff; font-weight: bold; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.in-queue circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.in-queue text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.done text.val { fill: #4de88c; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .col-tag {
+    fill: #9ad4ff;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    font-weight: bold;
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-poll { background: #e94560; color: white; }
+  .kind-offer { background: #0f9950; color: white; }
+  .kind-record { background: #4de88c; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  /* ============ QUEUE + MAP ============ */
+  .queue-wrap { font-family: 'Monaco', monospace; font-size: 12px; margin-bottom: 10px; }
+  .queue-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .queue-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: #0a1a35;
+    border-radius: 3px;
+    min-height: 40px;
+    overflow-x: auto;
+  }
+  .queue-cell {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    padding: 3px 7px;
+    background: #0f3460;
+    border: 1px solid #ffa500;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #ffd87a;
+    transition: all 0.2s;
+  }
+  .queue-cell.just-polled { background: #4a0f1f; border-color: #ff8ca0; color: #fff; opacity: 0.55; }
+  .queue-cell.just-offered { background: #0f4a2a; border-color: #4de88c; color: #fff; }
+  .queue-cell .cell-val { font-size: 13px; }
+  .queue-cell .cell-idx { font-size: 9px; color: #c89aff; margin-top: 2px; }
+  /* Map rows */
+  .map-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+  .map-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .map-row.highlight { background: #2a1f4a; border-left: 3px solid #c89aff; }
+  .map-row .key { color: #c89aff; min-width: 36px; font-weight: bold; }
+  .map-row .arrow { color: #666; }
+  .map-row .vals {
+    display: flex;
+    gap: 4px;
+  }
+  .map-row .vals span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    padding: 1px 6px;
+    background: #0a1a35;
+    border-radius: 2px;
+    color: #ffd87a;
+  }
+  .map-row .vals span.just-added {
+    background: #0f4a2a;
+    color: #fff;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-queue { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-done { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 314 — Binary Tree Vertical Order Traversal</h1>
+    <div class="subtitle">BFS carrying (node, col). left → col−1, right → col+1. HashMap + min/max col tracking. root = [3, 9, 20, null, null, 15, 7]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill col"><span class="pill-k">active col</span><span class="pill-v" id="colV">—</span></span>
+      <span class="pill min"><span class="pill-k">minCol</span><span class="pill-v" id="minV">0</span></span>
+      <span class="pill max"><span class="pill-k">maxCol</span><span class="pill-v" id="maxV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Queue (node, col)</div>
+    <div class="queue-wrap">
+      <div class="queue-label">front → back</div>
+      <div class="queue-row" id="queueRow"></div>
+    </div>
+    <div class="panel-title">Map &lt;col, List&lt;Integer&gt;&gt;</div>
+    <div class="map-rows" id="mapRows"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>polled this step</div>
+      <div class="legend-item"><div class="chip chip-queue"></div>in queue</div>
+      <div class="legend-item"><div class="chip chip-done"></div>processed</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Why HashMap + min/max</div>
+      HashMap puts/gets in O(1). Tracking minCol / maxCol lets the final output loop iterate <code>for (i = min; i <= max; i++)</code> in sorted column order without TreeMap’s O(log n) per op.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public List<List<Integer>> verticalOrder(TreeNode root) {",
+    "    List<List<Integer>> result = new ArrayList<>();",
+    "    if (root == null) return result;",
+    "    Map<Integer, List<Integer>> map = new HashMap<>();",
+    "    Deque<TreeNode> nodes = new ArrayDeque<>();",
+    "    Deque<Integer>  cols  = new ArrayDeque<>();",
+    "    nodes.offer(root);",
+    "    cols.offer(0);",
+    "    int minCol = 0, maxCol = 0;",
+    "    while (!nodes.isEmpty()) {",
+    "        TreeNode node = nodes.poll();",
+    "        int col = cols.poll();",
+    "        map.computeIfAbsent(col, k -> new ArrayList<>()).add(node.val);",
+    "        minCol = Math.min(minCol, col);",
+    "        maxCol = Math.max(maxCol, col);",
+    "        if (node.left != null) {",
+    "            nodes.offer(node.left);",
+    "            cols.offer(col - 1);",
+    "        }",
+    "        if (node.right != null) {",
+    "            nodes.offer(node.right);",
+    "            cols.offer(col + 1);",
+    "        }",
+    "    }",
+    "    for (int i = minCol; i <= maxCol; i++) {",
+    "        result.add(map.get(i));",
+    "    }",
+    "    return result;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // Column x-positions: col -1 → 180, col 0 → 320, col 1 → 460, col 2 → 600
+  const COL_X = { "-1": 180, "0": 320, "1": 460, "2": 600 };
+  const nodes = {
+    n3:  { x: 320, y:  40, r: 22, val: '3',  col: 0 },
+    n9:  { x: 180, y: 130, r: 22, val: '9',  col: -1 },
+    n20: { x: 460, y: 130, r: 22, val: '20', col: 1 },
+    n15: { x: 320, y: 220, r: 22, val: '15', col: 0 },
+    n7:  { x: 600, y: 220, r: 22, val: '7',  col: 2 }
+  };
+  const edges = [
+    { from: 'n3', to: 'n9' },
+    { from: 'n3', to: 'n20' },
+    { from: 'n20', to: 'n15' },
+    { from: 'n20', to: 'n7' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  // Column lane guides
+  const colLanes = {};
+  const colLabels = {};
+  Object.entries(COL_X).forEach(([col, x]) => {
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x);
+    line.setAttribute('y1', 10);
+    line.setAttribute('x2', x);
+    line.setAttribute('y2', 300);
+    line.setAttribute('class', 'col-lane');
+    svg.appendChild(line);
+    colLanes[col] = line;
+    const lbl = document.createElementNS(SVGNS, 'text');
+    lbl.setAttribute('x', x);
+    lbl.setAttribute('y', 300);
+    lbl.setAttribute('class', 'col-label');
+    lbl.textContent = `col=${col}`;
+    svg.appendChild(lbl);
+    colLabels[col] = lbl;
+  });
+
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x);
+    circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    const tag = document.createElementNS(SVGNS, 'text');
+    tag.setAttribute('x', n.x);
+    tag.setAttribute('y', n.y + n.r + 12);
+    tag.setAttribute('class', 'col-tag');
+    tag.textContent = `col=${n.col}`;
+    svg.appendChild(tag);
+  });
+
+  // ============ STEP DATA ============
+  // queue: array of {k, col}
+  // map: object {col: [vals...]}
+  // justAdded: {col, val} most recently added to map
+  // activeCol: integer (highlights the column lane + map row)
+  const steps = [
+    { line: [2, 4, 5, 6, 7, 8, 9], activeCol: null, minCol: 0, maxCol: 0,
+      queue: [{k:"n3", col:0}], justPolled: null, justOffered:[{k:"n3", col:0}], active: null, done: [],
+      map: {}, justAdded: null,
+      action: "Init. HashMap + two parallel Deques. offer(root, col=0). minCol = maxCol = 0.", kind: "call" },
+
+    { line: [10, 11, 12], activeCol: 0, minCol: 0, maxCol: 0,
+      queue: [], justPolled: {k:"n3", col:0}, justOffered:[], active: "n3", done: [],
+      map: {}, justAdded: null,
+      action: "Poll node=3, col=0.", kind: "poll" },
+
+    { line: [13], activeCol: 0, minCol: 0, maxCol: 0,
+      queue: [], justPolled: null, justOffered:[], active: "n3", done: [],
+      map: {"0": [3]}, justAdded: {col: 0, val: 3},
+      action: "map.computeIfAbsent(0 → new ArrayList<>()).add(3). map = {0: [3]}.", kind: "record" },
+
+    { line: [14, 15], activeCol: 0, minCol: 0, maxCol: 0,
+      queue: [], justPolled: null, justOffered:[], active: "n3", done: [],
+      map: {"0": [3]}, justAdded: null,
+      action: "minCol = min(0, 0) = 0. maxCol = max(0, 0) = 0. (No change — root already set.)", kind: "call" },
+
+    { line: [16, 17, 18, 20, 21, 22], activeCol: 0, minCol: 0, maxCol: 0,
+      queue: [{k:"n9", col:-1}, {k:"n20", col:1}], justPolled: null, justOffered:[{k:"n9", col:-1}, {k:"n20", col:1}],
+      active: null, done: ["n3"],
+      map: {"0": [3]}, justAdded: null,
+      action: "3.left=9 → offer(9, col-1 = -1). 3.right=20 → offer(20, col+1 = 1).", kind: "offer" },
+
+    { line: [10, 11, 12], activeCol: -1, minCol: 0, maxCol: 0,
+      queue: [{k:"n20", col:1}], justPolled: {k:"n9", col:-1}, justOffered:[], active: "n9", done: ["n3"],
+      map: {"0": [3]}, justAdded: null,
+      action: "Poll node=9, col=-1.", kind: "poll" },
+
+    { line: [13], activeCol: -1, minCol: 0, maxCol: 0,
+      queue: [{k:"n20", col:1}], justPolled: null, justOffered:[], active: "n9", done: ["n3"],
+      map: {"0": [3], "-1": [9]}, justAdded: {col: -1, val: 9},
+      action: "map.computeIfAbsent(-1 → new ArrayList<>()).add(9). map = {0: [3], -1: [9]}.", kind: "record" },
+
+    { line: [14, 15], activeCol: -1, minCol: -1, maxCol: 0,
+      queue: [{k:"n20", col:1}], justPolled: null, justOffered:[], active: "n9", done: ["n3"],
+      map: {"0": [3], "-1": [9]}, justAdded: null,
+      action: "minCol = min(0, -1) = -1. maxCol unchanged. 9 has no children.", kind: "call" },
+
+    { line: [10, 11, 12], activeCol: 1, minCol: -1, maxCol: 0,
+      queue: [], justPolled: {k:"n20", col:1}, justOffered:[], active: "n20", done: ["n3", "n9"],
+      map: {"0": [3], "-1": [9]}, justAdded: null,
+      action: "Poll node=20, col=1.", kind: "poll" },
+
+    { line: [13], activeCol: 1, minCol: -1, maxCol: 0,
+      queue: [], justPolled: null, justOffered:[], active: "n20", done: ["n3", "n9"],
+      map: {"0": [3], "-1": [9], "1": [20]}, justAdded: {col: 1, val: 20},
+      action: "map.computeIfAbsent(1 → new ArrayList<>()).add(20). map = {0: [3], -1: [9], 1: [20]}.", kind: "record" },
+
+    { line: [14, 15], activeCol: 1, minCol: -1, maxCol: 1,
+      queue: [], justPolled: null, justOffered:[], active: "n20", done: ["n3", "n9"],
+      map: {"0": [3], "-1": [9], "1": [20]}, justAdded: null,
+      action: "minCol unchanged. maxCol = max(0, 1) = 1.", kind: "call" },
+
+    { line: [16, 17, 18, 20, 21, 22], activeCol: 1, minCol: -1, maxCol: 1,
+      queue: [{k:"n15", col:0}, {k:"n7", col:2}], justPolled: null,
+      justOffered:[{k:"n15", col:0}, {k:"n7", col:2}], active: null, done: ["n3", "n9", "n20"],
+      map: {"0": [3], "-1": [9], "1": [20]}, justAdded: null,
+      action: "20.left=15 → offer(15, col-1 = 0). 20.right=7 → offer(7, col+1 = 2). 15 lands in col 0 — same column as root!", kind: "offer" },
+
+    { line: [10, 11, 12], activeCol: 0, minCol: -1, maxCol: 1,
+      queue: [{k:"n7", col:2}], justPolled: {k:"n15", col:0}, justOffered:[], active: "n15", done: ["n3", "n9", "n20"],
+      map: {"0": [3], "-1": [9], "1": [20]}, justAdded: null,
+      action: "Poll node=15, col=0.", kind: "poll" },
+
+    { line: [13], activeCol: 0, minCol: -1, maxCol: 1,
+      queue: [{k:"n7", col:2}], justPolled: null, justOffered:[], active: "n15", done: ["n3", "n9", "n20"],
+      map: {"0": [3, 15], "-1": [9], "1": [20]}, justAdded: {col: 0, val: 15},
+      action: "map.get(0) exists → add 15. map[0] = [3, 15]. BFS order preserved: 3 first (level 0), 15 second (level 2).", kind: "record" },
+
+    { line: [14, 15], activeCol: 0, minCol: -1, maxCol: 1,
+      queue: [{k:"n7", col:2}], justPolled: null, justOffered:[], active: "n15", done: ["n3", "n9", "n20"],
+      map: {"0": [3, 15], "-1": [9], "1": [20]}, justAdded: null,
+      action: "min/max unchanged. 15 has no children.", kind: "call" },
+
+    { line: [10, 11, 12], activeCol: 2, minCol: -1, maxCol: 1,
+      queue: [], justPolled: {k:"n7", col:2}, justOffered:[], active: "n7", done: ["n3", "n9", "n20", "n15"],
+      map: {"0": [3, 15], "-1": [9], "1": [20]}, justAdded: null,
+      action: "Poll node=7, col=2.", kind: "poll" },
+
+    { line: [13], activeCol: 2, minCol: -1, maxCol: 1,
+      queue: [], justPolled: null, justOffered:[], active: "n7", done: ["n3", "n9", "n20", "n15"],
+      map: {"0": [3, 15], "-1": [9], "1": [20], "2": [7]}, justAdded: {col: 2, val: 7},
+      action: "map.computeIfAbsent(2 → new ArrayList<>()).add(7). map[2] = [7].", kind: "record" },
+
+    { line: [14, 15], activeCol: 2, minCol: -1, maxCol: 2,
+      queue: [], justPolled: null, justOffered:[], active: "n7", done: ["n3", "n9", "n20", "n15"],
+      map: {"0": [3, 15], "-1": [9], "1": [20], "2": [7]}, justAdded: null,
+      action: "maxCol = max(1, 2) = 2. 7 has no children. Queue empty — exit while.", kind: "call" },
+
+    { line: [24, 25], activeCol: null, minCol: -1, maxCol: 2,
+      queue: [], justPolled: null, justOffered:[], active: null, done: ["n3", "n9", "n20", "n15", "n7"],
+      map: {"0": [3, 15], "-1": [9], "1": [20], "2": [7]}, justAdded: null,
+      action: "Final loop: i = -1 to 2. result = [[9], [3, 15], [20], [7]]. ★ Columns visited in sorted order via the min/max range.", kind: "record" },
+
+    { line: [27], activeCol: null, minCol: -1, maxCol: 2,
+      queue: [], justPolled: null, justOffered:[], active: null, done: ["n3", "n9", "n20", "n15", "n7"],
+      map: {"0": [3, 15], "-1": [9], "1": [20], "2": [7]}, justAdded: null,
+      action: "Return result = [[9], [3, 15], [20], [7]]. ★ Done.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const colVEl = document.getElementById('colV');
+  const minVEl = document.getElementById('minV');
+  const maxVEl = document.getElementById('maxV');
+  const queueRowEl = document.getElementById('queueRow');
+  const mapRowsEl = document.getElementById('mapRows');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    colVEl.textContent = s.activeCol !== null ? s.activeCol : '—';
+    minVEl.textContent = s.minCol;
+    maxVEl.textContent = s.maxCol;
+    // Column lane highlight
+    Object.keys(colLanes).forEach(col => {
+      const active = (s.activeCol !== null) && (String(s.activeCol) === col);
+      colLanes[col].classList.toggle('highlight', active);
+      colLabels[col].classList.toggle('highlight', active);
+    });
+    // Tree nodes
+    const queueKeys = new Set(s.queue.map(q => q.k));
+    const doneSet = new Set(s.done);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'in-queue', 'done');
+      if ((s.active === key) || (s.justPolled && s.justPolled.k === key)) {
+        el.classList.add('active');
+      } else if (queueKeys.has(key)) {
+        el.classList.add('in-queue');
+      } else if (doneSet.has(key)) {
+        el.classList.add('done');
+      }
+    });
+    // Queue
+    queueRowEl.innerHTML = '';
+    if (s.justPolled) {
+      const polled = document.createElement('span');
+      polled.className = 'queue-cell just-polled';
+      const v = document.createElement('div'); v.className = 'cell-val'; v.textContent = nodes[s.justPolled.k].val;
+      const ix = document.createElement('div'); ix.className = 'cell-idx'; ix.textContent = `col=${s.justPolled.col}`;
+      polled.appendChild(v); polled.appendChild(ix);
+      queueRowEl.appendChild(polled);
+      const arr = document.createElement('span'); arr.style.color = '#666'; arr.style.fontSize = '11px'; arr.textContent = '⟵';
+      queueRowEl.appendChild(arr);
+    }
+    s.queue.forEach(q => {
+      const cell = document.createElement('span');
+      cell.className = 'queue-cell';
+      const offeredNow = s.justOffered.some(o => o.k === q.k && o.col === q.col);
+      if (offeredNow) { cell.classList.add('just-offered'); }
+      const v = document.createElement('div'); v.className = 'cell-val'; v.textContent = nodes[q.k].val;
+      const ix = document.createElement('div'); ix.className = 'cell-idx'; ix.textContent = `col=${q.col}`;
+      cell.appendChild(v); cell.appendChild(ix);
+      queueRowEl.appendChild(cell);
+    });
+    if (s.queue.length === 0 && !s.justPolled) {
+      const empty = document.createElement('span');
+      empty.style.color = '#6a7a9a'; empty.style.fontStyle = 'italic'; empty.style.fontSize = '11px';
+      empty.textContent = '[empty]';
+      queueRowEl.appendChild(empty);
+    }
+    // Map (sorted by numeric key)
+    mapRowsEl.innerHTML = '';
+    const sortedKeys = Object.keys(s.map).map(Number).sort((a, b) => a - b);
+    sortedKeys.forEach(col => {
+      const row = document.createElement('div');
+      row.className = 'map-row';
+      if (s.activeCol !== null && col === s.activeCol) { row.classList.add('highlight'); }
+      const k = document.createElement('span'); k.className = 'key'; k.textContent = `col ${col}`;
+      const arr = document.createElement('span'); arr.className = 'arrow'; arr.textContent = '→';
+      const vals = document.createElement('span'); vals.className = 'vals';
+      s.map[col].forEach(v => {
+        const vs = document.createElement('span');
+        vs.textContent = v;
+        if (s.justAdded && s.justAdded.col === col && s.justAdded.val === v) { vs.classList.add('just-added'); }
+        vals.appendChild(vs);
+      });
+      row.appendChild(k); row.appendChild(arr); row.appendChild(vals);
+      mapRowsEl.appendChild(row);
+    });
+    if (sortedKeys.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.color = '#6a7a9a'; empty.style.fontStyle = 'italic'; empty.style.fontSize = '11px';
+      empty.textContent = '[empty]';
+      mapRowsEl.appendChild(empty);
+    }
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
