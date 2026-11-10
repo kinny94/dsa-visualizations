@@ -46,6 +46,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [958](https://kinny94.github.io/dsa-visualizations/lc958-check-completeness-of-binary-tree.html) | Check Completeness of a Binary Tree | Binary Tree · BFS · null sentinel |
 | [144](https://kinny94.github.io/dsa-visualizations/lc144-binary-tree-preorder-traversal.html) | Binary Tree Preorder Traversal | Binary Tree · DFS · iterative stack |
 | [100](https://kinny94.github.io/dsa-visualizations/lc100-same-tree.html) | Same Tree | Binary Tree · Parallel recursion |
+| [101](https://kinny94.github.io/dsa-visualizations/lc101-symmetric-tree.html) | Symmetric Tree | Binary Tree · BFS · mirror pair-walk |
 
 ## Adding a new animation
 

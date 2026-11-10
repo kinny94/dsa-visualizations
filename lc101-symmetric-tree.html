@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 101 — Symmetric Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.lp .pill-v { color: #9ad4ff; }
+  .pill.rp .pill-v { color: #ffd87a; }
+  .pill.verdict .pill-v { color: #4de88c; }
+  .pill.verdict.fail .pill-v { color: #ff8ca0; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 340px; }
+  .axis {
+    stroke: #c89aff;
+    stroke-width: 1;
+    stroke-dasharray: 3,4;
+    opacity: 0.4;
+  }
+  .axis-label {
+    fill: #c89aff;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    opacity: 0.6;
+  }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.in-queue circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.in-queue text.val { fill: #ffd87a; }
+  .node.active-left circle { stroke: #9ad4ff; stroke-width: 4; fill: #0f2a4a; }
+  .node.active-left text.val { fill: #cde8ff; }
+  .node.active-right circle { stroke: #ffd87a; stroke-width: 4; fill: #2a2010; }
+  .node.active-right text.val { fill: #fff2bf; }
+  .node.match-ok circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.match-ok text.val { fill: #4de88c; }
+  .node.null-ghost circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 10; }
+  .node.null-ghost text.val { fill: #8a6a6a; font-size: 10px; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .mirror-link {
+    stroke: #4de88c;
+    stroke-width: 2;
+    stroke-dasharray: 4,3;
+    fill: none;
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+  .mirror-link.active { opacity: 0.85; stroke: #ffd87a; stroke-width: 3; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-poll { background: #e94560; color: white; }
+  .kind-check { background: #c89aff; color: #1a1a2e; }
+  .kind-offer { background: #0f9950; color: white; }
+  .kind-continue { background: #666; color: white; }
+  .kind-return { background: #4de88c; color: #1a1a2e; }
+  /* Queue of pairs */
+  .queue-wrap { font-family: 'Monaco', monospace; font-size: 12px; margin-bottom: 10px; }
+  .queue-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .queue-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: #0a1a35;
+    border-radius: 3px;
+    min-height: 40px;
+    overflow-x: auto;
+    flex-wrap: wrap;
+  }
+  .queue-pair {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border: 1px dashed #4a6a8a;
+    border-radius: 4px;
+    background: rgba(74, 106, 138, 0.1);
+  }
+  .queue-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    padding: 3px 7px;
+    background: #0f3460;
+    border-radius: 3px;
+    font-weight: bold;
+    font-size: 12px;
+  }
+  .queue-cell.l-slot { color: #9ad4ff; border: 1px solid #9ad4ff; }
+  .queue-cell.r-slot { color: #ffd87a; border: 1px solid #ffd87a; }
+  .queue-cell.null-cell { opacity: 0.5; font-style: italic; }
+  .queue-pair.just-polled { background: #4a0f1f; border-color: #ff8ca0; opacity: 0.6; }
+  .queue-pair.just-offered { background: #0f4a2a; border-color: #4de88c; }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-l { background: #0f2a4a; border: 2px solid #9ad4ff; }
+  .chip-r { background: #2a2010; border: 2px solid #ffd87a; }
+  .chip-match { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-queue { background: #2a2010; border: 2px solid #ffa500; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 101 — Symmetric Tree</h1>
+    <div class="subtitle">BFS pair-walk · mirrored offers: (L.left, R.right) and (L.right, R.left) · LinkedList allows null sentinels · root = [1, 2, 2, 3, 4, 4, 3]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill lp"><span class="pill-k">left</span><span class="pill-v" id="leftV">—</span></span>
+      <span class="pill rp"><span class="pill-k">right</span><span class="pill-v" id="rightV">—</span></span>
+      <span class="pill verdict" id="verdictPill"><span class="pill-k">verdict</span><span class="pill-v" id="verdictV">—</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Queue (pairs: L · R)</div>
+    <div class="queue-wrap">
+      <div class="queue-row" id="queueRow"></div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-l"></div>left (polled first)</div>
+      <div class="legend-item"><div class="chip chip-r"></div>right (polled second)</div>
+      <div class="legend-item"><div class="chip chip-match"></div>pair matched (continue)</div>
+      <div class="legend-item"><div class="chip chip-queue"></div>in queue</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">The symmetry trick</div>
+      Enqueue pairs in mirror order: <code>(L.left, R.right)</code> and <code>(L.right, R.left)</code>. Each side’s leftmost compares against the other’s rightmost. Drop the swap → this collapses to LC 100 Same Tree.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public boolean isSymmetric(TreeNode root) {",
+    "    if (root == null) {",
+    "        return true;    // (vacuously symmetric)",
+    "    }",
+    "    Queue<TreeNode> queue = new LinkedList<>();",
+    "    queue.add(root.left);",
+    "    queue.add(root.right);",
+    "    while (!queue.isEmpty()) {",
+    "        TreeNode left  = queue.poll();",
+    "        TreeNode right = queue.poll();",
+    "        if (left == null && right == null) {",
+    "            continue;",
+    "        }",
+    "        if (left == null || right == null) {",
+    "            return false;",
+    "        }",
+    "        if (left.val != right.val) {",
+    "            return false;",
+    "        }",
+    "        queue.add(left.left);",
+    "        queue.add(right.right);",
+    "        queue.add(left.right);",
+    "        queue.add(right.left);",
+    "    }",
+    "    return true;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // [1, 2, 2, 3, 4, 4, 3]
+  //        1
+  //       / \
+  //     2(L) 2(R)
+  //     /\   /\
+  //  3(LL)4(LR)4(RL)3(RR)
+  const nodes = {
+    n1:   { x: 320, y:  50, r: 22, val: '1' },
+    n2L:  { x: 200, y: 140, r: 22, val: '2' },
+    n2R:  { x: 440, y: 140, r: 22, val: '2' },
+    n3LL: { x: 130, y: 230, r: 22, val: '3' },
+    n4LR: { x: 270, y: 230, r: 22, val: '4' },
+    n4RL: { x: 370, y: 230, r: 22, val: '4' },
+    n3RR: { x: 510, y: 230, r: 22, val: '3' }
+  };
+  const edges = [
+    ['n1', 'n2L'], ['n1', 'n2R'],
+    ['n2L', 'n3LL'], ['n2L', 'n4LR'],
+    ['n2R', 'n4RL'], ['n2R', 'n3RR']
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  // Mirror axis
+  const ax = document.createElementNS(SVGNS, 'line');
+  ax.setAttribute('x1', 320); ax.setAttribute('y1', 10);
+  ax.setAttribute('x2', 320); ax.setAttribute('y2', 310);
+  ax.setAttribute('class', 'axis');
+  svg.appendChild(ax);
+  const axLbl = document.createElementNS(SVGNS, 'text');
+  axLbl.setAttribute('x', 320); axLbl.setAttribute('y', 310);
+  axLbl.setAttribute('class', 'axis-label'); axLbl.textContent = 'mirror axis';
+  svg.appendChild(axLbl);
+
+  edges.forEach(([from, to]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+  });
+
+  // Mirror pair indicator lines (dashed, appear when comparing a pair)
+  const pairLinks = {
+    'n2L:n2R':   { a: 'n2L',  b: 'n2R' },
+    'n3LL:n3RR': { a: 'n3LL', b: 'n3RR' },
+    'n4LR:n4RL': { a: 'n4LR', b: 'n4RL' }
+  };
+  const pairLinkEls = {};
+  Object.entries(pairLinks).forEach(([key, {a, b}]) => {
+    const n1 = nodes[a], n2 = nodes[b];
+    const line = document.createElementNS(SVGNS, 'path');
+    // Draw as a gentle arc from n1 to n2
+    const midX = (n1.x + n2.x) / 2;
+    const midY = Math.min(n1.y, n2.y) - 30;
+    line.setAttribute('d', `M ${n1.x} ${n1.y} Q ${midX} ${midY} ${n2.x} ${n2.y}`);
+    line.setAttribute('class', 'mirror-link');
+    svg.appendChild(line);
+    pairLinkEls[key] = line;
+  });
+
+  // Nodes
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // queue: array of pairs {l:{k,isNull}, r:{k,isNull}} but we model as flat array of cells {k, isNull, slot}
+  // where slot alternates "l"/"r"; pairs assembled in render.
+  // justPolled: {l, r} pair just popped this step
+  // justOffered: array of flat cells offered this step
+  // activeL / activeR: node ids currently being compared (for tree highlight)
+  // pairKey: which mirror pair arc to highlight
+  // matched: array of node ids that matched (green)
+  // verdict: null | true | false
+  const steps = [
+    { line: [2], queue: [], justPolled: null, justOffered: [],
+      activeL: null, activeR: null, pairKey: null, matched: [], verdict: null,
+      action: "Entry. Check: root == null? No (root = node 1).", kind: "check" },
+
+    { line: [5, 6], queue: [{k:"n2L", slot:"l"}], justPolled: null,
+      justOffered: [{k:"n2L", slot:"l"}],
+      activeL: null, activeR: null, pairKey: null, matched: [], verdict: null,
+      action: "LinkedList queue. add(root.left) → add(node 2 on left side). queue = [(2L)].", kind: "offer" },
+
+    { line: [7], queue: [{k:"n2L", slot:"l"}, {k:"n2R", slot:"r"}], justPolled: null,
+      justOffered: [{k:"n2R", slot:"r"}],
+      activeL: null, activeR: null, pairKey: null, matched: [], verdict: null,
+      action: "add(root.right) → add(node 2 on right side). queue = [(2L, 2R)].", kind: "offer" },
+
+    { line: [8, 9], queue: [{k:"n2R", slot:"r"}], justPolled: {l:{k:"n2L"}, r:null},
+      justOffered: [],
+      activeL: "n2L", activeR: null, pairKey: null, matched: [], verdict: null,
+      action: "while not empty. left = queue.poll() → node 2 (left side).", kind: "poll" },
+
+    { line: [10], queue: [], justPolled: {l:{k:"n2L"}, r:{k:"n2R"}},
+      justOffered: [],
+      activeL: "n2L", activeR: "n2R", pairKey: "n2L:n2R", matched: [], verdict: null,
+      action: "right = queue.poll() → node 2 (right side). Pair assembled.", kind: "poll" },
+
+    { line: [11], queue: [], justPolled: {l:{k:"n2L"}, r:{k:"n2R"}}, justOffered: [],
+      activeL: "n2L", activeR: "n2R", pairKey: "n2L:n2R", matched: [], verdict: null,
+      action: "Check: both null? No.", kind: "check" },
+
+    { line: [14], queue: [], justPolled: {l:{k:"n2L"}, r:{k:"n2R"}}, justOffered: [],
+      activeL: "n2L", activeR: "n2R", pairKey: "n2L:n2R", matched: [], verdict: null,
+      action: "Check: one null? No.", kind: "check" },
+
+    { line: [17], queue: [], justPolled: {l:{k:"n2L"}, r:{k:"n2R"}}, justOffered: [],
+      activeL: "n2L", activeR: "n2R", pairKey: "n2L:n2R", matched: [], verdict: null,
+      action: "Check: left.val != right.val? 2 == 2, no.", kind: "check" },
+
+    { line: [20], queue: [{k:"n3LL", slot:"l"}], justPolled: null,
+      justOffered: [{k:"n3LL", slot:"l"}],
+      activeL: "n2L", activeR: "n2R", pairKey: "n2L:n2R", matched: ["n2L", "n2R"], verdict: null,
+      action: "add(left.left) → add(node 3 on far left). queue = [(3LL)].", kind: "offer" },
+
+    { line: [21], queue: [{k:"n3LL", slot:"l"}, {k:"n3RR", slot:"r"}], justPolled: null,
+      justOffered: [{k:"n3RR", slot:"r"}],
+      activeL: "n2L", activeR: "n2R", pairKey: "n2L:n2R", matched: ["n2L", "n2R"], verdict: null,
+      action: "add(right.right) → add(node 3 on far right). ★ Mirror pair: L.left paired with R.right.", kind: "offer" },
+
+    { line: [22], queue: [{k:"n3LL", slot:"l"}, {k:"n3RR", slot:"r"}, {k:"n4LR", slot:"l"}], justPolled: null,
+      justOffered: [{k:"n4LR", slot:"l"}],
+      activeL: "n2L", activeR: "n2R", pairKey: "n2L:n2R", matched: ["n2L", "n2R"], verdict: null,
+      action: "add(left.right) → add(node 4 inner-left).", kind: "offer" },
+
+    { line: [23], queue: [{k:"n3LL", slot:"l"}, {k:"n3RR", slot:"r"}, {k:"n4LR", slot:"l"}, {k:"n4RL", slot:"r"}], justPolled: null,
+      justOffered: [{k:"n4RL", slot:"r"}],
+      activeL: "n2L", activeR: "n2R", pairKey: "n2L:n2R", matched: ["n2L", "n2R"], verdict: null,
+      action: "add(right.left) → add(node 4 inner-right). ★ Mirror pair: L.right paired with R.left.", kind: "offer" },
+
+    { line: [8, 9], queue: [{k:"n3RR", slot:"r"}, {k:"n4LR", slot:"l"}, {k:"n4RL", slot:"r"}], justPolled: {l:{k:"n3LL"}, r:null},
+      justOffered: [],
+      activeL: "n3LL", activeR: null, pairKey: null, matched: ["n2L", "n2R"], verdict: null,
+      action: "Next iter. left = poll → node 3 (far left).", kind: "poll" },
+
+    { line: [10], queue: [{k:"n4LR", slot:"l"}, {k:"n4RL", slot:"r"}], justPolled: {l:{k:"n3LL"}, r:{k:"n3RR"}},
+      justOffered: [],
+      activeL: "n3LL", activeR: "n3RR", pairKey: "n3LL:n3RR", matched: ["n2L", "n2R"], verdict: null,
+      action: "right = poll → node 3 (far right). Mirror pair ready.", kind: "poll" },
+
+    { line: [11, 14, 17], queue: [{k:"n4LR", slot:"l"}, {k:"n4RL", slot:"r"}], justPolled: {l:{k:"n3LL"}, r:{k:"n3RR"}},
+      justOffered: [],
+      activeL: "n3LL", activeR: "n3RR", pairKey: "n3LL:n3RR", matched: ["n2L", "n2R"], verdict: null,
+      action: "All three guards pass: both non-null, values equal (3 == 3).", kind: "check" },
+
+    { line: [20, 21, 22, 23], queue: [
+        {k:"n4LR", slot:"l"}, {k:"n4RL", slot:"r"},
+        {k:"nullA", slot:"l", isNull:true}, {k:"nullB", slot:"r", isNull:true},
+        {k:"nullC", slot:"l", isNull:true}, {k:"nullD", slot:"r", isNull:true}
+      ],
+      justPolled: null,
+      justOffered: [{k:"nullA", slot:"l", isNull:true}, {k:"nullB", slot:"r", isNull:true}, {k:"nullC", slot:"l", isNull:true}, {k:"nullD", slot:"r", isNull:true}],
+      activeL: "n3LL", activeR: "n3RR", pairKey: "n3LL:n3RR", matched: ["n2L", "n2R", "n3LL", "n3RR"], verdict: null,
+      action: "Offer four nulls in mirror order: (3LL.left, 3RR.right) and (3LL.right, 3RR.left) — all null (leaves).", kind: "offer" },
+
+    { line: [8, 9], queue: [
+        {k:"n4RL", slot:"r"},
+        {k:"nullA", slot:"l", isNull:true}, {k:"nullB", slot:"r", isNull:true},
+        {k:"nullC", slot:"l", isNull:true}, {k:"nullD", slot:"r", isNull:true}
+      ],
+      justPolled: {l:{k:"n4LR"}, r:null}, justOffered: [],
+      activeL: "n4LR", activeR: null, pairKey: null, matched: ["n2L", "n2R", "n3LL", "n3RR"], verdict: null,
+      action: "left = poll → node 4 (inner-left).", kind: "poll" },
+
+    { line: [10], queue: [
+        {k:"nullA", slot:"l", isNull:true}, {k:"nullB", slot:"r", isNull:true},
+        {k:"nullC", slot:"l", isNull:true}, {k:"nullD", slot:"r", isNull:true}
+      ],
+      justPolled: {l:{k:"n4LR"}, r:{k:"n4RL"}}, justOffered: [],
+      activeL: "n4LR", activeR: "n4RL", pairKey: "n4LR:n4RL", matched: ["n2L", "n2R", "n3LL", "n3RR"], verdict: null,
+      action: "right = poll → node 4 (inner-right). Pair ready.", kind: "poll" },
+
+    { line: [11, 14, 17], queue: [
+        {k:"nullA", slot:"l", isNull:true}, {k:"nullB", slot:"r", isNull:true},
+        {k:"nullC", slot:"l", isNull:true}, {k:"nullD", slot:"r", isNull:true}
+      ],
+      justPolled: {l:{k:"n4LR"}, r:{k:"n4RL"}}, justOffered: [],
+      activeL: "n4LR", activeR: "n4RL", pairKey: "n4LR:n4RL", matched: ["n2L", "n2R", "n3LL", "n3RR"], verdict: null,
+      action: "All guards pass: both non-null, 4 == 4.", kind: "check" },
+
+    { line: [20, 21, 22, 23], queue: [
+        {k:"nullA", slot:"l", isNull:true}, {k:"nullB", slot:"r", isNull:true},
+        {k:"nullC", slot:"l", isNull:true}, {k:"nullD", slot:"r", isNull:true},
+        {k:"nullE", slot:"l", isNull:true}, {k:"nullF", slot:"r", isNull:true},
+        {k:"nullG", slot:"l", isNull:true}, {k:"nullH", slot:"r", isNull:true}
+      ],
+      justPolled: null,
+      justOffered: [{k:"nullE", slot:"l", isNull:true}, {k:"nullF", slot:"r", isNull:true}, {k:"nullG", slot:"l", isNull:true}, {k:"nullH", slot:"r", isNull:true}],
+      activeL: "n4LR", activeR: "n4RL", pairKey: "n4LR:n4RL", matched: ["n2L", "n2R", "n3LL", "n3RR", "n4LR", "n4RL"], verdict: null,
+      action: "Offer four more nulls in mirror order (4LR and 4RL are both leaves).", kind: "offer" },
+
+    { line: [8, 9, 10], queue: [
+        {k:"nullC", slot:"l", isNull:true}, {k:"nullD", slot:"r", isNull:true},
+        {k:"nullE", slot:"l", isNull:true}, {k:"nullF", slot:"r", isNull:true},
+        {k:"nullG", slot:"l", isNull:true}, {k:"nullH", slot:"r", isNull:true}
+      ],
+      justPolled: {l:{k:"nullA", isNull:true}, r:{k:"nullB", isNull:true}}, justOffered: [],
+      activeL: null, activeR: null, pairKey: null, matched: ["n2L", "n2R", "n3LL", "n3RR", "n4LR", "n4RL"], verdict: null,
+      action: "poll null, poll null. Both are null sentinels.", kind: "poll" },
+
+    { line: [11, 12], queue: [
+        {k:"nullC", slot:"l", isNull:true}, {k:"nullD", slot:"r", isNull:true},
+        {k:"nullE", slot:"l", isNull:true}, {k:"nullF", slot:"r", isNull:true},
+        {k:"nullG", slot:"l", isNull:true}, {k:"nullH", slot:"r", isNull:true}
+      ],
+      justPolled: null, justOffered: [],
+      activeL: null, activeR: null, pairKey: null, matched: ["n2L", "n2R", "n3LL", "n3RR", "n4LR", "n4RL"], verdict: null,
+      action: "Both null → continue (match).", kind: "continue" },
+
+    { line: [8, 9, 10, 11, 12], queue: [
+        {k:"nullE", slot:"l", isNull:true}, {k:"nullF", slot:"r", isNull:true},
+        {k:"nullG", slot:"l", isNull:true}, {k:"nullH", slot:"r", isNull:true}
+      ],
+      justPolled: {l:{k:"nullC", isNull:true}, r:{k:"nullD", isNull:true}}, justOffered: [],
+      activeL: null, activeR: null, pairKey: null, matched: ["n2L", "n2R", "n3LL", "n3RR", "n4LR", "n4RL"], verdict: null,
+      action: "Next pair: poll null, poll null. Both null → continue.", kind: "continue" },
+
+    { line: [8, 9, 10, 11, 12], queue: [
+        {k:"nullG", slot:"l", isNull:true}, {k:"nullH", slot:"r", isNull:true}
+      ],
+      justPolled: {l:{k:"nullE", isNull:true}, r:{k:"nullF", isNull:true}}, justOffered: [],
+      activeL: null, activeR: null, pairKey: null, matched: ["n2L", "n2R", "n3LL", "n3RR", "n4LR", "n4RL"], verdict: null,
+      action: "Next pair: poll null, poll null. Both null → continue.", kind: "continue" },
+
+    { line: [8, 9, 10, 11, 12], queue: [],
+      justPolled: {l:{k:"nullG", isNull:true}, r:{k:"nullH", isNull:true}}, justOffered: [],
+      activeL: null, activeR: null, pairKey: null, matched: ["n2L", "n2R", "n3LL", "n3RR", "n4LR", "n4RL"], verdict: null,
+      action: "Final pair: poll null, poll null. Both null → continue.", kind: "continue" },
+
+    { line: [8], queue: [], justPolled: null, justOffered: [],
+      activeL: null, activeR: null, pairKey: null, matched: ["n2L", "n2R", "n3LL", "n3RR", "n4LR", "n4RL"], verdict: null,
+      action: "while check: queue empty → exit.", kind: "check" },
+
+    { line: [26], queue: [], justPolled: null, justOffered: [],
+      activeL: null, activeR: null, pairKey: null, matched: ["n2L", "n2R", "n3LL", "n3RR", "n4LR", "n4RL"], verdict: true,
+      action: "Return true. ★ Tree is symmetric.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const leftVEl = document.getElementById('leftV');
+  const rightVEl = document.getElementById('rightV');
+  const verdictVEl = document.getElementById('verdictV');
+  const verdictPillEl = document.getElementById('verdictPill');
+  const queueRowEl = document.getElementById('queueRow');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function labelFor(key, isNull) {
+    if (isNull || !key || !nodes[key]) return 'null';
+    return nodes[key].val;
+  }
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    leftVEl.textContent = s.justPolled && s.justPolled.l ? labelFor(s.justPolled.l.k, s.justPolled.l.isNull) : (s.activeL ? nodes[s.activeL].val : '—');
+    rightVEl.textContent = s.justPolled && s.justPolled.r ? labelFor(s.justPolled.r.k, s.justPolled.r.isNull) : (s.activeR ? nodes[s.activeR].val : '—');
+    if (s.verdict === null) {
+      verdictVEl.textContent = '—';
+      verdictPillEl.classList.remove('fail');
+    } else if (s.verdict === true) {
+      verdictVEl.textContent = 'true (symmetric)';
+      verdictPillEl.classList.remove('fail');
+    } else {
+      verdictVEl.textContent = 'false';
+      verdictPillEl.classList.add('fail');
+    }
+    // Tree nodes
+    const queueKeys = new Set(s.queue.filter(c => !c.isNull).map(c => c.k));
+    const matchedSet = new Set(s.matched);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active-left', 'active-right', 'in-queue', 'match-ok');
+      if (key === s.activeL) { el.classList.add('active-left'); }
+      else if (key === s.activeR) { el.classList.add('active-right'); }
+      else if (queueKeys.has(key)) { el.classList.add('in-queue'); }
+      else if (matchedSet.has(key)) { el.classList.add('match-ok'); }
+    });
+    // Mirror pair link
+    Object.keys(pairLinkEls).forEach(key => {
+      pairLinkEls[key].classList.toggle('active', key === s.pairKey);
+    });
+    // Queue (pair up consecutive cells into pairs)
+    queueRowEl.innerHTML = '';
+    if (s.justPolled) {
+      const pair = document.createElement('div');
+      pair.className = 'queue-pair just-polled';
+      const l = document.createElement('span');
+      l.className = 'queue-cell l-slot' + (s.justPolled.l && s.justPolled.l.isNull ? ' null-cell' : '');
+      l.textContent = s.justPolled.l ? labelFor(s.justPolled.l.k, s.justPolled.l.isNull) : '—';
+      pair.appendChild(l);
+      if (s.justPolled.r) {
+        const r = document.createElement('span');
+        r.className = 'queue-cell r-slot' + (s.justPolled.r.isNull ? ' null-cell' : '');
+        r.textContent = labelFor(s.justPolled.r.k, s.justPolled.r.isNull);
+        pair.appendChild(r);
+      } else {
+        const pending = document.createElement('span');
+        pending.style.color = '#666'; pending.style.fontSize = '11px'; pending.style.padding = '0 6px';
+        pending.textContent = '…';
+        pair.appendChild(pending);
+      }
+      queueRowEl.appendChild(pair);
+      const arr = document.createElement('span');
+      arr.style.color = '#666'; arr.style.fontSize = '11px';
+      arr.textContent = '⟵';
+      queueRowEl.appendChild(arr);
+    }
+    // Remaining queue, grouped in pairs
+    const q = s.queue;
+    const offeredSet = new Set(s.justOffered.map(c => c.k));
+    for (let i = 0; i < q.length; i += 2) {
+      const pair = document.createElement('div');
+      pair.className = 'queue-pair';
+      if (q[i] && offeredSet.has(q[i].k)) { pair.classList.add('just-offered'); }
+      if (q[i + 1] && offeredSet.has(q[i + 1].k)) { pair.classList.add('just-offered'); }
+      [q[i], q[i + 1]].forEach(cell => {
+        if (!cell) return;
+        const c = document.createElement('span');
+        c.className = 'queue-cell ' + (cell.slot === 'l' ? 'l-slot' : 'r-slot') + (cell.isNull ? ' null-cell' : '');
+        c.textContent = labelFor(cell.k, cell.isNull);
+        pair.appendChild(c);
+      });
+      queueRowEl.appendChild(pair);
+    }
+    if (q.length === 0 && !s.justPolled) {
+      const empty = document.createElement('span');
+      empty.style.color = '#6a7a9a'; empty.style.fontStyle = 'italic'; empty.style.fontSize = '11px';
+      empty.textContent = '[empty]';
+      queueRowEl.appendChild(empty);
+    }
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
