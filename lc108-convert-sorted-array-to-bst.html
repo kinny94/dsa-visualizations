@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 108 — Convert Sorted Array to BST</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.low .pill-v { color: #9ad4ff; }
+  .pill.high .pill-v { color: #ffd87a; }
+  .pill.mid .pill-v { color: #e94560; }
+  /* Array display */
+  .arr-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px;
+    background: #0f1529;
+    border-radius: 4px;
+    align-items: center;
+  }
+  .arr-cells {
+    display: flex;
+    gap: 4px;
+  }
+  .arr-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 46px;
+    padding: 6px 8px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+    transition: all 0.25s;
+  }
+  .arr-cell .cell-val { font-weight: bold; color: #ffd87a; font-size: 14px; }
+  .arr-cell .cell-idx { font-size: 9px; color: #888; margin-top: 2px; }
+  .arr-cell.in-range { background: #1f2a4a; border-color: #4a6a8a; }
+  .arr-cell.low-marker { border-color: #9ad4ff; border-width: 2px; }
+  .arr-cell.high-marker { border-color: #ffd87a; border-width: 2px; }
+  .arr-cell.mid-marker { background: #4a0f1f; border-color: #ff8ca0; border-width: 2px; }
+  .arr-cell.mid-marker .cell-val { color: #fff; }
+  .arr-cell.consumed { opacity: 0.4; }
+  /* Tree */
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 280px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+  .node.created circle, .node.created text.val { opacity: 1; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.in-progress circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.in-progress text.val { fill: #ffd87a; }
+  .node.done circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.done text.val { fill: #4de88c; }
+  .edge {
+    stroke: #3a3a4a;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .edge.visible { opacity: 1; }
+  .edge.just-wired {
+    stroke: #ffd87a;
+    stroke-width: 3;
+  }
+  /* Action */
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #c89aff; color: #1a1a2e; }
+  .kind-create { background: #4de88c; color: #1a1a2e; }
+  .kind-wire { background: #ffd87a; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  /* Call stack */
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-progress { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-done { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 108 — Convert Sorted Array to BST</h1>
+    <div class="subtitle">Divide-and-conquer tree construction · mid = low + (high - low) / 2 as root · recurse on [low, mid-1] and [mid+1, high] · nums = [-10, -3, 0, 5, 9]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill low"><span class="pill-k">low</span><span class="pill-v" id="lowV">—</span></span>
+      <span class="pill high"><span class="pill-k">high</span><span class="pill-v" id="highV">—</span></span>
+      <span class="pill mid"><span class="pill-k">mid</span><span class="pill-v" id="midV">—</span></span>
+    </div>
+    <div class="arr-wrap">
+      <div class="arr-cells" id="arrCells"></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame / mid node</div>
+      <div class="legend-item"><div class="chip chip-progress"></div>created, wiring in progress</div>
+      <div class="legend-item"><div class="chip chip-done"></div>frame returned</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Why middle balances</div>
+      Mid splits range into halves differing by at most 1 element. Subtree heights thus differ by at most 1 at every recursion level — height-balanced by construction. Overflow-safe form <code>low + (high - low) / 2</code> is the habit.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public TreeNode sortedArrayToBST(int[] nums) {",
+    "    return solve(nums, 0, nums.length - 1);",
+    "}",
+    "",
+    "private TreeNode solve(int[] nums, int low, int high) {",
+    "    if (low > high) {",
+    "        return null;",
+    "    }",
+    "    int mid = low + (high - low) / 2;",
+    "    TreeNode root = new TreeNode(nums[mid]);",
+    "    root.left  = solve(nums, low,  mid - 1);",
+    "    root.right = solve(nums, mid + 1, high);",
+    "    return root;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ ARRAY ============
+  const ARR = [-10, -3, 0, 5, 9];
+  const arrCellsEl = document.getElementById('arrCells');
+  const arrCellEls = [];
+  ARR.forEach((v, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'arr-cell';
+    const val = document.createElement('div');
+    val.className = 'cell-val';
+    val.textContent = v;
+    const idx = document.createElement('div');
+    idx.className = 'cell-idx';
+    idx.textContent = `[${i}]`;
+    cell.appendChild(val); cell.appendChild(idx);
+    arrCellsEl.appendChild(cell);
+    arrCellEls.push(cell);
+  });
+
+  // ============ TREE ============
+  // Tree layout for the constructed BST (after all recursion):
+  //     0          (root, from index 2)
+  //    / \
+  //  -10  5        (from indices 0 and 3)
+  //    \   \
+  //    -3   9     (from indices 1 and 4)
+  const nodes = {
+    nIdx2: { x: 320, y:  40, r: 22, val: '0',   sourceIdx: 2 },
+    nIdx0: { x: 180, y: 130, r: 22, val: '-10', sourceIdx: 0 },
+    nIdx3: { x: 460, y: 130, r: 22, val: '5',   sourceIdx: 3 },
+    nIdx1: { x: 240, y: 220, r: 22, val: '-3',  sourceIdx: 1 },
+    nIdx4: { x: 520, y: 220, r: 22, val: '9',   sourceIdx: 4 }
+  };
+  const edges = [
+    { id: "e_2_0", from: 'nIdx2', to: 'nIdx0' },
+    { id: "e_2_3", from: 'nIdx2', to: 'nIdx3' },
+    { id: "e_0_1", from: 'nIdx0', to: 'nIdx1' },
+    { id: "e_3_4", from: 'nIdx3', to: 'nIdx4' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // low, high, mid: current frame's values (or null)
+  // active: node id being focused
+  // inProgress: array of node ids created but still wiring children
+  // done: nodes that have fully returned
+  // edgesSet: edge ids drawn so far
+  // justWired: edge id drawn this step
+  // stack: list of { id, label, sub }
+  const steps = [
+    { line: [2], low: null, high: null, mid: null,
+      active: null, inProgress: [], done: [], edgesSet: [], justWired: null,
+      stack: [{ id: "f_outer", label: "sortedArrayToBST(nums)", sub: "call solve(0, 4)" }],
+      action: "Entry. Call solve(nums, 0, nums.length - 1) = solve(nums, 0, 4).", kind: "call" },
+
+    { line: [5, 6], low: 0, high: 4, mid: null,
+      active: null, inProgress: [], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "entry" }
+      ],
+      action: "Enter solve(low=0, high=4). Check: low > high? No, proceed.", kind: "check" },
+
+    { line: [9], low: 0, high: 4, mid: 2,
+      active: null, inProgress: [], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "mid = 2" }
+      ],
+      action: "mid = low + (high - low) / 2 = 0 + 4 / 2 = 2. nums[2] = 0.", kind: "check" },
+
+    { line: [10], low: 0, high: 4, mid: 2,
+      active: "nIdx2", inProgress: ["nIdx2"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "root = TreeNode(0)" }
+      ],
+      action: "Create TreeNode(nums[mid] = 0). Root candidate for this subtree.", kind: "create" },
+
+    { line: [11], low: 0, high: 4, mid: 2,
+      active: "nIdx2", inProgress: ["nIdx2"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "recurse LEFT [0, 1]" }
+      ],
+      action: "Call solve(nums, low=0, mid-1=1) for LEFT subtree.", kind: "call" },
+
+    { line: [5, 6], low: 0, high: 1, mid: null,
+      active: "nIdx2", inProgress: ["nIdx2"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "entry" }
+      ],
+      action: "Enter solve(low=0, high=1). Check: low > high? No.", kind: "check" },
+
+    { line: [9], low: 0, high: 1, mid: 0,
+      active: "nIdx2", inProgress: ["nIdx2"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "mid = 0" }
+      ],
+      action: "mid = 0 + (1 - 0) / 2 = 0. nums[0] = -10. (For an even-length range, picks the lower middle.)", kind: "check" },
+
+    { line: [10], low: 0, high: 1, mid: 0,
+      active: "nIdx0", inProgress: ["nIdx2", "nIdx0"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "root = TreeNode(-10)" }
+      ],
+      action: "Create TreeNode(-10).", kind: "create" },
+
+    { line: [11], low: 0, high: 1, mid: 0,
+      active: "nIdx0", inProgress: ["nIdx2", "nIdx0"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "recurse LEFT [0, -1]" }
+      ],
+      action: "Call solve(nums, 0, mid-1=-1) for LEFT. Empty range coming.", kind: "call" },
+
+    { line: [5, 6, 7], low: 0, high: -1, mid: null,
+      active: "nIdx0", inProgress: ["nIdx2", "nIdx0"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "waiting on LEFT" },
+        { id: "f_0_m1", label: "solve(0, -1)", sub: "low > high → null" }
+      ],
+      action: "Enter solve(low=0, high=-1). low > high → return null. (-10).left stays null.", kind: "return" },
+
+    { line: [12], low: 0, high: 1, mid: 0,
+      active: "nIdx0", inProgress: ["nIdx2", "nIdx0"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "recurse RIGHT [1, 1]" }
+      ],
+      action: "Back in solve(0, 1). Call solve(nums, mid+1=1, 1) for RIGHT.", kind: "call" },
+
+    { line: [5, 6], low: 1, high: 1, mid: null,
+      active: "nIdx0", inProgress: ["nIdx2", "nIdx0"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "waiting on RIGHT" },
+        { id: "f_1_1", label: "solve(1, 1)", sub: "entry" }
+      ],
+      action: "Enter solve(low=1, high=1). Single-element range.", kind: "check" },
+
+    { line: [9], low: 1, high: 1, mid: 1,
+      active: "nIdx0", inProgress: ["nIdx2", "nIdx0"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "waiting on RIGHT" },
+        { id: "f_1_1", label: "solve(1, 1)", sub: "mid = 1" }
+      ],
+      action: "mid = 1 + 0 = 1. nums[1] = -3.", kind: "check" },
+
+    { line: [10], low: 1, high: 1, mid: 1,
+      active: "nIdx1", inProgress: ["nIdx2", "nIdx0", "nIdx1"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "waiting on RIGHT" },
+        { id: "f_1_1", label: "solve(1, 1)", sub: "root = TreeNode(-3)" }
+      ],
+      action: "Create TreeNode(-3).", kind: "create" },
+
+    { line: [11, 5, 6, 7], low: 1, high: 0, mid: null,
+      active: "nIdx1", inProgress: ["nIdx2", "nIdx0", "nIdx1"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "waiting on RIGHT" },
+        { id: "f_1_1", label: "solve(1, 1)", sub: "waiting on LEFT" },
+        { id: "f_1_0", label: "solve(1, 0)", sub: "low > high → null" }
+      ],
+      action: "solve(1, mid-1=0). Enter. low > high → return null. (-3).left stays null.", kind: "return" },
+
+    { line: [12, 5, 6, 7], low: 2, high: 1, mid: null,
+      active: "nIdx1", inProgress: ["nIdx2", "nIdx0", "nIdx1"], done: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "waiting on RIGHT" },
+        { id: "f_1_1", label: "solve(1, 1)", sub: "waiting on RIGHT" },
+        { id: "f_2_1", label: "solve(2, 1)", sub: "low > high → null" }
+      ],
+      action: "Back in solve(1, 1). solve(mid+1=2, 1). Enter. low > high → return null. (-3).right stays null.", kind: "return" },
+
+    { line: [13], low: 1, high: 1, mid: 1,
+      active: "nIdx1", inProgress: ["nIdx2", "nIdx0"], done: ["nIdx1"], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "waiting on RIGHT" },
+        { id: "f_1_1", label: "solve(1, 1)", sub: "return TreeNode(-3)" }
+      ],
+      action: "solve(1, 1) returns TreeNode(-3).", kind: "return" },
+
+    { line: [12], low: 0, high: 1, mid: 0,
+      active: "nIdx0", inProgress: ["nIdx2", "nIdx0"], done: ["nIdx1"], edgesSet: ["e_0_1"], justWired: "e_0_1",
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "root.right = TreeNode(-3)" }
+      ],
+      action: "Back in solve(0, 1). Assign (-10).right = TreeNode(-3). ★ Edge wired.", kind: "wire" },
+
+    { line: [13], low: 0, high: 1, mid: 0,
+      active: "nIdx0", inProgress: ["nIdx2"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_1", label: "solve(0, 1)", sub: "return TreeNode(-10)" }
+      ],
+      action: "solve(0, 1) returns TreeNode(-10) (its right subtree complete).", kind: "return" },
+
+    { line: [11], low: 0, high: 4, mid: 2,
+      active: "nIdx2", inProgress: ["nIdx2"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: "e_2_0",
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "root.left = TreeNode(-10)" }
+      ],
+      action: "Back in solve(0, 4). Assign (0).left = TreeNode(-10). ★ Edge wired. Left subtree complete.", kind: "wire" },
+
+    { line: [12], low: 0, high: 4, mid: 2,
+      active: "nIdx2", inProgress: ["nIdx2"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "recurse RIGHT [3, 4]" }
+      ],
+      action: "Call solve(nums, mid+1=3, 4) for RIGHT subtree.", kind: "call" },
+
+    { line: [5, 6], low: 3, high: 4, mid: null,
+      active: "nIdx2", inProgress: ["nIdx2"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "entry" }
+      ],
+      action: "Enter solve(low=3, high=4).", kind: "check" },
+
+    { line: [9], low: 3, high: 4, mid: 3,
+      active: "nIdx2", inProgress: ["nIdx2"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "mid = 3" }
+      ],
+      action: "mid = 3 + (4 - 3) / 2 = 3. nums[3] = 5.", kind: "check" },
+
+    { line: [10], low: 3, high: 4, mid: 3,
+      active: "nIdx3", inProgress: ["nIdx2", "nIdx3"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "root = TreeNode(5)" }
+      ],
+      action: "Create TreeNode(5).", kind: "create" },
+
+    { line: [11, 5, 6, 7], low: 3, high: 2, mid: null,
+      active: "nIdx3", inProgress: ["nIdx2", "nIdx3"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "waiting on LEFT" },
+        { id: "f_3_2", label: "solve(3, 2)", sub: "low > high → null" }
+      ],
+      action: "solve(3, mid-1=2). Enter. low > high → return null.", kind: "return" },
+
+    { line: [12], low: 3, high: 4, mid: 3,
+      active: "nIdx3", inProgress: ["nIdx2", "nIdx3"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "recurse RIGHT [4, 4]" }
+      ],
+      action: "Call solve(nums, mid+1=4, 4) for RIGHT.", kind: "call" },
+
+    { line: [5, 6], low: 4, high: 4, mid: null,
+      active: "nIdx3", inProgress: ["nIdx2", "nIdx3"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "waiting on RIGHT" },
+        { id: "f_4_4", label: "solve(4, 4)", sub: "entry" }
+      ],
+      action: "Enter solve(low=4, high=4). Single-element range.", kind: "check" },
+
+    { line: [9], low: 4, high: 4, mid: 4,
+      active: "nIdx3", inProgress: ["nIdx2", "nIdx3"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "waiting on RIGHT" },
+        { id: "f_4_4", label: "solve(4, 4)", sub: "mid = 4" }
+      ],
+      action: "mid = 4 + 0 = 4. nums[4] = 9.", kind: "check" },
+
+    { line: [10], low: 4, high: 4, mid: 4,
+      active: "nIdx4", inProgress: ["nIdx2", "nIdx3", "nIdx4"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "waiting on RIGHT" },
+        { id: "f_4_4", label: "solve(4, 4)", sub: "root = TreeNode(9)" }
+      ],
+      action: "Create TreeNode(9).", kind: "create" },
+
+    { line: [11, 5, 6, 7], low: 4, high: 3, mid: null,
+      active: "nIdx4", inProgress: ["nIdx2", "nIdx3", "nIdx4"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "waiting on RIGHT" },
+        { id: "f_4_4", label: "solve(4, 4)", sub: "waiting on LEFT" },
+        { id: "f_4_3", label: "solve(4, 3)", sub: "low > high → null" }
+      ],
+      action: "solve(4, mid-1=3). Enter. Return null.", kind: "return" },
+
+    { line: [12, 5, 6, 7], low: 5, high: 4, mid: null,
+      active: "nIdx4", inProgress: ["nIdx2", "nIdx3", "nIdx4"], done: ["nIdx1", "nIdx0"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "waiting on RIGHT" },
+        { id: "f_4_4", label: "solve(4, 4)", sub: "waiting on RIGHT" },
+        { id: "f_5_4", label: "solve(5, 4)", sub: "low > high → null" }
+      ],
+      action: "Back in solve(4, 4). solve(mid+1=5, 4). Enter. Return null.", kind: "return" },
+
+    { line: [13], low: 4, high: 4, mid: 4,
+      active: "nIdx4", inProgress: ["nIdx2", "nIdx3"], done: ["nIdx1", "nIdx0", "nIdx4"], edgesSet: ["e_0_1", "e_2_0"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "root.right = TreeNode(9)" }
+      ],
+      action: "solve(4, 4) returns TreeNode(9).", kind: "return" },
+
+    { line: [12], low: 3, high: 4, mid: 3,
+      active: "nIdx3", inProgress: ["nIdx2", "nIdx3"], done: ["nIdx1", "nIdx0", "nIdx4"], edgesSet: ["e_0_1", "e_2_0", "e_3_4"], justWired: "e_3_4",
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_3_4", label: "solve(3, 4)", sub: "root.right = TreeNode(9)" }
+      ],
+      action: "Assign (5).right = TreeNode(9). ★ Edge wired.", kind: "wire" },
+
+    { line: [13], low: 3, high: 4, mid: 3,
+      active: "nIdx3", inProgress: ["nIdx2"], done: ["nIdx1", "nIdx0", "nIdx4", "nIdx3"], edgesSet: ["e_0_1", "e_2_0", "e_3_4"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "root.right = TreeNode(5)" }
+      ],
+      action: "solve(3, 4) returns TreeNode(5).", kind: "return" },
+
+    { line: [12], low: 0, high: 4, mid: 2,
+      active: "nIdx2", inProgress: ["nIdx2"], done: ["nIdx1", "nIdx0", "nIdx4", "nIdx3"], edgesSet: ["e_0_1", "e_2_0", "e_3_4", "e_2_3"], justWired: "e_2_3",
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "root.right = TreeNode(5)" }
+      ],
+      action: "Back in solve(0, 4). Assign (0).right = TreeNode(5). ★ Edge wired.", kind: "wire" },
+
+    { line: [13], low: 0, high: 4, mid: 2,
+      active: "nIdx2", inProgress: [], done: ["nIdx1", "nIdx0", "nIdx4", "nIdx3", "nIdx2"], edgesSet: ["e_0_1", "e_2_0", "e_3_4", "e_2_3"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "sortedArrayToBST(nums)", sub: "return TreeNode(0)" }
+      ],
+      action: "solve(0, 4) returns TreeNode(0). The entire BST is complete.", kind: "return" },
+
+    { line: [2], low: null, high: null, mid: null,
+      active: null, inProgress: [], done: ["nIdx1", "nIdx0", "nIdx4", "nIdx3", "nIdx2"], edgesSet: ["e_0_1", "e_2_0", "e_3_4", "e_2_3"], justWired: null,
+      stack: [],
+      action: "Return root. ★ Done. Height-balanced BST built in O(n) time.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const lowVEl = document.getElementById('lowV');
+  const highVEl = document.getElementById('highV');
+  const midVEl = document.getElementById('midV');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    lowVEl.textContent = s.low !== null ? s.low : '—';
+    highVEl.textContent = s.high !== null ? s.high : '—';
+    midVEl.textContent = s.mid !== null ? s.mid : '—';
+    // Array cells
+    arrCellEls.forEach((cell, i) => {
+      cell.classList.remove('in-range', 'low-marker', 'high-marker', 'mid-marker', 'consumed');
+      if (s.low !== null && s.high !== null && s.low <= s.high && i >= s.low && i <= s.high) {
+        cell.classList.add('in-range');
+      }
+      if (i === s.low && s.low !== null && s.low <= s.high) { cell.classList.add('low-marker'); }
+      if (i === s.high && s.high !== null && s.low <= s.high) { cell.classList.add('high-marker'); }
+      if (i === s.mid && s.mid !== null) { cell.classList.add('mid-marker'); }
+      // Consumed if a node has been created from this index
+      const doneSet = new Set([...s.done, ...s.inProgress]);
+      if (doneSet.has(`nIdx${i}`) && i !== s.mid) { cell.classList.add('consumed'); }
+    });
+    // Tree nodes
+    const createdSet = new Set([...s.inProgress, ...s.done]);
+    const doneSet = new Set(s.done);
+    const progSet = new Set(s.inProgress);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('created', 'active', 'in-progress', 'done');
+      if (createdSet.has(key)) { el.classList.add('created'); }
+      if (key === s.active) { el.classList.add('active'); }
+      else if (doneSet.has(key)) { el.classList.add('done'); }
+      else if (progSet.has(key)) { el.classList.add('in-progress'); }
+    });
+    // Edges
+    const edgeSetS = new Set(s.edgesSet);
+    Object.keys(edgeEls).forEach(id => {
+      const el = edgeEls[id];
+      el.classList.remove('visible', 'just-wired');
+      if (edgeSetS.has(id)) { el.classList.add('visible'); }
+      if (id === s.justWired) { el.classList.add('just-wired'); }
+    });
+    // Call stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

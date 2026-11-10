@@ -48,6 +48,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [100](https://kinny94.github.io/dsa-visualizations/lc100-same-tree.html) | Same Tree | Binary Tree · Parallel recursion |
 | [101](https://kinny94.github.io/dsa-visualizations/lc101-symmetric-tree.html) | Symmetric Tree | Binary Tree · BFS · mirror pair-walk |
 | [257](https://kinny94.github.io/dsa-visualizations/lc257-binary-tree-paths.html) | Binary Tree Paths | Binary Tree · DFS · path accumulator |
+| [108](https://kinny94.github.io/dsa-visualizations/lc108-convert-sorted-array-to-bst.html) | Convert Sorted Array to BST | Binary Tree · Divide & Conquer |
 
 ## Adding a new animation
 
