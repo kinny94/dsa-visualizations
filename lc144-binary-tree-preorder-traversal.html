@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 144 — Binary Tree Preorder Traversal</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.popped .pill-v { color: #e94560; }
+  .pill.top .pill-v { color: #9ad4ff; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 340px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.in-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.in-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.done text.val { fill: #4de88c; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .visit-order {
+    fill: #c89aff;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    font-weight: bold;
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-pop { background: #e94560; color: white; }
+  .kind-push { background: #0f9950; color: white; }
+  .kind-record { background: #4de88c; color: #1a1a2e; }
+  .kind-skip { background: #666; color: white; }
+  .kind-return { background: #666; color: white; }
+  /* ============ STACK (bottom-up) ============ */
+  .stack-wrap {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  .stack-label {
+    display: flex;
+    justify-content: space-between;
+    color: #aaa;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .stack-col {
+    display: flex;
+    flex-direction: column-reverse;   /* bottom-up stack: bottom at bottom */
+    gap: 4px;
+    padding: 6px 8px;
+    background: #0a1a35;
+    border-radius: 3px;
+    min-height: 60px;
+  }
+  .stack-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #ffa500;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #ffd87a;
+    transition: all 0.2s;
+  }
+  .stack-cell.top { border-color: #9ad4ff; background: #0f2a4a; color: #cde8ff; }
+  .stack-cell.just-pushed {
+    background: #0f4a2a;
+    border-color: #4de88c;
+    color: #fff;
+    animation: pushFlash 0.4s ease-out;
+  }
+  @keyframes pushFlash {
+    from { transform: translateY(10px); opacity: 0.3; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .stack-cell.just-popped {
+    background: #4a0f1f;
+    border-color: #ff8ca0;
+    color: #fff;
+    opacity: 0.55;
+  }
+  /* ============ RESULT ============ */
+  .result-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px 8px;
+    background: #0a1a35;
+    border-radius: 3px;
+    min-height: 40px;
+    font-family: 'Monaco', monospace;
+  }
+  .result-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    color: #4de88c;
+    font-weight: bold;
+    border-left: 2px solid #4de88c;
+  }
+  .result-item.new { animation: slideIn 0.4s ease-out; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f4a2a; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-stack { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-top { background: #0f2a4a; border: 2px solid #9ad4ff; }
+  .chip-done { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 144 — Binary Tree Preorder Traversal</h1>
+    <div class="subtitle">Iterative with explicit stack · push RIGHT before LEFT (LIFO preserves root→left→right) · root = [1, 2, 3, 4, 5, null, 6]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code (iterative)</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill popped"><span class="pill-k">popped</span><span class="pill-v" id="poppedV">—</span></span>
+      <span class="pill top"><span class="pill-k">top of stack</span><span class="pill-v" id="topV">—</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Stack (top on top)</div>
+    <div class="stack-wrap">
+      <div class="stack-label"><span>top</span><span>bottom</span></div>
+      <div class="stack-col" id="stackCol"></div>
+    </div>
+    <div class="panel-title" style="margin-top: 14px;">Result</div>
+    <div class="result-list" id="resultList"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>popped this step</div>
+      <div class="legend-item"><div class="chip chip-top"></div>top of stack</div>
+      <div class="legend-item"><div class="chip chip-stack"></div>on stack</div>
+      <div class="legend-item"><div class="chip chip-done"></div>processed (in result)</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Push-right-first trick</div>
+      LIFO means whatever we push LAST pops first. To visit LEFT before RIGHT, push RIGHT first (so it sits deeper) and LEFT second (so it pops next). Universal template for DFS-with-explicit-stack.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public List<Integer> preorderTraversal(TreeNode root) {",
+    "    List<Integer> result = new ArrayList<>();",
+    "    if (root == null) {",
+    "        return result;",
+    "    }",
+    "    Deque<TreeNode> stack = new ArrayDeque<>();",
+    "    stack.push(root);",
+    "    while (!stack.isEmpty()) {",
+    "        TreeNode node = stack.pop();",
+    "        result.add(node.val);",
+    "        if (node.right != null) {",
+    "            stack.push(node.right);",
+    "        }",
+    "        if (node.left != null) {",
+    "            stack.push(node.left);",
+    "        }",
+    "    }",
+    "    return result;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // [1, 2, 3, 4, 5, null, 6]
+  //        1
+  //       / \
+  //      2   3
+  //     /\    \
+  //    4  5    6
+  const nodes = {
+    n1: { x: 320, y:  50, r: 22, val: '1' },
+    n2: { x: 200, y: 140, r: 22, val: '2' },
+    n3: { x: 440, y: 140, r: 22, val: '3' },
+    n4: { x: 130, y: 230, r: 22, val: '4' },
+    n5: { x: 270, y: 230, r: 22, val: '5' },
+    n6: { x: 510, y: 230, r: 22, val: '6' }
+  };
+  const edges = [
+    ['n1', 'n2'], ['n1', 'n3'],
+    ['n2', 'n4'], ['n2', 'n5'],
+    ['n3', 'n6']
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  edges.forEach(([from, to]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+  });
+  const nodeEls = {};
+  const orderLabelEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    // Visit-order label under node
+    const ol = document.createElementNS(SVGNS, 'text');
+    ol.setAttribute('x', n.x); ol.setAttribute('y', n.y + n.r + 12);
+    ol.setAttribute('class', 'visit-order');
+    ol.textContent = '';
+    svg.appendChild(ol);
+    orderLabelEls[key] = ol;
+  });
+
+  // ============ STEP DATA ============
+  // stack: array of {k} where k is a node id; top of stack is LAST element
+  // justPopped: node id popped this step
+  // justPushed: node id pushed this step
+  // result: array of vals recorded so far
+  // visitOrder: map of node id to 1-indexed order in result (for the label under each node)
+  const steps = [
+    { line: [2, 3, 6, 7], popped: null, top: "n1",
+      stack: [{k:"n1"}], justPopped: null, justPushed: "n1", active: null, done: [],
+      result: [], visitOrder: {},
+      action: "Init result = []. root != null → skip early return. Create ArrayDeque stack. push(root). stack = [1].", kind: "call" },
+
+    { line: [8, 9], popped: "n1", top: null,
+      stack: [], justPopped: "n1", justPushed: null, active: "n1", done: [],
+      result: [], visitOrder: {},
+      action: "while check: stack not empty. node = stack.pop() → node 1.", kind: "pop" },
+
+    { line: [10], popped: "n1", top: null,
+      stack: [], justPopped: null, justPushed: null, active: "n1", done: [],
+      result: [1], visitOrder: {"n1": 1},
+      action: "result.add(node.val) → result = [1]. ★ Node 1 recorded in preorder position 1.", kind: "record" },
+
+    { line: [11, 12], popped: "n1", top: "n3",
+      stack: [{k:"n3"}], justPopped: null, justPushed: "n3", active: null, done: ["n1"],
+      result: [1], visitOrder: {"n1": 1},
+      action: "node.right = 3 ≠ null → push(3). stack = [3]. ★ Right pushed FIRST (will pop AFTER left).", kind: "push" },
+
+    { line: [14, 15], popped: "n1", top: "n2",
+      stack: [{k:"n3"}, {k:"n2"}], justPopped: null, justPushed: "n2", active: null, done: ["n1"],
+      result: [1], visitOrder: {"n1": 1},
+      action: "node.left = 2 ≠ null → push(2). stack = [3, 2]. ★ Left pushed SECOND (will pop next).", kind: "push" },
+
+    { line: [8, 9], popped: "n2", top: "n3",
+      stack: [{k:"n3"}], justPopped: "n2", justPushed: null, active: "n2", done: ["n1"],
+      result: [1], visitOrder: {"n1": 1},
+      action: "while check: not empty. node = stack.pop() → node 2.", kind: "pop" },
+
+    { line: [10], popped: "n2", top: "n3",
+      stack: [{k:"n3"}], justPopped: null, justPushed: null, active: "n2", done: ["n1"],
+      result: [1, 2], visitOrder: {"n1": 1, "n2": 2},
+      action: "result.add(2) → result = [1, 2]. ★ Node 2 recorded in position 2.", kind: "record" },
+
+    { line: [11, 12], popped: "n2", top: "n5",
+      stack: [{k:"n3"}, {k:"n5"}], justPopped: null, justPushed: "n5", active: null, done: ["n1", "n2"],
+      result: [1, 2], visitOrder: {"n1": 1, "n2": 2},
+      action: "node.right = 5 ≠ null → push(5). stack = [3, 5].", kind: "push" },
+
+    { line: [14, 15], popped: "n2", top: "n4",
+      stack: [{k:"n3"}, {k:"n5"}, {k:"n4"}], justPopped: null, justPushed: "n4", active: null, done: ["n1", "n2"],
+      result: [1, 2], visitOrder: {"n1": 1, "n2": 2},
+      action: "node.left = 4 ≠ null → push(4). stack = [3, 5, 4].", kind: "push" },
+
+    { line: [8, 9], popped: "n4", top: "n5",
+      stack: [{k:"n3"}, {k:"n5"}], justPopped: "n4", justPushed: null, active: "n4", done: ["n1", "n2"],
+      result: [1, 2], visitOrder: {"n1": 1, "n2": 2},
+      action: "while check: not empty. node = stack.pop() → node 4.", kind: "pop" },
+
+    { line: [10], popped: "n4", top: "n5",
+      stack: [{k:"n3"}, {k:"n5"}], justPopped: null, justPushed: null, active: "n4", done: ["n1", "n2"],
+      result: [1, 2, 4], visitOrder: {"n1": 1, "n2": 2, "n4": 3},
+      action: "result.add(4) → result = [1, 2, 4]. ★ Node 4 in position 3.", kind: "record" },
+
+    { line: [11], popped: "n4", top: "n5",
+      stack: [{k:"n3"}, {k:"n5"}], justPopped: null, justPushed: null, active: "n4", done: ["n1", "n2", "n4"],
+      result: [1, 2, 4], visitOrder: {"n1": 1, "n2": 2, "n4": 3},
+      action: "node.right = null → skip push.", kind: "skip" },
+
+    { line: [14], popped: "n4", top: "n5",
+      stack: [{k:"n3"}, {k:"n5"}], justPopped: null, justPushed: null, active: "n4", done: ["n1", "n2", "n4"],
+      result: [1, 2, 4], visitOrder: {"n1": 1, "n2": 2, "n4": 3},
+      action: "node.left = null → skip push.", kind: "skip" },
+
+    { line: [8, 9], popped: "n5", top: "n3",
+      stack: [{k:"n3"}], justPopped: "n5", justPushed: null, active: "n5", done: ["n1", "n2", "n4"],
+      result: [1, 2, 4], visitOrder: {"n1": 1, "n2": 2, "n4": 3},
+      action: "while check: not empty. node = stack.pop() → node 5.", kind: "pop" },
+
+    { line: [10], popped: "n5", top: "n3",
+      stack: [{k:"n3"}], justPopped: null, justPushed: null, active: "n5", done: ["n1", "n2", "n4"],
+      result: [1, 2, 4, 5], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4},
+      action: "result.add(5) → result = [1, 2, 4, 5]. ★ Node 5 in position 4.", kind: "record" },
+
+    { line: [11], popped: "n5", top: "n3",
+      stack: [{k:"n3"}], justPopped: null, justPushed: null, active: "n5", done: ["n1", "n2", "n4", "n5"],
+      result: [1, 2, 4, 5], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4},
+      action: "node.right = null → skip push.", kind: "skip" },
+
+    { line: [14], popped: "n5", top: "n3",
+      stack: [{k:"n3"}], justPopped: null, justPushed: null, active: "n5", done: ["n1", "n2", "n4", "n5"],
+      result: [1, 2, 4, 5], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4},
+      action: "node.left = null → skip push.", kind: "skip" },
+
+    { line: [8, 9], popped: "n3", top: null,
+      stack: [], justPopped: "n3", justPushed: null, active: "n3", done: ["n1", "n2", "n4", "n5"],
+      result: [1, 2, 4, 5], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4},
+      action: "while check: not empty. node = stack.pop() → node 3. (Finally — the subtree we deferred all the way back when we popped node 1.)", kind: "pop" },
+
+    { line: [10], popped: "n3", top: null,
+      stack: [], justPopped: null, justPushed: null, active: "n3", done: ["n1", "n2", "n4", "n5"],
+      result: [1, 2, 4, 5, 3], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4, "n3": 5},
+      action: "result.add(3) → result = [1, 2, 4, 5, 3]. ★ Node 3 in position 5.", kind: "record" },
+
+    { line: [11, 12], popped: "n3", top: "n6",
+      stack: [{k:"n6"}], justPopped: null, justPushed: "n6", active: null, done: ["n1", "n2", "n4", "n5", "n3"],
+      result: [1, 2, 4, 5, 3], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4, "n3": 5},
+      action: "node.right = 6 ≠ null → push(6). stack = [6].", kind: "push" },
+
+    { line: [14], popped: "n3", top: "n6",
+      stack: [{k:"n6"}], justPopped: null, justPushed: null, active: "n3", done: ["n1", "n2", "n4", "n5", "n3"],
+      result: [1, 2, 4, 5, 3], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4, "n3": 5},
+      action: "node.left = null → skip push.", kind: "skip" },
+
+    { line: [8, 9], popped: "n6", top: null,
+      stack: [], justPopped: "n6", justPushed: null, active: "n6", done: ["n1", "n2", "n4", "n5", "n3"],
+      result: [1, 2, 4, 5, 3], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4, "n3": 5},
+      action: "while check: not empty. node = stack.pop() → node 6.", kind: "pop" },
+
+    { line: [10], popped: "n6", top: null,
+      stack: [], justPopped: null, justPushed: null, active: "n6", done: ["n1", "n2", "n4", "n5", "n3"],
+      result: [1, 2, 4, 5, 3, 6], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4, "n3": 5, "n6": 6},
+      action: "result.add(6) → result = [1, 2, 4, 5, 3, 6]. ★ Node 6 in position 6.", kind: "record" },
+
+    { line: [11], popped: "n6", top: null,
+      stack: [], justPopped: null, justPushed: null, active: "n6", done: ["n1", "n2", "n4", "n5", "n3", "n6"],
+      result: [1, 2, 4, 5, 3, 6], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4, "n3": 5, "n6": 6},
+      action: "node.right = null → skip push.", kind: "skip" },
+
+    { line: [14], popped: "n6", top: null,
+      stack: [], justPopped: null, justPushed: null, active: "n6", done: ["n1", "n2", "n4", "n5", "n3", "n6"],
+      result: [1, 2, 4, 5, 3, 6], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4, "n3": 5, "n6": 6},
+      action: "node.left = null → skip push.", kind: "skip" },
+
+    { line: [8], popped: null, top: null,
+      stack: [], justPopped: null, justPushed: null, active: null, done: ["n1", "n2", "n4", "n5", "n3", "n6"],
+      result: [1, 2, 4, 5, 3, 6], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4, "n3": 5, "n6": 6},
+      action: "while check: stack empty → exit loop.", kind: "call" },
+
+    { line: [18], popped: null, top: null,
+      stack: [], justPopped: null, justPushed: null, active: null, done: ["n1", "n2", "n4", "n5", "n3", "n6"],
+      result: [1, 2, 4, 5, 3, 6], visitOrder: {"n1": 1, "n2": 2, "n4": 3, "n5": 4, "n3": 5, "n6": 6},
+      action: "Return result = [1, 2, 4, 5, 3, 6]. ★ Preorder complete.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const poppedVEl = document.getElementById('poppedV');
+  const topVEl = document.getElementById('topV');
+  const stackColEl = document.getElementById('stackCol');
+  const resultListEl = document.getElementById('resultList');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    poppedVEl.textContent = s.popped ? nodes[s.popped].val : '—';
+    topVEl.textContent = s.top ? nodes[s.top].val : '—';
+    // Tree nodes
+    const stackKeys = new Set(s.stack.map(c => c.k));
+    const doneSet = new Set(s.done);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'in-stack', 'done');
+      if ((s.active === key) || (s.justPopped === key)) {
+        el.classList.add('active');
+      } else if (stackKeys.has(key)) {
+        el.classList.add('in-stack');
+      } else if (doneSet.has(key)) {
+        el.classList.add('done');
+      }
+      // Visit-order label
+      orderLabelEls[key].textContent = s.visitOrder[key] ? `#${s.visitOrder[key]}` : '';
+    });
+    // Stack panel (column-reverse CSS flips the order for display)
+    stackColEl.innerHTML = '';
+    // The data array's last element is the top; column-reverse puts first child at bottom visually, so append in order [bottom..top]
+    s.stack.forEach((c, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'stack-cell';
+      if (i === s.stack.length - 1) { cell.classList.add('top'); }
+      if (c.k === s.justPushed) { cell.classList.add('just-pushed'); }
+      cell.textContent = nodes[c.k].val;
+      stackColEl.appendChild(cell);
+    });
+    // If a just-popped cell exists, render it as a floating "about to drop" cell at the top
+    if (s.justPopped) {
+      const cell = document.createElement('div');
+      cell.className = 'stack-cell just-popped';
+      cell.textContent = nodes[s.justPopped].val;
+      stackColEl.appendChild(cell);
+    }
+    if (s.stack.length === 0 && !s.justPopped) {
+      const empty = document.createElement('div');
+      empty.style.color = '#6a7a9a'; empty.style.fontStyle = 'italic'; empty.style.fontSize = '11px';
+      empty.style.textAlign = 'center';
+      empty.textContent = '[empty]';
+      stackColEl.appendChild(empty);
+    }
+    // Result
+    resultListEl.innerHTML = '';
+    if (s.result.length === 0) {
+      const empty = document.createElement('span');
+      empty.style.color = '#6a7a9a'; empty.style.fontStyle = 'italic'; empty.style.fontSize = '11px';
+      empty.textContent = '[]';
+      resultListEl.appendChild(empty);
+    } else {
+      s.result.forEach((v, i) => {
+        const item = document.createElement('span');
+        item.className = 'result-item';
+        if (i >= prevResultLen) { item.classList.add('new'); }
+        item.textContent = v;
+        resultListEl.appendChild(item);
+      });
+    }
+    prevResultLen = s.result.length;
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
