@@ -34,6 +34,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [980](https://kinny94.github.io/dsa-visualizations/lc980-unique-paths-iii.html) | Unique Paths III | Recursion · Backtracking |
 | [301](https://kinny94.github.io/dsa-visualizations/lc301-remove-invalid-parentheses.html) | Remove Invalid Parentheses | Recursion · Backtracking |
 | [37](https://kinny94.github.io/dsa-visualizations/lc37-sudoku-solver.html) | Sudoku Solver | Recursion · Backtracking |
+| [104](https://kinny94.github.io/dsa-visualizations/lc104-maximum-depth-of-binary-tree.html) | Maximum Depth of Binary Tree | Binary Tree · Recursion |
 
 ## Adding a new animation
 

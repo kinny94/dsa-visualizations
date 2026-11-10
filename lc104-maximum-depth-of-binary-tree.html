@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 104 — Maximum Depth of Binary Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 300px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #9ad4ff; }
+  .pill.left .pill-v { color: #ffd87a; }
+  .pill.right .pill-v { color: #ff8ca0; }
+  .pill.ret .pill-v { color: #4de88c; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 340px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #fff; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.done text.val { fill: #4de88c; }
+  .node.null circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 10; }
+  .node.null text.val { fill: #8a6a6a; font-size: 10px; }
+  .node.null.active circle { fill: #4a2020; stroke: #ff8ca0; }
+  .node.null.done circle { fill: #1a3a2a; stroke: #4de88c; stroke-dasharray: 3,3; }
+  .depth-label {
+    fill: #4de88c;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+  }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.on-stack { stroke: #ffa500; stroke-width: 3; }
+  .edge.done { stroke: #4de88c; stroke-width: 2.5; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-return { background: #4de88c; color: #1a1a2e; }
+  .kind-record { background: #0f9950; color: white; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 6px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-stack { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-done { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-null { background: #2a1a1a; border: 2px dashed #5a3a3a; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 104 — Maximum Depth of Binary Tree</h1>
+    <div class="subtitle">Post-order recursion: 1 + max(maxDepth(left), maxDepth(right)) · null → 0 · root = [3, 9, 20, null, null, 15, 7]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill left"><span class="pill-k">left</span><span class="pill-v" id="leftV">—</span></span>
+      <span class="pill right"><span class="pill-k">right</span><span class="pill-v" id="rightV">—</span></span>
+      <span class="pill ret"><span class="pill-k">return</span><span class="pill-v" id="retV">—</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-stack"></div>on call stack (waiting)</div>
+      <div class="legend-item"><div class="chip chip-done"></div>returned (depth labelled)</div>
+      <div class="legend-item"><div class="chip chip-null"></div>null child → 0</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Post-order shape</div>
+      Each parent waits for BOTH children to return before computing its own depth. Watch the stack grow down-left first (9, null, null), unwind, then grow down-right (20, 15, ...).
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public int maxDepth(TreeNode root) {",
+    "    if (root == null) {",
+    "        return 0;",
+    "    }",
+    "    int left = maxDepth(root.left);",
+    "    int right = maxDepth(root.right);",
+    "    return 1 + Math.max(left, right);",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // Layout: root (3) at top-centre; children fan out.
+  const nodes = {
+    n3:  { x: 320, y:  40, r: 22, val: '3',  isNull: false },
+    n9:  { x: 160, y: 130, r: 22, val: '9',  isNull: false },
+    n20: { x: 480, y: 130, r: 22, val: '20', isNull: false },
+    n15: { x: 400, y: 220, r: 22, val: '15', isNull: false },
+    n7:  { x: 560, y: 220, r: 22, val: '7',  isNull: false },
+    // Null leaves
+    nullN9L:  { x: 110, y: 210, r: 12, val: 'null', isNull: true },
+    nullN9R:  { x: 210, y: 210, r: 12, val: 'null', isNull: true },
+    nullN15L: { x: 360, y: 300, r: 12, val: 'null', isNull: true },
+    nullN15R: { x: 440, y: 300, r: 12, val: 'null', isNull: true },
+    nullN7L:  { x: 520, y: 300, r: 12, val: 'null', isNull: true },
+    nullN7R:  { x: 600, y: 300, r: 12, val: 'null', isNull: true }
+  };
+  const edges = [
+    ['n3', 'n9'],
+    ['n3', 'n20'],
+    ['n20', 'n15'],
+    ['n20', 'n7'],
+    ['n9', 'nullN9L'],
+    ['n9', 'nullN9R'],
+    ['n15', 'nullN15L'],
+    ['n15', 'nullN15R'],
+    ['n7', 'nullN7L'],
+    ['n7', 'nullN7R']
+  ];
+
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(([from, to]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+  });
+  const nodeEls = {};
+  const depthEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.isNull ? ' null' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x);
+    circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+
+    // Depth label (beside / below node)
+    const d = document.createElementNS(SVGNS, 'text');
+    d.setAttribute('x', n.x + n.r + 12);
+    d.setAttribute('y', n.y + 4);
+    d.setAttribute('class', 'depth-label');
+    d.textContent = '';
+    svg.appendChild(d);
+    depthEls[key] = d;
+  });
+
+  // ============ STEP DATA ============
+  // Each step: { line, active, stack, computed, left, right, ret, action, kind }
+  const steps = [
+    { line: [1, 2], active: "n3", stack: [{ id: "n3", sub: "root=3, waiting" }],
+      computed: {}, left: null, right: null, ret: null,
+      action: "Enter maxDepth(3). root != null — proceed to recurse on children.", kind: "call" },
+
+    { line: [5], active: "n3", stack: [{ id: "n3", sub: "root=3, calling L" }],
+      computed: {}, left: null, right: null, ret: null,
+      action: "Line 5: call maxDepth(root.left) → maxDepth(node 9).", kind: "call" },
+
+    { line: [1, 2], active: "n9", stack: [
+        { id: "n3", sub: "waiting on left" },
+        { id: "n9", sub: "root=9, waiting" }
+      ], computed: {}, left: null, right: null, ret: null,
+      action: "Enter maxDepth(9). root != null. Proceed to its left child.", kind: "call" },
+
+    { line: [5], active: "nullN9L", stack: [
+        { id: "n3", sub: "waiting on left" },
+        { id: "n9", sub: "root=9, calling L" }
+      ], computed: {}, left: null, right: null, ret: null,
+      action: "Line 5: call maxDepth(9.left) → maxDepth(null).", kind: "call" },
+
+    { line: [2, 3], active: "nullN9L", stack: [
+        { id: "n3", sub: "waiting on left" },
+        { id: "n9", sub: "root=9, calling L" }
+      ], computed: { nullN9L: 0 }, left: null, right: null, ret: 0,
+      action: "maxDepth(null): line 2 root==null → line 3 return 0.", kind: "return" },
+
+    { line: [6], active: "n9", stack: [
+        { id: "n3", sub: "waiting on left" },
+        { id: "n9", sub: "root=9, left=0, calling R" }
+      ], computed: { nullN9L: 0 }, left: 0, right: null, ret: null,
+      action: "Back in maxDepth(9). left = 0. Line 6: call maxDepth(9.right) → maxDepth(null).", kind: "call" },
+
+    { line: [2, 3], active: "nullN9R", stack: [
+        { id: "n3", sub: "waiting on left" },
+        { id: "n9", sub: "root=9, left=0, calling R" }
+      ], computed: { nullN9L: 0, nullN9R: 0 }, left: 0, right: null, ret: 0,
+      action: "maxDepth(null) → return 0.", kind: "return" },
+
+    { line: [7], active: "n9", stack: [
+        { id: "n3", sub: "waiting on left" },
+        { id: "n9", sub: "root=9, left=0, right=0" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1 }, left: 0, right: 0, ret: 1,
+      action: "Back in maxDepth(9). right = 0. Line 7: return 1 + max(0, 0) = 1.", kind: "return" },
+
+    { line: [6], active: "n3", stack: [
+        { id: "n3", sub: "root=3, left=1, calling R" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1 }, left: 1, right: null, ret: null,
+      action: "Back in maxDepth(3). left = 1. Line 6: call maxDepth(3.right) → maxDepth(node 20).", kind: "call" },
+
+    { line: [1, 2], active: "n20", stack: [
+        { id: "n3", sub: "root=3, left=1, waiting on right" },
+        { id: "n20", sub: "root=20, waiting" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1 }, left: null, right: null, ret: null,
+      action: "Enter maxDepth(20). root != null.", kind: "call" },
+
+    { line: [5], active: "n15", stack: [
+        { id: "n3", sub: "waiting on right" },
+        { id: "n20", sub: "root=20, calling L" },
+        { id: "n15", sub: "root=15, waiting" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1 }, left: null, right: null, ret: null,
+      action: "maxDepth(20) line 5: call maxDepth(20.left) → maxDepth(node 15). Enter 15, root != null.", kind: "call" },
+
+    { line: [2, 3], active: "nullN15L", stack: [
+        { id: "n3", sub: "waiting on right" },
+        { id: "n20", sub: "root=20, calling L" },
+        { id: "n15", sub: "root=15, calling L" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1, nullN15L: 0 }, left: null, right: null, ret: 0,
+      action: "maxDepth(15) line 5 calls maxDepth(null) → return 0.", kind: "return" },
+
+    { line: [2, 3], active: "nullN15R", stack: [
+        { id: "n3", sub: "waiting on right" },
+        { id: "n20", sub: "root=20, calling L" },
+        { id: "n15", sub: "root=15, left=0, calling R" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1, nullN15L: 0, nullN15R: 0 }, left: 0, right: null, ret: 0,
+      action: "maxDepth(15) line 6 calls maxDepth(null) → return 0.", kind: "return" },
+
+    { line: [7], active: "n15", stack: [
+        { id: "n3", sub: "waiting on right" },
+        { id: "n20", sub: "root=20, calling L" },
+        { id: "n15", sub: "root=15, left=0, right=0" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1, nullN15L: 0, nullN15R: 0, n15: 1 },
+      left: 0, right: 0, ret: 1,
+      action: "maxDepth(15) line 7: return 1 + max(0, 0) = 1.", kind: "return" },
+
+    { line: [6], active: "n20", stack: [
+        { id: "n3", sub: "waiting on right" },
+        { id: "n20", sub: "root=20, left=1, calling R" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1, nullN15L: 0, nullN15R: 0, n15: 1 },
+      left: 1, right: null, ret: null,
+      action: "Back in maxDepth(20). left = 1. Line 6: call maxDepth(20.right) → maxDepth(node 7).", kind: "call" },
+
+    { line: [1, 2], active: "n7", stack: [
+        { id: "n3", sub: "waiting on right" },
+        { id: "n20", sub: "root=20, left=1, waiting on right" },
+        { id: "n7", sub: "root=7, waiting" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1, nullN15L: 0, nullN15R: 0, n15: 1 },
+      left: null, right: null, ret: null,
+      action: "Enter maxDepth(7). root != null.", kind: "call" },
+
+    { line: [2, 3], active: "nullN7L", stack: [
+        { id: "n3", sub: "waiting on right" },
+        { id: "n20", sub: "left=1, waiting" },
+        { id: "n7", sub: "root=7, calling L" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1, nullN15L: 0, nullN15R: 0, n15: 1, nullN7L: 0 },
+      left: null, right: null, ret: 0,
+      action: "maxDepth(7) line 5 calls maxDepth(null) → return 0.", kind: "return" },
+
+    { line: [2, 3], active: "nullN7R", stack: [
+        { id: "n3", sub: "waiting on right" },
+        { id: "n20", sub: "left=1, waiting" },
+        { id: "n7", sub: "root=7, left=0, calling R" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1, nullN15L: 0, nullN15R: 0, n15: 1, nullN7L: 0, nullN7R: 0 },
+      left: 0, right: null, ret: 0,
+      action: "maxDepth(7) line 6 calls maxDepth(null) → return 0.", kind: "return" },
+
+    { line: [7], active: "n7", stack: [
+        { id: "n3", sub: "waiting on right" },
+        { id: "n20", sub: "left=1, waiting" },
+        { id: "n7", sub: "root=7, left=0, right=0" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1, nullN15L: 0, nullN15R: 0, n15: 1, nullN7L: 0, nullN7R: 0, n7: 1 },
+      left: 0, right: 0, ret: 1,
+      action: "maxDepth(7) line 7: return 1 + max(0, 0) = 1.", kind: "return" },
+
+    { line: [7], active: "n20", stack: [
+        { id: "n3", sub: "waiting on right" },
+        { id: "n20", sub: "root=20, left=1, right=1" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1, nullN15L: 0, nullN15R: 0, n15: 1, nullN7L: 0, nullN7R: 0, n7: 1, n20: 2 },
+      left: 1, right: 1, ret: 2,
+      action: "Back in maxDepth(20). right = 1. Line 7: return 1 + max(1, 1) = 2.", kind: "return" },
+
+    { line: [7], active: "n3", stack: [
+        { id: "n3", sub: "root=3, left=1, right=2" }
+      ], computed: { nullN9L: 0, nullN9R: 0, n9: 1, nullN15L: 0, nullN15R: 0, n15: 1, nullN7L: 0, nullN7R: 0, n7: 1, n20: 2, n3: 3 },
+      left: 1, right: 2, ret: 3,
+      action: "Back in maxDepth(3). right = 2. Line 7: return 1 + max(1, 2) = 3. ★ Final answer.", kind: "record" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const leftVEl = document.getElementById('leftV');
+  const rightVEl = document.getElementById('rightV');
+  const retVEl = document.getElementById('retV');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    // Code
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    const activeNode = nodes[s.active];
+    nodeVEl.textContent = activeNode ? (activeNode.isNull ? 'null' : activeNode.val) : '—';
+    leftVEl.textContent = s.left !== null && s.left !== undefined ? s.left : '—';
+    rightVEl.textContent = s.right !== null && s.right !== undefined ? s.right : '—';
+    retVEl.textContent = s.ret !== null && s.ret !== undefined ? s.ret : '—';
+    // Tree nodes
+    const stackIds = new Set(s.stack.map(f => f.id));
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-stack', 'done');
+      if (key === s.active) { el.classList.add('active'); }
+      else if (stackIds.has(key)) { el.classList.add('on-stack'); }
+      else if (s.computed[key] !== undefined) { el.classList.add('done'); }
+      // Depth label
+      depthEls[key].textContent = s.computed[key] !== undefined ? `d=${s.computed[key]}` : '';
+    });
+    // Edges
+    edges.forEach(([from, to]) => {
+      const e = edgeEls[`${from}-${to}`];
+      e.classList.remove('on-stack', 'done');
+      const fromOnStack = stackIds.has(from) || from === s.active;
+      const toOnStack = stackIds.has(to) || to === s.active;
+      if (fromOnStack && toOnStack) {
+        e.classList.add('on-stack');
+      } else if (s.computed[from] !== undefined && s.computed[to] !== undefined) {
+        e.classList.add('done');
+      }
+    });
+    // Call stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const nodeVal = nodes[frame.id] ? (nodes[frame.id].isNull ? 'null' : nodes[frame.id].val) : frame.id;
+      const label = document.createElement('div');
+      label.textContent = `maxDepth(${nodeVal})`;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
