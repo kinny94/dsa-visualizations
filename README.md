@@ -50,6 +50,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [257](https://kinny94.github.io/dsa-visualizations/lc257-binary-tree-paths.html) | Binary Tree Paths | Binary Tree · DFS · path accumulator |
 | [108](https://kinny94.github.io/dsa-visualizations/lc108-convert-sorted-array-to-bst.html) | Convert Sorted Array to BST | Binary Tree · Divide & Conquer |
 | [222](https://kinny94.github.io/dsa-visualizations/lc222-count-complete-tree-nodes.html) | Count Complete Tree Nodes | Binary Tree · Binary-search-on-depth |
+| [404](https://kinny94.github.io/dsa-visualizations/lc404-sum-of-left-leaves.html) | Sum of Left Leaves | Binary Tree · BFS · check-at-parent |
 
 ## Adding a new animation
 
