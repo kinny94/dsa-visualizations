@@ -43,6 +43,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [662](https://kinny94.github.io/dsa-visualizations/lc662-maximum-width-of-binary-tree.html) | Maximum Width of Binary Tree | Binary Tree · BFS · heap indexing |
 | [314](https://kinny94.github.io/dsa-visualizations/lc314-binary-tree-vertical-order-traversal.html) | Binary Tree Vertical Order Traversal | Binary Tree · BFS · column indexing |
 | [117](https://kinny94.github.io/dsa-visualizations/lc117-populating-next-right-pointers-ii.html) | Populating Next Right Pointers in Each Node II | Binary Tree · O(1) threading · dummy sentinel |
+| [958](https://kinny94.github.io/dsa-visualizations/lc958-check-completeness-of-binary-tree.html) | Check Completeness of a Binary Tree | Binary Tree · BFS · null sentinel |
 
 ## Adding a new animation
 
