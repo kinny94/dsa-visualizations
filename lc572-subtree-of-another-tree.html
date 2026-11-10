@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 572 — Subtree of Another Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.p .pill-v { color: #9ad4ff; }
+  .pill.q .pill-v { color: #ffd87a; }
+  .pill.verdict .pill-v { color: #4de88c; }
+  .pill.verdict.fail .pill-v { color: #ff8ca0; }
+  .trees-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 280px; }
+  .tree-label {
+    fill: #aaa;
+    font-size: 12px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    font-weight: bold;
+  }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.match-ok circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.match-ok text.val { fill: #4de88c; }
+  .node.outer-walker circle { stroke: #ffa500; stroke-width: 4; fill: #4a3010; filter: drop-shadow(0 0 4px rgba(255, 165, 0, 0.6)); }
+  .node.outer-walker text.val { fill: #fff; }
+  .node.mismatch circle { stroke: #ff5570; stroke-width: 4; fill: #4a0f1f; }
+  .node.mismatch text.val { fill: #ff8ca0; }
+  .node.null-ghost circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 10; }
+  .node.null-ghost text.val { fill: #8a6a6a; font-size: 10px; }
+  .node.null-ghost.active circle { stroke: #9ad4ff; }
+  .node.null-ghost.match-ok circle { stroke: #4de88c; fill: #1a3a2a; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.null { stroke-dasharray: 3,3; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #e94560; color: white; }
+  .kind-return { background: #4de88c; color: #1a1a2e; }
+  .kind-fail { background: #ff5570; color: white; }
+  .kind-skip { background: #666; color: white; }
+  /* Call stack panel */
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-stack { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-match { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-mis { background: #4a0f1f; border: 2px solid #ff5570; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 572 — Subtree of Another Tree</h1>
+    <div class="subtitle">Outer DFS over main tree × inner isSameTree at every node · root = [3, 4, 5, 1, 2], subRoot = [4, 1, 2]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill p"><span class="pill-k">outer node</span><span class="pill-v" id="outerV">—</span></span>
+      <span class="pill q"><span class="pill-k">inner probe</span><span class="pill-v" id="probeV">—</span></span>
+      <span class="pill verdict" id="verdictPill"><span class="pill-k">verdict</span><span class="pill-v" id="verdictV">—</span></span>
+    </div>
+    <div class="trees-wrap">
+      <svg id="trees" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-stack"></div>on call stack (waiting)</div>
+      <div class="legend-item"><div class="chip chip-match"></div>frame returned true</div>
+      <div class="legend-item"><div class="chip chip-mis"></div>mismatch (returned false)</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Short-circuit</div>
+      <code>isSameTree(L) && isSameTree(R)</code> is left-to-right: if L returns false, R is never called. Any mismatch anywhere propagates up and skips the rest of the walk.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public boolean isSubtree(TreeNode root, TreeNode subRoot) {",
+    "    if (root == null) {",
+    "        return false;",
+    "    }",
+    "    if (isSameTree(root, subRoot)) {",
+    "        return true;",
+    "    }",
+    "    return isSubtree(root.left, subRoot)",
+    "        || isSubtree(root.right, subRoot);",
+    "}",
+    "",
+    "private boolean isSameTree(TreeNode p, TreeNode q) {",
+    "    if (p == null && q == null) {",
+    "        return true;",
+    "    }",
+    "    if (p == null || q == null) {",
+    "        return false;",
+    "    }",
+    "    if (p.val != q.val) {",
+    "        return false;",
+    "    }",
+    "    return isSameTree(p.left, q.left)",
+    "        && isSameTree(p.right, q.right);",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TWO TREES ============
+  // p = [1, 2, 3], q = [1, 2, 4]
+  //   P:        Q:
+  //    1          1
+  //   / \        / \
+  //  2   3      2   4
+  const nodes = {
+    // main tree (left half)
+    m3:    { x: 160, y:  50, r: 22, val: '3', tree: 'main' },
+    m4:    { x:  80, y: 140, r: 22, val: '4', tree: 'main' },
+    m5:    { x: 240, y: 140, r: 22, val: '5', tree: 'main' },
+    m1:    { x:  40, y: 230, r: 22, val: '1', tree: 'main' },
+    m2:    { x: 120, y: 230, r: 22, val: '2', tree: 'main' },
+    // subRoot tree (right half)
+    s4:    { x: 460, y:  80, r: 22, val: '4', tree: 'sub' },
+    s1:    { x: 410, y: 170, r: 22, val: '1', tree: 'sub' },
+    s2:    { x: 510, y: 170, r: 22, val: '2', tree: 'sub' },
+    // null ghosts for leaves (for visual clarity)
+    m1L: { x:  20, y: 290, r: 8, val: 'null', tree: 'main', isNull: true },
+    m1R: { x:  60, y: 290, r: 8, val: 'null', tree: 'main', isNull: true },
+    m2L: { x: 100, y: 290, r: 8, val: 'null', tree: 'main', isNull: true },
+    m2R: { x: 140, y: 290, r: 8, val: 'null', tree: 'main', isNull: true },
+    m5L: { x: 220, y: 230, r: 8, val: 'null', tree: 'main', isNull: true },
+    m5R: { x: 260, y: 230, r: 8, val: 'null', tree: 'main', isNull: true },
+    s1L: { x: 390, y: 240, r: 8, val: 'null', tree: 'sub', isNull: true },
+    s1R: { x: 430, y: 240, r: 8, val: 'null', tree: 'sub', isNull: true },
+    s2L: { x: 490, y: 240, r: 8, val: 'null', tree: 'sub', isNull: true },
+    s2R: { x: 530, y: 240, r: 8, val: 'null', tree: 'sub', isNull: true }
+  };
+  const edges = [
+    { from: 'm3', to: 'm4' }, { from: 'm3', to: 'm5' },
+    { from: 'm4', to: 'm1' }, { from: 'm4', to: 'm2' },
+    { from: 'm5', to: 'm5L', isNull: true }, { from: 'm5', to: 'm5R', isNull: true },
+    { from: 'm1', to: 'm1L', isNull: true }, { from: 'm1', to: 'm1R', isNull: true },
+    { from: 'm2', to: 'm2L', isNull: true }, { from: 'm2', to: 'm2R', isNull: true },
+    { from: 's4', to: 's1' }, { from: 's4', to: 's2' },
+    { from: 's1', to: 's1L', isNull: true }, { from: 's1', to: 's1R', isNull: true },
+    { from: 's2', to: 's2L', isNull: true }, { from: 's2', to: 's2R', isNull: true }
+  ];
+
+  const svg = document.getElementById('trees');
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  // Tree labels
+  const pLbl = document.createElementNS(SVGNS, 'text');
+  pLbl.setAttribute('x', 160); pLbl.setAttribute('y', 20);
+  pLbl.setAttribute('class', 'tree-label'); pLbl.textContent = 'main tree (root)';
+  svg.appendChild(pLbl);
+  const qLbl = document.createElementNS(SVGNS, 'text');
+  qLbl.setAttribute('x', 460); qLbl.setAttribute('y', 50);
+  qLbl.setAttribute('class', 'tree-label'); qLbl.textContent = 'subRoot';
+  svg.appendChild(qLbl);
+
+  // Edges
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge' + (e.isNull ? ' null' : ''));
+    svg.appendChild(line);
+  });
+  // Nodes
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.isNull ? ' null-ghost' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // nodeState: per-node state (active-left/active-right/on-stack/match-ok/mismatch)
+  // activeP / activeQ: nodes being compared by isSameTree (blue/yellow)
+  // outerNode: current isSubtree outer walker (red glow)
+  // stack: outer+inner call frames
+  // verdict: null | true | false
+  const steps = [
+    { line: [1, 2], outerNode: "m3", activeP: null, activeQ: null,
+      nodeState: { m3: "active-left" },
+      stack: [{ id: "o1", label: "isSubtree(main 3, subRoot)", sub: "entry" }],
+      verdict: null,
+      action: "Enter isSubtree(root=3, subRoot=4). root != null → proceed.", kind: "call" },
+
+    { line: [5], outerNode: "m3", activeP: null, activeQ: null,
+      nodeState: { m3: "active-left" },
+      stack: [{ id: "o1", label: "isSubtree(main 3, subRoot)", sub: "call isSameTree(3, 4)" }],
+      verdict: null,
+      action: "Call isSameTree(root=3, subRoot=4). Does the subtree at main-node 3 equal subRoot?", kind: "call" },
+
+    { line: [13, 14], outerNode: "m3", activeP: "m3", activeQ: "s4",
+      nodeState: { m3: "active-left", s4: "active-right" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "i_m3_s4", label: "isSameTree(m3, s4)", sub: "entry" }
+      ],
+      verdict: null,
+      action: "Enter isSameTree(3, 4). Both non-null, check values.", kind: "check" },
+
+    { line: [19, 20], outerNode: "m3", activeP: "m3", activeQ: "s4",
+      nodeState: { m3: "mismatch", s4: "mismatch" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "i_m3_s4", label: "isSameTree(m3, s4)", sub: "3 != 4 → false" }
+      ],
+      verdict: null,
+      action: "3.val != 4.val → return false. isSameTree(3, 4) fails fast.", kind: "fail" },
+
+    { line: [8], outerNode: "m3", activeP: null, activeQ: null,
+      nodeState: { m3: "on-stack" },
+      stack: [{ id: "o1", label: "isSubtree(main 3, subRoot)", sub: "try LEFT" }],
+      verdict: null,
+      action: "Back in isSubtree(3). isSameTree failed. Evaluate LHS of ||: isSubtree(root.left=4, subRoot).", kind: "call" },
+
+    { line: [1, 2], outerNode: "m4", activeP: null, activeQ: null,
+      nodeState: { m3: "on-stack", m4: "active-left" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting on LEFT" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "entry" }
+      ],
+      verdict: null,
+      action: "Enter isSubtree(root=4, subRoot=4). root != null.", kind: "call" },
+
+    { line: [5], outerNode: "m4", activeP: null, activeQ: null,
+      nodeState: { m3: "on-stack", m4: "active-left" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting on LEFT" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "call isSameTree(4, 4)" }
+      ],
+      verdict: null,
+      action: "Call isSameTree(4, 4). Promising — vals look right!", kind: "call" },
+
+    { line: [13, 14, 17, 20, 23, 24], outerNode: "m4", activeP: "m4", activeQ: "s4",
+      nodeState: { m3: "on-stack", m4: "active-left", s4: "active-right" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting on LEFT" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "waiting" },
+        { id: "i_m4_s4", label: "isSameTree(m4, s4)", sub: "4 == 4" }
+      ],
+      verdict: null,
+      action: "isSameTree(4, 4): both non-null, 4 == 4. Recurse LEFT and RIGHT.", kind: "check" },
+
+    { line: [25], outerNode: "m4", activeP: "m4", activeQ: "s4",
+      nodeState: { m3: "on-stack", m4: "on-stack", s4: "on-stack" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "waiting" },
+        { id: "i_m4_s4", label: "isSameTree(m4, s4)", sub: "recurse LEFT" }
+      ],
+      verdict: null,
+      action: "Evaluate LHS: isSameTree(4.left=1, 4.left=1).", kind: "call" },
+
+    { line: [13, 14, 17, 20, 23, 24], outerNode: "m4", activeP: "m1", activeQ: "s1",
+      nodeState: { m3: "on-stack", m4: "on-stack", s4: "on-stack", m1: "active-left", s1: "active-right" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "waiting" },
+        { id: "i_m4_s4", label: "isSameTree(m4, s4)", sub: "waiting on LEFT" },
+        { id: "i_m1_s1", label: "isSameTree(m1, s1)", sub: "1 == 1" }
+      ],
+      verdict: null,
+      action: "isSameTree(1, 1): both non-null, 1 == 1. Recurse.", kind: "check" },
+
+    { line: [13, 14, 15], outerNode: "m4", activeP: "m1L", activeQ: "s1L",
+      nodeState: { m3: "on-stack", m4: "on-stack", s4: "on-stack", m1: "on-stack", s1: "on-stack",
+                   m1L: "active-left", s1L: "active-right" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "waiting" },
+        { id: "i_m4_s4", label: "isSameTree(m4, s4)", sub: "waiting on LEFT" },
+        { id: "i_m1_s1", label: "isSameTree(m1, s1)", sub: "waiting on LEFT" },
+        { id: "i_null", label: "isSameTree(null, null)", sub: "both null → true" }
+      ],
+      verdict: null,
+      action: "Base case: both null → return true.", kind: "return" },
+
+    { line: [13, 14, 15], outerNode: "m4", activeP: "m1R", activeQ: "s1R",
+      nodeState: { m3: "on-stack", m4: "on-stack", s4: "on-stack", m1: "on-stack", s1: "on-stack",
+                   m1L: "match-ok", s1L: "match-ok",
+                   m1R: "active-left", s1R: "active-right" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "waiting" },
+        { id: "i_m4_s4", label: "isSameTree(m4, s4)", sub: "waiting on LEFT" },
+        { id: "i_m1_s1", label: "isSameTree(m1, s1)", sub: "LHS=true, recurse RIGHT" },
+        { id: "i_null2", label: "isSameTree(null, null)", sub: "both null → true" }
+      ],
+      verdict: null,
+      action: "isSameTree(1.right=null, 1.right=null) → both null → true.", kind: "return" },
+
+    { line: [25, 26], outerNode: "m4", activeP: "m1", activeQ: "s1",
+      nodeState: { m3: "on-stack", m4: "on-stack", s4: "on-stack",
+                   m1: "match-ok", s1: "match-ok",
+                   m1L: "match-ok", s1L: "match-ok", m1R: "match-ok", s1R: "match-ok" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "waiting" },
+        { id: "i_m4_s4", label: "isSameTree(m4, s4)", sub: "LHS=true" }
+      ],
+      verdict: null,
+      action: "isSameTree(1, 1) returns true && true = true.", kind: "return" },
+
+    { line: [26], outerNode: "m4", activeP: "m2", activeQ: "s2",
+      nodeState: { m3: "on-stack", m4: "on-stack", s4: "on-stack",
+                   m1: "match-ok", s1: "match-ok",
+                   m1L: "match-ok", s1L: "match-ok", m1R: "match-ok", s1R: "match-ok",
+                   m2: "active-left", s2: "active-right" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "waiting" },
+        { id: "i_m4_s4", label: "isSameTree(m4, s4)", sub: "evaluate RHS" },
+        { id: "i_m2_s2", label: "isSameTree(m2, s2)", sub: "2 == 2" }
+      ],
+      verdict: null,
+      action: "Evaluate RHS of isSameTree(4, 4): isSameTree(4.right=2, 4.right=2). vals match.", kind: "check" },
+
+    { line: [13, 14, 15], outerNode: "m4", activeP: "m2L", activeQ: "s2L",
+      nodeState: { m3: "on-stack", m4: "on-stack", s4: "on-stack",
+                   m1: "match-ok", s1: "match-ok",
+                   m1L: "match-ok", s1L: "match-ok", m1R: "match-ok", s1R: "match-ok",
+                   m2: "on-stack", s2: "on-stack",
+                   m2L: "active-left", s2L: "active-right" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "waiting" },
+        { id: "i_m4_s4", label: "isSameTree(m4, s4)", sub: "waiting on RIGHT" },
+        { id: "i_m2_s2", label: "isSameTree(m2, s2)", sub: "LHS: null/null" }
+      ],
+      verdict: null,
+      action: "isSameTree(2.left=null, 2.left=null) → both null → true.", kind: "return" },
+
+    { line: [13, 14, 15], outerNode: "m4", activeP: "m2R", activeQ: "s2R",
+      nodeState: { m3: "on-stack", m4: "on-stack", s4: "on-stack",
+                   m1: "match-ok", s1: "match-ok",
+                   m1L: "match-ok", s1L: "match-ok", m1R: "match-ok", s1R: "match-ok",
+                   m2: "on-stack", s2: "on-stack",
+                   m2L: "match-ok", s2L: "match-ok",
+                   m2R: "active-left", s2R: "active-right" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "waiting" },
+        { id: "i_m4_s4", label: "isSameTree(m4, s4)", sub: "waiting on RIGHT" },
+        { id: "i_m2_s2", label: "isSameTree(m2, s2)", sub: "RHS: null/null" }
+      ],
+      verdict: null,
+      action: "isSameTree(2.right=null, 2.right=null) → both null → true.", kind: "return" },
+
+    { line: [25, 26], outerNode: "m4", activeP: "m2", activeQ: "s2",
+      nodeState: { m3: "on-stack", m4: "on-stack", s4: "on-stack",
+                   m1: "match-ok", s1: "match-ok",
+                   m1L: "match-ok", s1L: "match-ok", m1R: "match-ok", s1R: "match-ok",
+                   m2: "match-ok", s2: "match-ok",
+                   m2L: "match-ok", s2L: "match-ok", m2R: "match-ok", s2R: "match-ok" },
+      stack: [
+        { id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting" },
+        { id: "o2", label: "isSubtree(main 4, subRoot)", sub: "waiting" },
+        { id: "i_m4_s4", label: "isSameTree(m4, s4)", sub: "returning true" }
+      ],
+      verdict: null,
+      action: "isSameTree(2, 2) returns true. Back in isSameTree(4, 4): true && true = true. ★", kind: "return" },
+
+    { line: [6], outerNode: "m4", activeP: null, activeQ: null,
+      nodeState: { m3: "on-stack", m4: "match-ok", s4: "match-ok",
+                   m1: "match-ok", s1: "match-ok",
+                   m1L: "match-ok", s1L: "match-ok", m1R: "match-ok", s1R: "match-ok",
+                   m2: "match-ok", s2: "match-ok",
+                   m2L: "match-ok", s2L: "match-ok", m2R: "match-ok", s2R: "match-ok" },
+      stack: [{ id: "o1", label: "isSubtree(main 3, subRoot)", sub: "waiting on LEFT" }],
+      verdict: null,
+      action: "isSameTree returned true → isSubtree(4) returns true. ★", kind: "return" },
+
+    { line: [8], outerNode: "m3", activeP: null, activeQ: null,
+      nodeState: { m3: "match-ok", m4: "match-ok", s4: "match-ok",
+                   m1: "match-ok", s1: "match-ok",
+                   m1L: "match-ok", s1L: "match-ok", m1R: "match-ok", s1R: "match-ok",
+                   m2: "match-ok", s2: "match-ok",
+                   m2L: "match-ok", s2L: "match-ok", m2R: "match-ok", s2R: "match-ok" },
+      stack: [],
+      verdict: true,
+      action: "Back in isSubtree(3). LHS of || returned true → short-circuit. Return true. ★ Done.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const outerVEl = document.getElementById('outerV');
+  const probeVEl = document.getElementById('probeV');
+  const verdictVEl = document.getElementById('verdictV');
+  const verdictPillEl = document.getElementById('verdictPill');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function labelFor(key) {
+    if (!key) return 'null';
+    const n = nodes[key];
+    return n.isNull ? 'null' : `node ${n.val}`;
+  }
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    outerVEl.textContent = s.outerNode ? ('node ' + nodes[s.outerNode].val) : '—';
+    probeVEl.textContent = s.activeP && s.activeQ
+      ? (labelFor(s.activeP) + ' vs ' + labelFor(s.activeQ))
+      : '—';
+    if (s.verdict === null) {
+      verdictVEl.textContent = '—';
+      verdictPillEl.classList.remove('fail');
+    } else if (s.verdict === false) {
+      verdictVEl.textContent = 'false';
+      verdictPillEl.classList.add('fail');
+    } else {
+      verdictVEl.textContent = 'true';
+      verdictPillEl.classList.remove('fail');
+    }
+    // Tree nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'active-left', 'active-right', 'on-stack', 'match-ok', 'mismatch', 'outer-walker');
+      const state = s.nodeState[key];
+      if (state) { el.classList.add(state); }
+      // Outer walker highlight (if outerNode isn't currently being compared)
+      if (s.outerNode === key && key !== s.activeP && key !== s.activeQ && state !== 'match-ok' && state !== 'mismatch') {
+        el.classList.add('outer-walker');
+      }
+    });
+    // Call stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = `isSameTree(${labelFor(frame.pKey)}, ${labelFor(frame.qKey)})`;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — all returned]';
+      stackEl.appendChild(li);
+    }
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
