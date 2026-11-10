@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 199 — Binary Tree Right Side View</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.level .pill-v { color: #c89aff; }
+  .pill.size .pill-v { color: #9ad4ff; }
+  .pill.sum .pill-v { color: #ffd87a; }
+  .pill.avg .pill-v { color: #4de88c; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 320px; }
+  .level-band {
+    fill: #1a2240;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .level-band.active { opacity: 0.55; fill: #3a1f4a; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.in-queue circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.in-queue text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.done text.val { fill: #4de88c; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.in-queue { stroke: #ffa500; }
+  .edge.done { stroke: #4de88c; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-poll { background: #e94560; color: white; }
+  .kind-offer { background: #0f9950; color: white; }
+  .kind-record { background: #4de88c; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  /* ============ QUEUE PANEL ============ */
+  .queue-wrap {
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+  }
+  .queue-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .queue-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: #0a1a35;
+    border-radius: 3px;
+    min-height: 44px;
+    overflow-x: auto;
+  }
+  .queue-arrow {
+    color: #666;
+    font-size: 11px;
+  }
+  .queue-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #ffa500;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #ffd87a;
+    transition: all 0.2s;
+  }
+  .queue-cell.just-polled {
+    background: #4a0f1f;
+    border-color: #ff8ca0;
+    color: #fff;
+    opacity: 0.6;
+  }
+  .queue-cell.just-offered {
+    background: #0f4a2a;
+    border-color: #4de88c;
+    color: #fff;
+  }
+  .queue-cell.phantom {
+    opacity: 0.25;
+    border-style: dashed;
+  }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+    margin-top: 10px;
+  }
+  .result-list li {
+    padding: 5px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #4de88c;
+    display: flex;
+    justify-content: space-between;
+  }
+  .result-list li.new {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f9950; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .result-list .r-idx { color: #888; font-size: 11px; }
+  .legend {
+    margin-top: 10px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-queue { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-done { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 199 — Binary Tree Right Side View</h1>
+    <div class="subtitle">BFS level-by-level · record only when i == size - 1 (rightmost of level) · root = [3, 9, 20, null, null, 15, 7]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill level"><span class="pill-k">level</span><span class="pill-v" id="lvlV">—</span></span>
+      <span class="pill size"><span class="pill-k">size</span><span class="pill-v" id="sizeV">—</span></span>
+      <span class="pill sum"><span class="pill-k">i</span><span class="pill-v" id="iV">—</span></span>
+      <span class="pill avg"><span class="pill-k">i==size-1?</span><span class="pill-v" id="lastV">—</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Queue</div>
+    <div class="queue-wrap">
+      <div class="queue-label">front → back</div>
+      <div class="queue-row" id="queueRow"></div>
+    </div>
+    <div class="panel-title" style="margin-top: 12px;">Result</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>polled this step</div>
+      <div class="legend-item"><div class="chip chip-queue"></div>in queue</div>
+      <div class="legend-item"><div class="chip chip-done"></div>processed</div>
+    </div>
+    <div style="margin-top: 12px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">The key move</div>
+      Because children are offered <em>left before right</em>, the queue preserves left-to-right order within each level. So the LAST poll of the inner loop (<code>i == size - 1</code>) is the rightmost node on that level — record its val. Everything else is skipped.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public List<Integer> rightSideView(TreeNode root) {",
+    "    List<Integer> result = new ArrayList<>();",
+    "    if (root == null) {",
+    "        return result;",
+    "    }",
+    "    Queue<TreeNode> queue = new ArrayDeque<>();",
+    "    queue.offer(root);",
+    "    while (!queue.isEmpty()) {",
+    "        int size = queue.size();",
+    "        for (int i = 0; i < size; i++) {",
+    "            TreeNode node = queue.poll();",
+    "            if (node.left != null) {",
+    "                queue.offer(node.left);",
+    "            }",
+    "            if (node.right != null) {",
+    "                queue.offer(node.right);",
+    "            }",
+    "            if (i == size - 1) {",
+    "                result.add(node.val);",
+    "            }",
+    "        }",
+    "    }",
+    "    return result;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  const nodes = {
+    n3:  { x: 320, y:  50, r: 22, val: '3',  level: 0 },
+    n9:  { x: 180, y: 140, r: 22, val: '9',  level: 1 },
+    n20: { x: 460, y: 140, r: 22, val: '20', level: 1 },
+    n15: { x: 390, y: 230, r: 22, val: '15', level: 2 },
+    n7:  { x: 530, y: 230, r: 22, val: '7',  level: 2 }
+  };
+  const edges = [['n3', 'n9'], ['n3', 'n20'], ['n20', 'n15'], ['n20', 'n7']];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  // Level bands
+  const levelBands = {};
+  [0, 1, 2].forEach(lvl => {
+    const band = document.createElementNS(SVGNS, 'rect');
+    band.setAttribute('x', 0);
+    band.setAttribute('y', 20 + lvl * 90);
+    band.setAttribute('width', 640);
+    band.setAttribute('height', 60);
+    band.setAttribute('class', 'level-band');
+    svg.appendChild(band);
+    levelBands[lvl] = band;
+  });
+
+  const edgeEls = {};
+  edges.forEach(([from, to]) => {
+    const a = nodes[from], b = nodes[to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x);
+    line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x);
+    line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[`${from}-${to}`] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x);
+    circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x);
+    t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  const steps = [
+    { line: [2, 3, 6, 7], level: null, size: null, i: null, isLast: null,
+      queue: ["n3"], justPolled: null, justOffered: ["n3"], active: null, done: [],
+      result: [], newResult: 0,
+      action: "Init result = []. root != null → skip early return. ArrayDeque, offer(3). queue = [3].", kind: "call" },
+
+    { line: [8, 9], level: 0, size: 1, i: null, isLast: null,
+      queue: ["n3"], justPolled: null, justOffered: [], active: null, done: [],
+      result: [], newResult: 0,
+      action: "Enter while loop. SNAPSHOT: size = 1.", kind: "call" },
+
+    { line: [10, 11], level: 0, size: 1, i: 0, isLast: true,
+      queue: [], justPolled: "n3", justOffered: [], active: "n3", done: [],
+      result: [], newResult: 0,
+      action: "Inner i=0: poll → node 3. (i == size - 1 holds — this IS the last of level 0.)", kind: "poll" },
+
+    { line: [12, 13, 15, 16], level: 0, size: 1, i: 0, isLast: true,
+      queue: ["n9", "n20"], justPolled: null, justOffered: ["n9", "n20"], active: null, done: ["n3"],
+      result: [], newResult: 0,
+      action: "3.left=9 → offer 9. 3.right=20 → offer 20. queue = [9, 20].", kind: "offer" },
+
+    { line: [18, 19], level: 0, size: 1, i: 0, isLast: true,
+      queue: ["n9", "n20"], justPolled: null, justOffered: [], active: null, done: ["n3"],
+      result: [3], newResult: 1,
+      action: "i == size - 1 → result.add(3). result = [3]. ★ Level 0's rightmost.", kind: "record" },
+
+    { line: [8, 9], level: 1, size: 2, i: null, isLast: null,
+      queue: ["n9", "n20"], justPolled: null, justOffered: [], active: null, done: ["n3"],
+      result: [3], newResult: 0,
+      action: "Next while. SNAPSHOT: size = 2 (freezes level 1 before children bleed in).", kind: "call" },
+
+    { line: [10, 11], level: 1, size: 2, i: 0, isLast: false,
+      queue: ["n20"], justPolled: "n9", justOffered: [], active: "n9", done: ["n3"],
+      result: [3], newResult: 0,
+      action: "Inner i=0: poll → node 9. (i=0, size-1=1 → NOT last.)", kind: "poll" },
+
+    { line: [12, 15], level: 1, size: 2, i: 0, isLast: false,
+      queue: ["n20"], justPolled: null, justOffered: [], active: null, done: ["n3", "n9"],
+      result: [3], newResult: 0,
+      action: "9.left=null (guard skips). 9.right=null (guard skips). i != size - 1 → no record.", kind: "offer" },
+
+    { line: [10, 11], level: 1, size: 2, i: 1, isLast: true,
+      queue: [], justPolled: "n20", justOffered: [], active: "n20", done: ["n3", "n9"],
+      result: [3], newResult: 0,
+      action: "Inner i=1: poll → node 20. (i=1 == size-1=1 → this IS the last of level 1.)", kind: "poll" },
+
+    { line: [12, 13, 15, 16], level: 1, size: 2, i: 1, isLast: true,
+      queue: ["n15", "n7"], justPolled: null, justOffered: ["n15", "n7"], active: null, done: ["n3", "n9", "n20"],
+      result: [3], newResult: 0,
+      action: "20.left=15 → offer 15. 20.right=7 → offer 7. queue = [15, 7].", kind: "offer" },
+
+    { line: [18, 19], level: 1, size: 2, i: 1, isLast: true,
+      queue: ["n15", "n7"], justPolled: null, justOffered: [], active: null, done: ["n3", "n9", "n20"],
+      result: [3, 20], newResult: 1,
+      action: "i == size - 1 → result.add(20). result = [3, 20]. ★ Level 1's rightmost.", kind: "record" },
+
+    { line: [8, 9], level: 2, size: 2, i: null, isLast: null,
+      queue: ["n15", "n7"], justPolled: null, justOffered: [], active: null, done: ["n3", "n9", "n20"],
+      result: [3, 20], newResult: 0,
+      action: "Next while. SNAPSHOT: size = 2.", kind: "call" },
+
+    { line: [10, 11], level: 2, size: 2, i: 0, isLast: false,
+      queue: ["n7"], justPolled: "n15", justOffered: [], active: "n15", done: ["n3", "n9", "n20"],
+      result: [3, 20], newResult: 0,
+      action: "Inner i=0: poll → node 15. (i=0, size-1=1 → NOT last.)", kind: "poll" },
+
+    { line: [12, 15], level: 2, size: 2, i: 0, isLast: false,
+      queue: ["n7"], justPolled: null, justOffered: [], active: null, done: ["n3", "n9", "n20", "n15"],
+      result: [3, 20], newResult: 0,
+      action: "15.left=null, 15.right=null. i != size - 1 → no record.", kind: "offer" },
+
+    { line: [10, 11], level: 2, size: 2, i: 1, isLast: true,
+      queue: [], justPolled: "n7", justOffered: [], active: "n7", done: ["n3", "n9", "n20", "n15"],
+      result: [3, 20], newResult: 0,
+      action: "Inner i=1: poll → node 7. (i=1 == size-1=1 → this IS the last of level 2.)", kind: "poll" },
+
+    { line: [12, 15], level: 2, size: 2, i: 1, isLast: true,
+      queue: [], justPolled: null, justOffered: [], active: null, done: ["n3", "n9", "n20", "n15", "n7"],
+      result: [3, 20], newResult: 0,
+      action: "7.left=null, 7.right=null. Nothing offered.", kind: "offer" },
+
+    { line: [18, 19], level: 2, size: 2, i: 1, isLast: true,
+      queue: [], justPolled: null, justOffered: [], active: null, done: ["n3", "n9", "n20", "n15", "n7"],
+      result: [3, 20, 7], newResult: 1,
+      action: "i == size - 1 → result.add(7). result = [3, 20, 7]. ★ Level 2's rightmost.", kind: "record" },
+
+    { line: [8], level: null, size: null, i: null, isLast: null,
+      queue: [], justPolled: null, justOffered: [], active: null, done: ["n3", "n9", "n20", "n15", "n7"],
+      result: [3, 20, 7], newResult: 0,
+      action: "while check: queue empty → exit loop.", kind: "call" },
+
+    { line: [23], level: null, size: null, i: null, isLast: null,
+      queue: [], justPolled: null, justOffered: [], active: null, done: ["n3", "n9", "n20", "n15", "n7"],
+      result: [3, 20, 7], newResult: 0,
+      action: "Return result = [3, 20, 7]. ★ Done.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const lvlVEl = document.getElementById('lvlV');
+  const sizeVEl = document.getElementById('sizeV');
+  const iVEl = document.getElementById('iV');
+  const lastVEl = document.getElementById('lastV');
+  const queueRowEl = document.getElementById('queueRow');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    // Code
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    lvlVEl.textContent = s.level !== null ? s.level : '—';
+    sizeVEl.textContent = s.size !== null ? s.size : '—';
+    iVEl.textContent = s.i !== null && s.i !== undefined ? s.i : '—';
+    if (s.isLast === true) { lastVEl.textContent = 'yes ★'; lastVEl.style.color = '#4de88c'; }
+    else if (s.isLast === false) { lastVEl.textContent = 'no'; lastVEl.style.color = '#ff8ca0'; }
+    else { lastVEl.textContent = '—'; lastVEl.style.color = '#ffa500'; }
+    // Level band highlight
+    [0, 1, 2].forEach(lvl => {
+      levelBands[lvl].classList.toggle('active', s.level === lvl);
+    });
+    // Tree nodes
+    const queueSet = new Set(s.queue);
+    const doneSet = new Set(s.done);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'in-queue', 'done');
+      if (key === s.active || key === s.justPolled) { el.classList.add('active'); }
+      else if (queueSet.has(key)) { el.classList.add('in-queue'); }
+      else if (doneSet.has(key)) { el.classList.add('done'); }
+    });
+    // Edges
+    edges.forEach(([from, to]) => {
+      const e = edgeEls[`${from}-${to}`];
+      e.classList.remove('in-queue', 'done');
+      if (doneSet.has(from) && doneSet.has(to)) { e.classList.add('done'); }
+      else if ((doneSet.has(from) || from === s.active) && queueSet.has(to)) { e.classList.add('in-queue'); }
+    });
+    // Queue panel
+    queueRowEl.innerHTML = '';
+    if (s.justPolled && !queueSet.has(s.justPolled)) {
+      const polled = document.createElement('span');
+      polled.className = 'queue-cell just-polled';
+      polled.textContent = nodes[s.justPolled].val;
+      queueRowEl.appendChild(polled);
+      const arr = document.createElement('span');
+      arr.className = 'queue-arrow';
+      arr.textContent = '⟵ polled';
+      queueRowEl.appendChild(arr);
+    }
+    s.queue.forEach(id => {
+      const cell = document.createElement('span');
+      cell.className = 'queue-cell';
+      if (s.justOffered.includes(id)) { cell.classList.add('just-offered'); }
+      cell.textContent = nodes[id].val;
+      queueRowEl.appendChild(cell);
+    });
+    if (s.queue.length === 0 && !s.justPolled) {
+      const empty = document.createElement('span');
+      empty.style.color = '#6a7a9a';
+      empty.style.fontStyle = 'italic';
+      empty.style.fontSize = '11px';
+      empty.textContent = '[empty]';
+      queueRowEl.appendChild(empty);
+    }
+    // Result list
+    resultEl.innerHTML = '';
+    s.result.forEach((v, i) => {
+      const li = document.createElement('li');
+      const left = document.createElement('span');
+      left.className = 'r-idx';
+      left.textContent = `level ${i}`;
+      const right = document.createElement('span');
+      right.textContent = String(v);
+      li.appendChild(left);
+      li.appendChild(right);
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
