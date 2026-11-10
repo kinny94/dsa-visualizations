@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 687 — Longest Univalue Path</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.left .pill-v { color: #9ad4ff; }
+  .pill.right .pill-v { color: #ffd87a; }
+  .pill.through .pill-v { color: #c89aff; }
+  .pill.max .pill-v { color: #4de88c; }
+  .pill.max.updated { animation: maxPulse 0.5s ease-out; }
+  @keyframes maxPulse {
+    from { transform: scale(1.3); background: #4de88c; color: #000; }
+    to { transform: scale(1); }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 300px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #4a6a8a; fill: #1a2e4a; opacity: 0.55; }
+  .node.done text.val { opacity: 0.55; }
+  .node.in-longest circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; filter: drop-shadow(0 0 6px rgba(77, 232, 140, 0.55)); }
+  .node.in-longest text.val { fill: #4de88c; font-weight: bold; }
+  .node.null-ghost circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 8; }
+  .node.null-ghost text.val { display: none; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.univalue-left { stroke: #9ad4ff; stroke-width: 3; }
+  .edge.univalue-right { stroke: #ffd87a; stroke-width: 3; }
+  .edge.in-longest { stroke: #4de88c; stroke-width: 4; }
+  .edge.null { stroke-dasharray: 3,3; }
+  .ret-tag {
+    fill: #4de88c;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    font-weight: bold;
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #c89aff; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .kind-match { background: #0f9950; color: white; }
+  .kind-update { background: #4de88c; color: #1a1a2e; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-stack { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-longest { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 687 — Longest Univalue Path</h1>
+    <div class="subtitle">Post-order with two values: chain-DOWN propagates up, through-path (left+right) updates max · root = [5, 4, 5, 1, 1, null, 5]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code (int[1] wrapper)</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill left"><span class="pill-k">leftExt</span><span class="pill-v" id="leftV">—</span></span>
+      <span class="pill right"><span class="pill-k">rightExt</span><span class="pill-v" id="rightV">—</span></span>
+      <span class="pill through"><span class="pill-k">through</span><span class="pill-v" id="throughV">—</span></span>
+      <span class="pill max" id="maxPill"><span class="pill-k">max[0]</span><span class="pill-v" id="maxV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 300" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-stack"></div>on recursion stack</div>
+      <div class="legend-item"><div class="chip chip-longest"></div>on longest univalue path</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Two values per frame</div>
+      Sum <code>leftExt + rightExt</code> for the "through here" answer (updates max). Return <code>max(leftExt, rightExt)</code> up — a parent can only extend ONE side. Same template as LC 543 Diameter and LC 124 Max Path Sum.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public int longestUnivaluePath(TreeNode root) {",
+    "    int[] max = {0};",
+    "    chainDown(root, max);",
+    "    return max[0];",
+    "}",
+    "",
+    "private int chainDown(TreeNode node, int[] max) {",
+    "    if (node == null) {",
+    "        return 0;",
+    "    }",
+    "    int leftChain  = chainDown(node.left,  max);",
+    "    int rightChain = chainDown(node.right, max);",
+    "    int leftExt  = (node.left  != null",
+    "                  && node.left.val  == node.val)",
+    "                  ? leftChain  + 1 : 0;",
+    "    int rightExt = (node.right != null",
+    "                  && node.right.val == node.val)",
+    "                  ? rightChain + 1 : 0;",
+    "    max[0] = Math.max(max[0], leftExt + rightExt);",
+    "    return Math.max(leftExt, rightExt);",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // [5, 4, 5, 1, 1, null, 5]
+  //       5
+  //      / \
+  //     4   5
+  //    /\    \
+  //   1  1    5
+  const nodes = {
+    n5r:  { x: 320, y:  50, r: 22, val: '5' },
+    n4:   { x: 180, y: 140, r: 22, val: '4' },
+    n5m:  { x: 460, y: 140, r: 22, val: '5' },
+    n1a:  { x: 110, y: 230, r: 22, val: '1' },
+    n1b:  { x: 250, y: 230, r: 22, val: '1' },
+    n5l:  { x: 510, y: 230, r: 22, val: '5' },
+    // null ghosts
+    n5m_L: { x: 410, y: 230, r: 8, isNull: true },
+    n1a_L: { x:  80, y: 280, r: 6, isNull: true },
+    n1a_R: { x: 140, y: 280, r: 6, isNull: true },
+    n1b_L: { x: 220, y: 280, r: 6, isNull: true },
+    n1b_R: { x: 280, y: 280, r: 6, isNull: true },
+    n5l_L: { x: 480, y: 280, r: 6, isNull: true },
+    n5l_R: { x: 540, y: 280, r: 6, isNull: true }
+  };
+  const edges = [
+    { id: "e_rr_4", from: 'n5r', to: 'n4' },
+    { id: "e_rr_5m", from: 'n5r', to: 'n5m' },
+    { id: "e_4_1a", from: 'n4',  to: 'n1a' },
+    { id: "e_4_1b", from: 'n4',  to: 'n1b' },
+    { id: "e_5m_L", from: 'n5m', to: 'n5m_L', isNull: true },
+    { id: "e_5m_5l", from: 'n5m', to: 'n5l' },
+    { id: "e_1a_L", from: 'n1a', to: 'n1a_L', isNull: true },
+    { id: "e_1a_R", from: 'n1a', to: 'n1a_R', isNull: true },
+    { id: "e_1b_L", from: 'n1b', to: 'n1b_L', isNull: true },
+    { id: "e_1b_R", from: 'n1b', to: 'n1b_R', isNull: true },
+    { id: "e_5l_L", from: 'n5l', to: 'n5l_L', isNull: true },
+    { id: "e_5l_R", from: 'n5l', to: 'n5l_R', isNull: true }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge' + (e.isNull ? ' null' : ''));
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  const retTagEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.isNull ? ' null-ghost' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    if (!n.isNull) {
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+      t.setAttribute('class', 'val');
+      t.textContent = n.val;
+      g.appendChild(t);
+    }
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    // Return tag
+    const tag = document.createElementNS(SVGNS, 'text');
+    tag.setAttribute('x', n.x + (n.r || 8) + 10); tag.setAttribute('y', n.y + 4);
+    tag.setAttribute('class', 'ret-tag');
+    tag.textContent = '';
+    svg.appendChild(tag);
+    retTagEls[key] = tag;
+  });
+
+  // ============ STEP DATA ============
+  // active: node id of current frame
+  // stack: list of frames
+  // leftExt / rightExt / through: pill values (null to hide)
+  // max: int[] value
+  // maxUpdated: true if max changed this step (animate pulse)
+  // returned: map of node id → return value
+  // univalueEdges: edge ids colored as univalue
+  // longestEdges / longestNodes: for final highlight
+  // pathNodes: nodes currently on recursion stack path (highlight)
+  const steps = [
+    { line: [1, 2, 3], active: null,
+      stack: [{ id: "f_outer", label: "longestUnivaluePath(root)", sub: "init max=[0], call chainDown(5 root)" }],
+      pathNodes: [], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Init max = [0]. Call chainDown(root=5, max).", kind: "call" },
+
+    // ===== chainDown(5 root) enter =====
+    { line: [7, 8], active: "n5r",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "entry" }
+      ],
+      pathNodes: ["n5r"], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Enter chainDown(node=5 root). Node != null → proceed.", kind: "call" },
+
+    { line: [11], active: "n5r",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "recurse LEFT" }
+      ],
+      pathNodes: ["n5r"], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Call chainDown(node.left = 4, max).", kind: "call" },
+
+    // ===== chainDown(4) =====
+    { line: [7, 8, 11], active: "n4",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on LEFT" },
+        { id: "f_4", label: "chainDown(4)", sub: "recurse LEFT" }
+      ],
+      pathNodes: ["n5r", "n4"], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Enter chainDown(4). Call chainDown(node.left = 1a).", kind: "call" },
+
+    // ===== chainDown(1a) =====
+    { line: [7, 8, 11, 12], active: "n1a",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on LEFT" },
+        { id: "f_4", label: "chainDown(4)", sub: "waiting on LEFT" },
+        { id: "f_1a", label: "chainDown(1a)", sub: "both kids null → 0, 0" }
+      ],
+      pathNodes: ["n5r", "n4", "n1a"], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Enter chainDown(1a). Both children null → both chainDown(null) return 0. leftChain=0, rightChain=0.", kind: "return" },
+
+    { line: [13, 14, 15, 16, 17, 18, 19], active: "n1a",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on LEFT" },
+        { id: "f_4", label: "chainDown(4)", sub: "waiting on LEFT" },
+        { id: "f_1a", label: "chainDown(1a)", sub: "extensions = 0, 0" }
+      ],
+      pathNodes: ["n5r", "n4", "n1a"], leftExt: 0, rightExt: 0, through: 0, max: 0, maxUpdated: false,
+      returned: {}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Both node.left and node.right are null → leftExt = 0, rightExt = 0. through = 0.", kind: "check" },
+
+    { line: [20, 21], active: "n1a",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on LEFT" },
+        { id: "f_4", label: "chainDown(4)", sub: "waiting on LEFT" },
+        { id: "f_1a", label: "chainDown(1a)", sub: "return 0" }
+      ],
+      pathNodes: ["n5r", "n4"], leftExt: 0, rightExt: 0, through: 0, max: 0, maxUpdated: false,
+      returned: {"n1a": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "max[0] = max(0, 0+0) = 0. Return max(0, 0) = 0.", kind: "return" },
+
+    { line: [12], active: "n4",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on LEFT" },
+        { id: "f_4", label: "chainDown(4)", sub: "leftChain=0, recurse RIGHT" }
+      ],
+      pathNodes: ["n5r", "n4"], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {"n1a": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Back in chainDown(4). leftChain = 0. Call chainDown(node.right = 1b).", kind: "call" },
+
+    // ===== chainDown(1b) =====
+    { line: [7, 8, 11, 12], active: "n1b",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on LEFT" },
+        { id: "f_4", label: "chainDown(4)", sub: "waiting on RIGHT" },
+        { id: "f_1b", label: "chainDown(1b)", sub: "both kids null → 0, 0" }
+      ],
+      pathNodes: ["n5r", "n4", "n1b"], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {"n1a": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Enter chainDown(1b). Both children null. leftChain=0, rightChain=0.", kind: "return" },
+
+    { line: [13, 14, 15, 16, 17, 18, 19, 20, 21], active: "n1b",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on LEFT" },
+        { id: "f_4", label: "chainDown(4)", sub: "waiting on RIGHT" },
+        { id: "f_1b", label: "chainDown(1b)", sub: "return 0" }
+      ],
+      pathNodes: ["n5r", "n4"], leftExt: 0, rightExt: 0, through: 0, max: 0, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "leftExt=0, rightExt=0, through=0. max unchanged. Return 0.", kind: "return" },
+
+    // ===== Back in chainDown(4), compute =====
+    { line: [13, 14, 15, 16, 17, 18, 19], active: "n4",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on LEFT" },
+        { id: "f_4", label: "chainDown(4)", sub: "1 != 4, extensions = 0, 0" }
+      ],
+      pathNodes: ["n5r", "n4"], leftExt: 0, rightExt: 0, through: 0, max: 0, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Check: node.left.val (1) == node.val (4)? NO → leftExt = 0. node.right.val (1) == 4? NO → rightExt = 0. (4’s subtree is a dead end for univalue.)", kind: "check" },
+
+    { line: [20, 21], active: "n4",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "LEFT done" }
+      ],
+      pathNodes: ["n5r"], leftExt: 0, rightExt: 0, through: 0, max: 0, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "through = 0. max[0] = max(0, 0) = 0. Return 0 from chainDown(4).", kind: "return" },
+
+    // ===== Back in chainDown(5 root), recurse RIGHT =====
+    { line: [12], active: "n5r",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "leftChain=0, recurse RIGHT" }
+      ],
+      pathNodes: ["n5r"], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Back in chainDown(5 root). leftChain = 0. Call chainDown(node.right = 5 mid).", kind: "call" },
+
+    // ===== chainDown(5 mid) =====
+    { line: [7, 8, 11], active: "n5m",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on RIGHT" },
+        { id: "f_5m", label: "chainDown(5 mid)", sub: "recurse LEFT (null)" }
+      ],
+      pathNodes: ["n5r", "n5m"], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Enter chainDown(5 mid). Call chainDown(node.left = null) → returns 0. leftChain = 0.", kind: "return" },
+
+    { line: [12], active: "n5m",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on RIGHT" },
+        { id: "f_5m", label: "chainDown(5 mid)", sub: "recurse RIGHT" }
+      ],
+      pathNodes: ["n5r", "n5m"], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Call chainDown(node.right = 5 leaf).", kind: "call" },
+
+    // ===== chainDown(5 leaf) =====
+    { line: [7, 8, 11, 12], active: "n5l",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on RIGHT" },
+        { id: "f_5m", label: "chainDown(5 mid)", sub: "waiting on RIGHT" },
+        { id: "f_5l", label: "chainDown(5 leaf)", sub: "leaf → 0, 0" }
+      ],
+      pathNodes: ["n5r", "n5m", "n5l"], leftExt: null, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Enter chainDown(5 leaf). Both children null → leftChain=0, rightChain=0.", kind: "return" },
+
+    { line: [13, 14, 15, 16, 17, 18, 19, 20, 21], active: "n5l",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on RIGHT" },
+        { id: "f_5m", label: "chainDown(5 mid)", sub: "waiting on RIGHT" },
+        { id: "f_5l", label: "chainDown(5 leaf)", sub: "return 0" }
+      ],
+      pathNodes: ["n5r", "n5m"], leftExt: 0, rightExt: 0, through: 0, max: 0, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0, "n5l": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "leftExt=0, rightExt=0, through=0. max unchanged. Return 0.", kind: "return" },
+
+    // ===== Back in chainDown(5 mid), compute =====
+    { line: [13, 14, 15], active: "n5m",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on RIGHT" },
+        { id: "f_5m", label: "chainDown(5 mid)", sub: "leftExt = 0 (left null)" }
+      ],
+      pathNodes: ["n5r", "n5m"], leftExt: 0, rightExt: null, through: null, max: 0, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0, "n5l": 0}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Back in chainDown(5 mid). Check node.left == null → leftExt = 0.", kind: "check" },
+
+    { line: [16, 17, 18, 19], active: "n5m",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on RIGHT" },
+        { id: "f_5m", label: "chainDown(5 mid)", sub: "5==5 → rightExt = 0+1 = 1" }
+      ],
+      pathNodes: ["n5r", "n5m"], leftExt: 0, rightExt: 1, through: 1, max: 0, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0, "n5l": 0},
+      univalueEdges: ["e_5m_5l"], longestEdges: [], longestNodes: [],
+      action: "node.right.val (5) == node.val (5)? YES → rightExt = rightChain + 1 = 0 + 1 = 1. through = 0 + 1 = 1.", kind: "match" },
+
+    { line: [20], active: "n5m",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "waiting on RIGHT" },
+        { id: "f_5m", label: "chainDown(5 mid)", sub: "max = 1 ★" }
+      ],
+      pathNodes: ["n5r", "n5m"], leftExt: 0, rightExt: 1, through: 1, max: 1, maxUpdated: true,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0, "n5l": 0},
+      univalueEdges: ["e_5m_5l"], longestEdges: [], longestNodes: [],
+      action: "max[0] = max(0, leftExt + rightExt = 0 + 1 = 1) = 1. ★ max updated!", kind: "update" },
+
+    { line: [21], active: "n5m",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "RIGHT done" }
+      ],
+      pathNodes: ["n5r"], leftExt: 0, rightExt: 1, through: 1, max: 1, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0, "n5l": 0, "n5m": 1},
+      univalueEdges: ["e_5m_5l"], longestEdges: [], longestNodes: [],
+      action: "Return max(leftExt, rightExt) = max(0, 1) = 1 from chainDown(5 mid). (Propagate the extendable side up.)", kind: "return" },
+
+    // ===== Back in chainDown(5 root), compute =====
+    { line: [13, 14, 15], active: "n5r",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "4 != 5 → leftExt = 0" }
+      ],
+      pathNodes: ["n5r"], leftExt: 0, rightExt: null, through: null, max: 1, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0, "n5l": 0, "n5m": 1},
+      univalueEdges: ["e_5m_5l"], longestEdges: [], longestNodes: [],
+      action: "Back in chainDown(5 root). node.left.val (4) == 5? NO → leftExt = 0.", kind: "check" },
+
+    { line: [16, 17, 18, 19], active: "n5r",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "5==5 → rightExt = 1+1 = 2" }
+      ],
+      pathNodes: ["n5r"], leftExt: 0, rightExt: 2, through: 2, max: 1, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0, "n5l": 0, "n5m": 1},
+      univalueEdges: ["e_5m_5l", "e_rr_5m"], longestEdges: [], longestNodes: [],
+      action: "node.right.val (5) == 5? YES → rightExt = rightChain + 1 = 1 + 1 = 2. through = 0 + 2 = 2.", kind: "match" },
+
+    { line: [20], active: "n5r",
+      stack: [
+        { id: "f_outer", label: "longestUnivaluePath(root)", sub: "waiting" },
+        { id: "f_5r", label: "chainDown(5 root)", sub: "max = 2 ★" }
+      ],
+      pathNodes: ["n5r"], leftExt: 0, rightExt: 2, through: 2, max: 2, maxUpdated: true,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0, "n5l": 0, "n5m": 1},
+      univalueEdges: ["e_5m_5l", "e_rr_5m"],
+      longestEdges: ["e_rr_5m", "e_5m_5l"], longestNodes: ["n5r", "n5m", "n5l"],
+      action: "max[0] = max(1, 0 + 2 = 2) = 2. ★ max updated! Longest univalue path = 5 → 5 → 5 (2 edges).", kind: "update" },
+
+    { line: [21], active: "n5r",
+      stack: [{ id: "f_outer", label: "longestUnivaluePath(root)", sub: "chainDown returned 2" }],
+      pathNodes: [], leftExt: 0, rightExt: 2, through: 2, max: 2, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0, "n5l": 0, "n5m": 1, "n5r": 2},
+      univalueEdges: ["e_5m_5l", "e_rr_5m"],
+      longestEdges: ["e_rr_5m", "e_5m_5l"], longestNodes: ["n5r", "n5m", "n5l"],
+      action: "Return max(0, 2) = 2 from chainDown(5 root). (This is the extendable side, but there’s no parent to extend.)", kind: "return" },
+
+    { line: [4], active: null,
+      stack: [],
+      pathNodes: [], leftExt: null, rightExt: null, through: null, max: 2, maxUpdated: false,
+      returned: {"n1a": 0, "n1b": 0, "n4": 0, "n5l": 0, "n5m": 1, "n5r": 2},
+      univalueEdges: ["e_5m_5l", "e_rr_5m"],
+      longestEdges: ["e_rr_5m", "e_5m_5l"], longestNodes: ["n5r", "n5m", "n5l"],
+      action: "Return max[0] = 2. ★ Done. Longest univalue path: 5 → 5 → 5 on the right spine.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const leftVEl = document.getElementById('leftV');
+  const rightVEl = document.getElementById('rightV');
+  const throughVEl = document.getElementById('throughV');
+  const maxVEl = document.getElementById('maxV');
+  const maxPillEl = document.getElementById('maxPill');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    nodeVEl.textContent = s.active ? nodes[s.active].val : '—';
+    leftVEl.textContent = s.leftExt !== null ? s.leftExt : '—';
+    rightVEl.textContent = s.rightExt !== null ? s.rightExt : '—';
+    throughVEl.textContent = s.through !== null ? s.through : '—';
+    maxVEl.textContent = s.max;
+    if (s.maxUpdated) {
+      maxPillEl.classList.remove('updated');
+      // force reflow
+      void maxPillEl.offsetWidth;
+      maxPillEl.classList.add('updated');
+    } else {
+      maxPillEl.classList.remove('updated');
+    }
+    // Tree nodes
+    const pathSet = new Set(s.pathNodes);
+    const longestSet = new Set(s.longestNodes);
+    const returnedKeys = Object.keys(s.returned);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-stack', 'done', 'in-longest');
+      if (longestSet.has(key)) {
+        el.classList.add('in-longest');
+      } else if (key === s.active) {
+        el.classList.add('active');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-stack');
+      } else if (returnedKeys.includes(key)) {
+        el.classList.add('done');
+      }
+      // Return tag
+      retTagEls[key].textContent = s.returned[key] !== undefined ? `=${s.returned[key]}` : '';
+    });
+    // Edges
+    const univSet = new Set(s.univalueEdges);
+    const longestEdgeSet = new Set(s.longestEdges);
+    edges.forEach(e => {
+      const line = edgeEls[e.id];
+      line.classList.remove('univalue-left', 'univalue-right', 'in-longest');
+      if (longestEdgeSet.has(e.id)) {
+        line.classList.add('in-longest');
+      } else if (univSet.has(e.id)) {
+        line.classList.add('univalue-right');
+      }
+    });
+    // Call stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
