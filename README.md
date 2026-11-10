@@ -52,6 +52,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [222](https://kinny94.github.io/dsa-visualizations/lc222-count-complete-tree-nodes.html) | Count Complete Tree Nodes | Binary Tree · Binary-search-on-depth |
 | [404](https://kinny94.github.io/dsa-visualizations/lc404-sum-of-left-leaves.html) | Sum of Left Leaves | Binary Tree · BFS · check-at-parent |
 | [572](https://kinny94.github.io/dsa-visualizations/lc572-subtree-of-another-tree.html) | Subtree of Another Tree | Binary Tree · Outer × Inner composition |
+| [113](https://kinny94.github.io/dsa-visualizations/lc113-path-sum-ii.html) | Path Sum II | Binary Tree · DFS · path accumulator |
 
 ## Adding a new animation
 
