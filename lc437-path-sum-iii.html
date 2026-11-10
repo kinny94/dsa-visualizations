@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 437 — Path Sum III</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.cur .pill-v { color: #9ad4ff; }
+  .pill.lookup .pill-v { color: #ffd87a; }
+  .pill.count .pill-v { color: #4de88c; }
+  .pill.total .pill-v { color: #c89aff; }
+  .tree-wrap {
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+    min-height: 0;
+  }
+  svg { display: block; width: 100%; height: 280px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 13px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.on-path circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-path text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.matched circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; filter: drop-shadow(0 0 6px rgba(77, 232, 140, 0.5)); }
+  .node.matched text.val { fill: #4de88c; font-weight: bold; }
+  .node.done circle { stroke: #4a6a8a; fill: #1a2e4a; opacity: 0.5; }
+  .node.done text.val { opacity: 0.5; }
+  .node.null-ghost circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 8; }
+  .node.null-ghost text.val { display: none; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; }
+  .edge.null { stroke-dasharray: 3,3; }
+  .psum-label {
+    fill: #9ad4ff;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    font-weight: bold;
+  }
+  /* HashMap display */
+  .map-wrap {
+    padding: 10px;
+    background: #0f1529;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+  }
+  .map-label {
+    display: flex;
+    justify-content: space-between;
+    color: #aaa;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .map-rows {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .map-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 8px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    font-size: 11px;
+    transition: all 0.2s;
+  }
+  .map-entry .map-k { color: #9ad4ff; font-weight: bold; }
+  .map-entry .map-sep { color: #666; }
+  .map-entry .map-v { color: #ffd87a; font-weight: bold; }
+  .map-entry.looked-up {
+    background: #4a3010;
+    border-color: #ffa500;
+    animation: lookupFlash 0.4s ease-out;
+  }
+  .map-entry.found { background: #0f4a2a; border-color: #4de88c; box-shadow: 0 0 6px rgba(77, 232, 140, 0.5); }
+  .map-entry.just-incr {
+    background: #0f4a2a;
+    border-color: #4de88c;
+    animation: incrFlash 0.4s ease-out;
+  }
+  .map-entry.just-decr {
+    background: #4a0f1f;
+    border-color: #ff8ca0;
+    animation: decrFlash 0.4s ease-out;
+  }
+  .map-entry.zero { opacity: 0.3; }
+  @keyframes lookupFlash {
+    from { transform: scale(0.8); background: #ffa500; }
+    to { transform: scale(1); }
+  }
+  @keyframes incrFlash {
+    from { transform: scale(0.7); background: #4de88c; color: #000; }
+    to { transform: scale(1); }
+  }
+  @keyframes decrFlash {
+    from { transform: scale(1.2); background: #ff8ca0; }
+    to { transform: scale(1); }
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-sum { background: #9ad4ff; color: #1a1a2e; }
+  .kind-lookup { background: #ffd87a; color: #1a1a2e; }
+  .kind-match { background: #4de88c; color: #1a1a2e; }
+  .kind-incr { background: #0f9950; color: white; }
+  .kind-decr { background: #ff8ca0; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  /* Call stack */
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .matches-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+    margin-top: 6px;
+  }
+  .matches-list li {
+    padding: 5px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #4de88c;
+    color: #4de88c;
+    font-weight: bold;
+  }
+  .matches-list li.new { animation: slideIn 0.4s ease-out; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f4a2a; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-path { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-matched { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 437 — Path Sum III</h1>
+    <div class="subtitle">Prefix-sum + HashMap trick · lookup prefix[currentSum − target] → how many ancestors start a path of sum target ending here · root = [10, 5, -3, 3, 2, null, 11], target = 8</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code (no merge)</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill cur"><span class="pill-k">currentSum</span><span class="pill-v" id="curV">0</span></span>
+      <span class="pill lookup"><span class="pill-k">lookup key</span><span class="pill-v" id="lookupV">—</span></span>
+      <span class="pill count"><span class="pill-k">found</span><span class="pill-v" id="foundV">—</span></span>
+      <span class="pill total"><span class="pill-k">total paths</span><span class="pill-v" id="totalV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="map-wrap">
+      <div class="map-label">
+        <span>prefix: Map&lt;Long, Integer&gt;</span>
+        <span id="mapInfo"></span>
+      </div>
+      <div class="map-rows" id="mapRows"></div>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="panel-title" style="margin-top: 14px;">Matches found</div>
+    <ul class="matches-list" id="matches"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active DFS node</div>
+      <div class="legend-item"><div class="chip chip-path"></div>on root→current path</div>
+      <div class="legend-item"><div class="chip chip-matched"></div>endpoint of matching path</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Why prefix[0] = 1</div>
+      Seeds the empty prefix — handles paths that START from root. If `currentSum == target` at any node, `prefix[currentSum - target] = prefix[0] = 1` counts that root-starting path exactly once.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public int pathSum(TreeNode root, int targetSum) {",
+    "    Map<Long, Integer> prefix = new HashMap<>();",
+    "    prefix.put(0L, 1);",
+    "    return dfs(root, 0L, targetSum, prefix);",
+    "}",
+    "",
+    "private int dfs(TreeNode node, long currentSum, int targetSum,",
+    "                Map<Long, Integer> prefix) {",
+    "    if (node == null) {",
+    "        return 0;",
+    "    }",
+    "    currentSum += node.val;",
+    "    int count = prefix.getOrDefault(currentSum - targetSum, 0);",
+    "    prefix.put(currentSum,",
+    "               prefix.getOrDefault(currentSum, 0) + 1);",
+    "    count += dfs(node.left,  currentSum, targetSum, prefix);",
+    "    count += dfs(node.right, currentSum, targetSum, prefix);",
+    "    prefix.put(currentSum,",
+    "               prefix.getOrDefault(currentSum, 0) - 1);",
+    "    return count;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // [10, 5, -3, 3, 2, null, 11]
+  //       10
+  //      /  \
+  //     5   -3
+  //    /\    \
+  //   3  2   11
+  const nodes = {
+    n10: { x: 320, y:  40, r: 22, val: '10',  psum: 10 },
+    n5:  { x: 180, y: 130, r: 22, val: '5',   psum: 15 },
+    nm3: { x: 460, y: 130, r: 22, val: '-3',  psum: 7  },
+    n3:  { x: 120, y: 220, r: 22, val: '3',   psum: 18 },
+    n2:  { x: 240, y: 220, r: 22, val: '2',   psum: 17 },
+    n11: { x: 510, y: 220, r: 22, val: '11',  psum: 18 },
+    // null ghosts
+    nm3L:{ x: 420, y: 220, r: 8, isNull: true },
+    n3L: { x:  90, y: 270, r: 6, isNull: true },
+    n3R: { x: 150, y: 270, r: 6, isNull: true },
+    n2L: { x: 210, y: 270, r: 6, isNull: true },
+    n2R: { x: 270, y: 270, r: 6, isNull: true },
+    n11L:{ x: 480, y: 270, r: 6, isNull: true },
+    n11R:{ x: 540, y: 270, r: 6, isNull: true }
+  };
+  const edges = [
+    { from: 'n10', to: 'n5' },
+    { from: 'n10', to: 'nm3' },
+    { from: 'n5',  to: 'n3' },
+    { from: 'n5',  to: 'n2' },
+    { from: 'nm3', to: 'nm3L', isNull: true },
+    { from: 'nm3', to: 'n11' },
+    { from: 'n3',  to: 'n3L', isNull: true },
+    { from: 'n3',  to: 'n3R', isNull: true },
+    { from: 'n2',  to: 'n2L', isNull: true },
+    { from: 'n2',  to: 'n2R', isNull: true },
+    { from: 'n11', to: 'n11L', isNull: true },
+    { from: 'n11', to: 'n11R', isNull: true }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge' + (e.isNull ? ' null' : ''));
+    svg.appendChild(line);
+    edgeEls[`${e.from}-${e.to}`] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.isNull ? ' null-ghost' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    if (!n.isNull) {
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+      t.setAttribute('class', 'val');
+      t.textContent = n.val;
+      g.appendChild(t);
+    }
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // map: object { "key": count } for prefix state
+  // lookedUp: key (string) that was just queried (highlight amber)
+  // found: boolean — was lookedUp found with positive count
+  // justIncr / justDecr: key just incremented or decremented
+  // currentSum: long value for pill
+  // lookupKey: currentSum - target for pill
+  // foundCount: numeric count returned from lookup
+  // total: running total of matches found so far
+  // active: node id of current frame
+  // pathNodes: nodes on root→current path
+  // matched: array of node ids whose lookup found a match (green highlight on tree)
+  // done: fully returned frames
+  // stack: call stack
+  // matches: array of path strings for right panel
+  // newMatch: 1 if last entry just added
+  const steps = [
+    { line: [2, 3, 4], active: null, currentSum: 0, lookupKey: null, foundCount: null, total: 0,
+      pathNodes: [], matched: [], done: [],
+      map: {"0": 1}, lookedUp: null, found: false, justIncr: "0", justDecr: null,
+      stack: [{ id: "f_outer", label: "pathSum(root, 8)", sub: "init: prefix[0]=1, call dfs(10, 0, 8)" }],
+      matches: [], newMatch: 0,
+      action: "Init prefix={0:1}. The seed 0→1 handles paths starting from the root.", kind: "call" },
+
+    { line: [9, 10], active: "n10", currentSum: 0, lookupKey: null, foundCount: null, total: 0,
+      pathNodes: [], matched: [], done: [],
+      map: {"0": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "entry" }
+      ],
+      matches: [], newMatch: 0,
+      action: "Enter dfs(root=10, currentSum=0). Node != null → proceed.", kind: "call" },
+
+    { line: [12], active: "n10", currentSum: 10, lookupKey: null, foundCount: null, total: 0,
+      pathNodes: ["n10"], matched: [], done: [],
+      map: {"0": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "currentSum = 10" }
+      ],
+      matches: [], newMatch: 0,
+      action: "currentSum += 10 → 10.", kind: "sum" },
+
+    { line: [13], active: "n10", currentSum: 10, lookupKey: 2, foundCount: 0, total: 0,
+      pathNodes: ["n10"], matched: [], done: [],
+      map: {"0": 1}, lookedUp: "2", found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "count = 0" }
+      ],
+      matches: [], newMatch: 0,
+      action: "Lookup prefix[currentSum - target] = prefix[10 - 8] = prefix[2]. Not in map → count = 0.", kind: "lookup" },
+
+    { line: [14, 15], active: "n10", currentSum: 10, lookupKey: 2, foundCount: 0, total: 0,
+      pathNodes: ["n10"], matched: [], done: [],
+      map: {"0": 1, "10": 1}, lookedUp: null, found: false, justIncr: "10", justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "prefix[10]=1" }
+      ],
+      matches: [], newMatch: 0,
+      action: "prefix.put(10, prefix.getOrDefault(10, 0) + 1) → prefix[10] = 1.", kind: "incr" },
+
+    { line: [16], active: "n10", currentSum: 10, lookupKey: null, foundCount: null, total: 0,
+      pathNodes: ["n10"], matched: [], done: [],
+      map: {"0": 1, "10": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "recurse LEFT" }
+      ],
+      matches: [], newMatch: 0,
+      action: "Call dfs(10.left = 5, currentSum=10, 8, prefix).", kind: "call" },
+
+    { line: [9, 10], active: "n5", currentSum: 10, lookupKey: null, foundCount: null, total: 0,
+      pathNodes: ["n10"], matched: [], done: [],
+      map: {"0": 1, "10": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "entry" }
+      ],
+      matches: [], newMatch: 0,
+      action: "Enter dfs(node=5, currentSum=10). Node != null.", kind: "call" },
+
+    { line: [12], active: "n5", currentSum: 15, lookupKey: null, foundCount: null, total: 0,
+      pathNodes: ["n10", "n5"], matched: [], done: [],
+      map: {"0": 1, "10": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "currentSum = 15" }
+      ],
+      matches: [], newMatch: 0,
+      action: "currentSum += 5 → 15.", kind: "sum" },
+
+    { line: [13], active: "n5", currentSum: 15, lookupKey: 7, foundCount: 0, total: 0,
+      pathNodes: ["n10", "n5"], matched: [], done: [],
+      map: {"0": 1, "10": 1}, lookedUp: "7", found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "count = 0" }
+      ],
+      matches: [], newMatch: 0,
+      action: "Lookup prefix[15 - 8] = prefix[7]. Not in map → count = 0.", kind: "lookup" },
+
+    { line: [14, 15], active: "n5", currentSum: 15, lookupKey: 7, foundCount: 0, total: 0,
+      pathNodes: ["n10", "n5"], matched: [], done: [],
+      map: {"0": 1, "10": 1, "15": 1}, lookedUp: null, found: false, justIncr: "15", justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "prefix[15]=1" }
+      ],
+      matches: [], newMatch: 0,
+      action: "prefix[15] = 1.", kind: "incr" },
+
+    { line: [16], active: "n5", currentSum: 15, lookupKey: null, foundCount: null, total: 0,
+      pathNodes: ["n10", "n5"], matched: [], done: [],
+      map: {"0": 1, "10": 1, "15": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "recurse LEFT" }
+      ],
+      matches: [], newMatch: 0,
+      action: "Call dfs(5.left = 3, currentSum=15, 8, prefix).", kind: "call" },
+
+    { line: [9, 10, 12], active: "n3", currentSum: 18, lookupKey: null, foundCount: null, total: 0,
+      pathNodes: ["n10", "n5", "n3"], matched: [], done: [],
+      map: {"0": 1, "10": 1, "15": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "dfs(3, 15)", sub: "currentSum = 18" }
+      ],
+      matches: [], newMatch: 0,
+      action: "Enter dfs(3, 15). currentSum += 3 → 18.", kind: "sum" },
+
+    { line: [13], active: "n3", currentSum: 18, lookupKey: 10, foundCount: 1, total: 1,
+      pathNodes: ["n10", "n5", "n3"], matched: ["n3"], done: [],
+      map: {"0": 1, "10": 1, "15": 1}, lookedUp: "10", found: true, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "dfs(3, 15)", sub: "★ FOUND prefix[10]=1" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 1,
+      action: "Lookup prefix[18 - 8] = prefix[10]. FOUND with count 1! ★ MATCH: path [5, 3] sums to 8. (Ancestor at prefixSum 10 is node 10; everything AFTER = path [5, 3].)", kind: "match" },
+
+    { line: [14, 15], active: "n3", currentSum: 18, lookupKey: 10, foundCount: 1, total: 1,
+      pathNodes: ["n10", "n5", "n3"], matched: ["n3"], done: [],
+      map: {"0": 1, "10": 1, "15": 1, "18": 1}, lookedUp: null, found: false, justIncr: "18", justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "dfs(3, 15)", sub: "prefix[18]=1" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "prefix[18] = 1.", kind: "incr" },
+
+    { line: [16, 17], active: "n3", currentSum: 18, lookupKey: null, foundCount: null, total: 1,
+      pathNodes: ["n10", "n5", "n3"], matched: ["n3"], done: [],
+      map: {"0": 1, "10": 1, "15": 1, "18": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "dfs(3, 15)", sub: "both children null → 0" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "Call dfs(3.left = null) → return 0. Call dfs(3.right = null) → return 0.", kind: "return" },
+
+    { line: [18, 19], active: "n3", currentSum: 18, lookupKey: null, foundCount: null, total: 1,
+      pathNodes: ["n10", "n5", "n3"], matched: ["n3"], done: [],
+      map: {"0": 1, "10": 1, "15": 1, "18": 0}, lookedUp: null, found: false, justIncr: null, justDecr: "18",
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "dfs(3, 15)", sub: "backtrack: prefix[18]=0" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "BACKTRACK: prefix[18] = 1 - 1 = 0. Return 1 from dfs(3).", kind: "decr" },
+
+    { line: [16, 17], active: "n5", currentSum: 15, lookupKey: null, foundCount: null, total: 1,
+      pathNodes: ["n10", "n5"], matched: ["n3"], done: ["n3"],
+      map: {"0": 1, "10": 1, "15": 1, "18": 0}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "count = 0 + 1 = 1, recurse RIGHT" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "Back in dfs(5). count = 0 + 1 = 1. Call dfs(5.right = 2, currentSum=15).", kind: "call" },
+
+    { line: [9, 10, 12], active: "n2", currentSum: 17, lookupKey: null, foundCount: null, total: 1,
+      pathNodes: ["n10", "n5", "n2"], matched: ["n3"], done: ["n3"],
+      map: {"0": 1, "10": 1, "15": 1, "18": 0}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "waiting on RIGHT" },
+        { id: "f_n2", label: "dfs(2, 15)", sub: "currentSum = 17" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "Enter dfs(2, 15). currentSum += 2 → 17.", kind: "sum" },
+
+    { line: [13], active: "n2", currentSum: 17, lookupKey: 9, foundCount: 0, total: 1,
+      pathNodes: ["n10", "n5", "n2"], matched: ["n3"], done: ["n3"],
+      map: {"0": 1, "10": 1, "15": 1, "18": 0}, lookedUp: "9", found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "waiting on RIGHT" },
+        { id: "f_n2", label: "dfs(2, 15)", sub: "count = 0" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "Lookup prefix[17 - 8] = prefix[9]. Not in map → count = 0.", kind: "lookup" },
+
+    { line: [14, 15, 16, 17], active: "n2", currentSum: 17, lookupKey: 9, foundCount: 0, total: 1,
+      pathNodes: ["n10", "n5", "n2"], matched: ["n3"], done: ["n3"],
+      map: {"0": 1, "10": 1, "15": 1, "18": 0, "17": 1}, lookedUp: null, found: false, justIncr: "17", justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "waiting on RIGHT" },
+        { id: "f_n2", label: "dfs(2, 15)", sub: "prefix[17]=1, kids null" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "prefix[17] = 1. Recurse LEFT (null) → 0. Recurse RIGHT (null) → 0.", kind: "incr" },
+
+    { line: [18, 19], active: "n2", currentSum: 17, lookupKey: null, foundCount: null, total: 1,
+      pathNodes: ["n10", "n5", "n2"], matched: ["n3"], done: ["n3"],
+      map: {"0": 1, "10": 1, "15": 1, "18": 0, "17": 0}, lookedUp: null, found: false, justIncr: null, justDecr: "17",
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "waiting on RIGHT" },
+        { id: "f_n2", label: "dfs(2, 15)", sub: "backtrack: prefix[17]=0" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "BACKTRACK: prefix[17] = 0. Return 0 from dfs(2).", kind: "decr" },
+
+    { line: [18, 19], active: "n5", currentSum: 15, lookupKey: null, foundCount: null, total: 1,
+      pathNodes: ["n10", "n5"], matched: ["n3"], done: ["n3", "n2"],
+      map: {"0": 1, "10": 1, "15": 0, "18": 0, "17": 0}, lookedUp: null, found: false, justIncr: null, justDecr: "15",
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on LEFT" },
+        { id: "f_n5", label: "dfs(5, 10)", sub: "backtrack: prefix[15]=0, return 1" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "Back in dfs(5). count = 1 + 0 = 1. BACKTRACK: prefix[15] = 0. Return 1 from dfs(5).", kind: "decr" },
+
+    { line: [17], active: "n10", currentSum: 10, lookupKey: null, foundCount: null, total: 1,
+      pathNodes: ["n10"], matched: ["n3"], done: ["n3", "n2", "n5"],
+      map: {"0": 1, "10": 1, "15": 0, "18": 0, "17": 0}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "count = 1, recurse RIGHT" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "Back in dfs(10). count = 0 + 1 = 1. Call dfs(10.right = -3, currentSum=10).", kind: "call" },
+
+    { line: [9, 10, 12], active: "nm3", currentSum: 7, lookupKey: null, foundCount: null, total: 1,
+      pathNodes: ["n10", "nm3"], matched: ["n3"], done: ["n3", "n2", "n5"],
+      map: {"0": 1, "10": 1, "15": 0, "18": 0, "17": 0}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on RIGHT" },
+        { id: "f_nm3", label: "dfs(-3, 10)", sub: "currentSum = 7" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "Enter dfs(-3, 10). currentSum += -3 → 7.", kind: "sum" },
+
+    { line: [13], active: "nm3", currentSum: 7, lookupKey: -1, foundCount: 0, total: 1,
+      pathNodes: ["n10", "nm3"], matched: ["n3"], done: ["n3", "n2", "n5"],
+      map: {"0": 1, "10": 1, "15": 0, "18": 0, "17": 0}, lookedUp: "-1", found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on RIGHT" },
+        { id: "f_nm3", label: "dfs(-3, 10)", sub: "count = 0" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "Lookup prefix[7 - 8] = prefix[-1]. Not in map → count = 0.", kind: "lookup" },
+
+    { line: [14, 15], active: "nm3", currentSum: 7, lookupKey: -1, foundCount: 0, total: 1,
+      pathNodes: ["n10", "nm3"], matched: ["n3"], done: ["n3", "n2", "n5"],
+      map: {"0": 1, "10": 1, "15": 0, "18": 0, "17": 0, "7": 1}, lookedUp: null, found: false, justIncr: "7", justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on RIGHT" },
+        { id: "f_nm3", label: "dfs(-3, 10)", sub: "prefix[7]=1" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "prefix[7] = 1.", kind: "incr" },
+
+    { line: [16, 17], active: "nm3", currentSum: 7, lookupKey: null, foundCount: null, total: 1,
+      pathNodes: ["n10", "nm3"], matched: ["n3"], done: ["n3", "n2", "n5"],
+      map: {"0": 1, "10": 1, "15": 0, "18": 0, "17": 0, "7": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on RIGHT" },
+        { id: "f_nm3", label: "dfs(-3, 10)", sub: "LEFT null → 0, recurse RIGHT" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "dfs(-3.left = null) → 0. Call dfs(-3.right = 11, currentSum=7).", kind: "call" },
+
+    { line: [9, 10, 12], active: "n11", currentSum: 18, lookupKey: null, foundCount: null, total: 1,
+      pathNodes: ["n10", "nm3", "n11"], matched: ["n3"], done: ["n3", "n2", "n5"],
+      map: {"0": 1, "10": 1, "15": 0, "18": 0, "17": 0, "7": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on RIGHT" },
+        { id: "f_nm3", label: "dfs(-3, 10)", sub: "waiting on RIGHT" },
+        { id: "f_n11", label: "dfs(11, 7)", sub: "currentSum = 18" }
+      ],
+      matches: ["5 → 3 (sum = 8)"], newMatch: 0,
+      action: "Enter dfs(11, 7). currentSum += 11 → 18.", kind: "sum" },
+
+    { line: [13], active: "n11", currentSum: 18, lookupKey: 10, foundCount: 1, total: 2,
+      pathNodes: ["n10", "nm3", "n11"], matched: ["n3", "n11"], done: ["n3", "n2", "n5"],
+      map: {"0": 1, "10": 1, "15": 0, "18": 0, "17": 0, "7": 1}, lookedUp: "10", found: true, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on RIGHT" },
+        { id: "f_nm3", label: "dfs(-3, 10)", sub: "waiting on RIGHT" },
+        { id: "f_n11", label: "dfs(11, 7)", sub: "★ FOUND prefix[10]=1" }
+      ],
+      matches: ["5 → 3 (sum = 8)", "-3 → 11 (sum = 8)"], newMatch: 1,
+      action: "Lookup prefix[18 - 8] = prefix[10]. FOUND with count 1! ★ MATCH: path [-3, 11] sums to 8.", kind: "match" },
+
+    { line: [14, 15, 16, 17, 18, 19], active: "n11", currentSum: 18, lookupKey: 10, foundCount: 1, total: 2,
+      pathNodes: ["n10", "nm3", "n11"], matched: ["n3", "n11"], done: ["n3", "n2", "n5"],
+      map: {"0": 1, "10": 1, "15": 0, "18": 0, "17": 0, "7": 1}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on RIGHT" },
+        { id: "f_nm3", label: "dfs(-3, 10)", sub: "waiting on RIGHT" },
+        { id: "f_n11", label: "dfs(11, 7)", sub: "incr+kids+decr, return 1" }
+      ],
+      matches: ["5 → 3 (sum = 8)", "-3 → 11 (sum = 8)"], newMatch: 0,
+      action: "prefix[18] = 1. Both children null → 0 + 0. BACKTRACK: prefix[18] = 0. Return 1 from dfs(11).", kind: "return" },
+
+    { line: [18, 19], active: "nm3", currentSum: 7, lookupKey: null, foundCount: null, total: 2,
+      pathNodes: ["n10", "nm3"], matched: ["n3", "n11"], done: ["n3", "n2", "n5", "n11"],
+      map: {"0": 1, "10": 1, "15": 0, "18": 0, "17": 0, "7": 0}, lookedUp: null, found: false, justIncr: null, justDecr: "7",
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "waiting on RIGHT" },
+        { id: "f_nm3", label: "dfs(-3, 10)", sub: "backtrack: prefix[7]=0, return 1" }
+      ],
+      matches: ["5 → 3 (sum = 8)", "-3 → 11 (sum = 8)"], newMatch: 0,
+      action: "Back in dfs(-3). count = 0 + 0 + 1 = 1. BACKTRACK: prefix[7] = 0. Return 1 from dfs(-3).", kind: "decr" },
+
+    { line: [18, 19], active: "n10", currentSum: 10, lookupKey: null, foundCount: null, total: 2,
+      pathNodes: ["n10"], matched: ["n3", "n11"], done: ["n3", "n2", "n5", "n11", "nm3"],
+      map: {"0": 1, "10": 0, "15": 0, "18": 0, "17": 0, "7": 0}, lookedUp: null, found: false, justIncr: null, justDecr: "10",
+      stack: [
+        { id: "f_outer", label: "pathSum(root, 8)", sub: "waiting" },
+        { id: "f_n10", label: "dfs(10, 0)", sub: "backtrack: prefix[10]=0, return 2" }
+      ],
+      matches: ["5 → 3 (sum = 8)", "-3 → 11 (sum = 8)"], newMatch: 0,
+      action: "Back in dfs(10). count = 1 + 1 = 2. BACKTRACK: prefix[10] = 0. Return 2.", kind: "decr" },
+
+    { line: [4], active: null, currentSum: 0, lookupKey: null, foundCount: null, total: 2,
+      pathNodes: [], matched: ["n3", "n11"], done: ["n3", "n2", "n5", "n11", "nm3", "n10"],
+      map: {"0": 1, "10": 0, "15": 0, "18": 0, "17": 0, "7": 0}, lookedUp: null, found: false, justIncr: null, justDecr: null,
+      stack: [],
+      matches: ["5 → 3 (sum = 8)", "-3 → 11 (sum = 8)"], newMatch: 0,
+      action: "Return 2. ★ Done. Two paths summing to 8: [5, 3] and [-3, 11].", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const curVEl = document.getElementById('curV');
+  const lookupVEl = document.getElementById('lookupV');
+  const foundVEl = document.getElementById('foundV');
+  const totalVEl = document.getElementById('totalV');
+  const mapRowsEl = document.getElementById('mapRows');
+  const stackEl = document.getElementById('stack');
+  const matchesEl = document.getElementById('matches');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    curVEl.textContent = s.currentSum;
+    if (s.lookupKey === null) {
+      lookupVEl.textContent = '—';
+      foundVEl.textContent = '—';
+    } else {
+      lookupVEl.textContent = s.lookupKey;
+      foundVEl.textContent = s.foundCount;
+    }
+    totalVEl.textContent = s.total;
+    // Tree
+    const pathSet = new Set(s.pathNodes);
+    const matchedSet = new Set(s.matched);
+    const doneSet = new Set(s.done);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-path', 'matched', 'done');
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (matchedSet.has(key)) {
+        el.classList.add('matched');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-path');
+      } else if (doneSet.has(key)) {
+        el.classList.add('done');
+      }
+    });
+    edges.forEach(e => {
+      const line = edgeEls[`${e.from}-${e.to}`];
+      line.classList.remove('on-path');
+      if (pathSet.has(e.from) && pathSet.has(e.to)) {
+        line.classList.add('on-path');
+      }
+    });
+    // HashMap
+    mapRowsEl.innerHTML = '';
+    const sortedKeys = Object.keys(s.map).map(Number).sort((a, b) => a - b);
+    sortedKeys.forEach(k => {
+      const entry = document.createElement('span');
+      entry.className = 'map-entry';
+      const v = s.map[k];
+      if (v === 0) { entry.classList.add('zero'); }
+      if (String(k) === s.lookedUp) {
+        entry.classList.add(s.found ? 'found' : 'looked-up');
+      }
+      if (String(k) === s.justIncr) { entry.classList.add('just-incr'); }
+      if (String(k) === s.justDecr) { entry.classList.add('just-decr'); }
+      const kEl = document.createElement('span');
+      kEl.className = 'map-k';
+      kEl.textContent = k;
+      const sep = document.createElement('span');
+      sep.className = 'map-sep';
+      sep.textContent = '→';
+      const vEl = document.createElement('span');
+      vEl.className = 'map-v';
+      vEl.textContent = v;
+      entry.appendChild(kEl); entry.appendChild(sep); entry.appendChild(vEl);
+      mapRowsEl.appendChild(entry);
+    });
+    if (sortedKeys.length === 0) {
+      const empty = document.createElement('span');
+      empty.style.color = '#6a7a9a'; empty.style.fontStyle = 'italic'; empty.style.fontSize = '11px';
+      empty.textContent = '{}';
+      mapRowsEl.appendChild(empty);
+    }
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    // Matches
+    matchesEl.innerHTML = '';
+    s.matches.forEach((m, i) => {
+      const li = document.createElement('li');
+      li.textContent = m;
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      matchesEl.appendChild(li);
+    });
+    prevResultLen = s.matches.length;
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].matches.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

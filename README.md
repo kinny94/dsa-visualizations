@@ -53,6 +53,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [404](https://kinny94.github.io/dsa-visualizations/lc404-sum-of-left-leaves.html) | Sum of Left Leaves | Binary Tree · BFS · check-at-parent |
 | [572](https://kinny94.github.io/dsa-visualizations/lc572-subtree-of-another-tree.html) | Subtree of Another Tree | Binary Tree · Outer × Inner composition |
 | [113](https://kinny94.github.io/dsa-visualizations/lc113-path-sum-ii.html) | Path Sum II | Binary Tree · DFS · path accumulator |
+| [437](https://kinny94.github.io/dsa-visualizations/lc437-path-sum-iii.html) | Path Sum III | Binary Tree · Prefix Sum · HashMap |
 
 ## Adding a new animation
 
