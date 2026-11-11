@@ -61,6 +61,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [297](https://kinny94.github.io/dsa-visualizations/lc297-serialize-deserialize-binary-tree.html) | Serialize + Deserialize Binary Tree | Binary Tree · BFS · null sentinels |
 | [783](https://kinny94.github.io/dsa-visualizations/lc783-minimum-distance-between-bst-nodes.html) | Minimum Distance Between BST Nodes | BST · Inorder · adjacent-pair |
 | [98](https://kinny94.github.io/dsa-visualizations/lc98-validate-binary-search-tree.html) | Validate Binary Search Tree | BST · Inorder · strictly-increasing |
+| [230](https://kinny94.github.io/dsa-visualizations/lc230-kth-smallest-element-bst.html) | Kth Smallest Element in a BST | BST · Inorder · counter + early stop |
 
 ## Adding a new animation
 

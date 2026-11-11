@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 230 — Kth Smallest Element in a BST</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: auto;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.prev .pill-v { color: #9ad4ff; }
+  .pill.diff .pill-v { color: #ffd87a; }
+  .pill.min .pill-v { color: #4de88c; }
+  .pill.min.updated { animation: minPulse 0.5s ease-out; }
+  @keyframes minPulse {
+    from { transform: scale(1.3); background: #4de88c; color: #000; }
+    to { transform: scale(1); }
+  }
+  .tree-wrap {
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 280px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.prev-node circle { stroke: #9ad4ff; stroke-width: 3; fill: #0f2a4a; }
+  .node.prev-node text.val { fill: #cde8ff; }
+  .node.done circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.done text.val { fill: #4de88c; }
+  .node.null-ghost circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 8; }
+  .node.null-ghost text.val { display: none; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.null { stroke-dasharray: 3,3; }
+  /* Sorted ribbon (visited inorder values) */
+  .ribbon-wrap {
+    padding: 10px;
+    background: #0f1529;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+  }
+  .ribbon-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .ribbon-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    flex-wrap: wrap;
+  }
+  .ribbon-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #ffd87a;
+    font-size: 13px;
+  }
+  .ribbon-cell.just-added {
+    background: #0f4a2a;
+    border-color: #4de88c;
+    color: #fff;
+    animation: appendFlash 0.4s ease-out;
+  }
+  .ribbon-cell.is-prev { background: #0f2a4a; border-color: #9ad4ff; color: #cde8ff; }
+  @keyframes appendFlash {
+    from { transform: scale(0.7); background: #4de88c; color: #000; }
+    to { transform: scale(1); }
+  }
+  .ribbon-arrow {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    color: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+  }
+  .ribbon-arrow .diff {
+    color: #ffd87a;
+    font-weight: bold;
+    margin-bottom: 1px;
+  }
+  .ribbon-arrow.is-min { color: #4de88c; }
+  .ribbon-arrow.is-min .diff { color: #4de88c; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #c89aff; color: #1a1a2e; }
+  .kind-visit { background: #4de88c; color: #1a1a2e; }
+  .kind-update { background: #ff8ca0; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-stack { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-prev { background: #0f2a4a; border: 2px solid #9ad4ff; }
+  .chip-done { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 230 — Kth Smallest Element in a BST</h1>
+    <div class="subtitle">Inorder walk + counter · stop at k-th visit · tree = [3, 1, 4, null, 2], k = 3</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill prev"><span class="pill-k">count</span><span class="pill-v" id="countV">0</span></span>
+      <span class="pill diff"><span class="pill-k">k</span><span class="pill-v" id="kV">3</span></span>
+      <span class="pill min" id="resultPill"><span class="pill-k">result</span><span class="pill-v" id="resultV">—</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="ribbon-wrap">
+      <div class="ribbon-label">Inorder sequence — stop at k = 3</div>
+      <div class="ribbon-row" id="ribbonRow"></div>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-stack"></div>on recursion stack</div>
+      <div class="legend-item"><div class="chip chip-prev"></div>prev (previous inorder node)</div>
+      <div class="legend-item"><div class="chip chip-done"></div>visited</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Why only adjacent pairs</div>
+      For any a < b < c in sorted order, <code>|a - c| &gt; |a - b|</code> AND <code>|a - c| &gt; |b - c|</code>. So the min can only come from an adjacent pair. Inorder is sorted for a BST — that’s the only trick.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "private int count = 0;",
+    "private int result = 0;",
+    "",
+    "public int kthSmallest(TreeNode root, int k) {",
+    "    solve(root, k);",
+    "    return result;",
+    "}",
+    "",
+    "private void solve(TreeNode node, int k) {",
+    "    if (node == null) {",
+    "        return;",
+    "    }",
+    "    solve(node.left, k);",
+    "    count++;",
+    "    if (count == k) {",
+    "        result = node.val;",
+    "        return;",
+    "    }",
+    "    solve(node.right, k);",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // BST: [4, 2, 6, 1, 3]
+  //       4
+  //      / \
+  //     2   6
+  //    /\
+  //   1  3
+  const nodes = {
+    n3: { x: 320, y:  50, r: 22, val: '3' },
+    n1: { x: 200, y: 140, r: 22, val: '1' },
+    n4: { x: 460, y: 140, r: 22, val: '4' },
+    n2: { x: 280, y: 230, r: 22, val: '2' },
+    n1L: { x: 160, y: 195, r: 6, isNull: true },
+    n4L: { x: 420, y: 195, r: 6, isNull: true },
+    n4R: { x: 500, y: 195, r: 6, isNull: true },
+    n2L: { x: 250, y: 285, r: 6, isNull: true },
+    n2R: { x: 310, y: 285, r: 6, isNull: true }
+  };
+  const edges = [
+    { id: 'e_3_1', from: 'n3', to: 'n1' },
+    { id: 'e_3_4', from: 'n3', to: 'n4' },
+    { id: 'e_1_L', from: 'n1', to: 'n1L', isNull: true },
+    { id: 'e_1_2', from: 'n1', to: 'n2' },
+    { id: 'e_4_L', from: 'n4', to: 'n4L', isNull: true },
+    { id: 'e_4_R', from: 'n4', to: 'n4R', isNull: true },
+    { id: 'e_2_L', from: 'n2', to: 'n2L', isNull: true },
+    { id: 'e_2_R', from: 'n2', to: 'n2R', isNull: true }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge' + (e.isNull ? ' null' : ''));
+    svg.appendChild(line);
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.isNull ? ' null-ghost' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    if (!n.isNull) {
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+      t.setAttribute('class', 'val');
+      t.textContent = n.val;
+      g.appendChild(t);
+    }
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // For this viz the shape is similar to LC 783:
+  //   pathNodes = recursion path
+  //   count = counter value
+  //   ribbon = inorder visits so far
+  //   justAdded = latest ribbon index
+  //   kHit = index in ribbon where count == k happens (for final highlight)
+  //   resultVal = current result (or null)
+  //   doneNodes, active, stack as usual
+  const K = 3;
+  const steps = [
+    { line: [5], active: null, stack: [{ id: "f_outer", label: "kthSmallest(root, 3)", sub: "call solve(3, 3)" }],
+      pathNodes: [], count: 0, ribbon: [], justAdded: -1, kHit: -1, resultVal: null, doneNodes: [],
+      action: "Init count = 0, result = 0. Call solve(root = 3, k = 3).", kind: "call" },
+
+    { line: [9, 10, 13], active: "n3", stack: [
+        { id: "f_outer", label: "kthSmallest(root, 3)", sub: "waiting" },
+        { id: "f_n3", label: "solve(3, 3)", sub: "recurse LEFT" }
+      ],
+      pathNodes: ["n3"], count: 0, ribbon: [], justAdded: -1, kHit: -1, resultVal: null, doneNodes: [],
+      action: "Enter solve(3). solve(node.left = 1, k).", kind: "call" },
+
+    { line: [9, 10, 13], active: "n1", stack: [
+        { id: "f_outer", label: "kthSmallest(root, 3)", sub: "waiting" },
+        { id: "f_n3", label: "solve(3, 3)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 3)", sub: "recurse LEFT (null)" }
+      ],
+      pathNodes: ["n3", "n1"], count: 0, ribbon: [], justAdded: -1, kHit: -1, resultVal: null, doneNodes: [],
+      action: "Enter solve(1). solve(1.left = null) → return.", kind: "call" },
+
+    { line: [14, 15], active: "n1", stack: [
+        { id: "f_outer", label: "kthSmallest", sub: "waiting" },
+        { id: "f_n3", label: "solve(3, 3)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 3)", sub: "count=1" }
+      ],
+      pathNodes: ["n3", "n1"], count: 1, ribbon: [1], justAdded: 0, kHit: -1, resultVal: null, doneNodes: [],
+      action: "count++ → 1. Visit node 1 (first inorder value). 1ˢᵗ smallest = 1.", kind: "visit" },
+
+    { line: [15], active: "n1", stack: [
+        { id: "f_outer", label: "kthSmallest", sub: "waiting" },
+        { id: "f_n3", label: "solve(3, 3)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 3)", sub: "1 != 3, continue" }
+      ],
+      pathNodes: ["n3", "n1"], count: 1, ribbon: [1], justAdded: -1, kHit: -1, resultVal: null, doneNodes: [],
+      action: "count (1) == k (3)? NO. Continue to right recursion.", kind: "check" },
+
+    { line: [19], active: "n1", stack: [
+        { id: "f_outer", label: "kthSmallest", sub: "waiting" },
+        { id: "f_n3", label: "solve(3, 3)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 3)", sub: "recurse RIGHT" }
+      ],
+      pathNodes: ["n3", "n1"], count: 1, ribbon: [1], justAdded: -1, kHit: -1, resultVal: null, doneNodes: [],
+      action: "solve(1.right = 2, k).", kind: "call" },
+
+    { line: [9, 10, 13], active: "n2", stack: [
+        { id: "f_outer", label: "kthSmallest", sub: "waiting" },
+        { id: "f_n3", label: "solve(3, 3)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 3)", sub: "waiting on RIGHT" },
+        { id: "f_n2", label: "solve(2, 3)", sub: "recurse LEFT (null)" }
+      ],
+      pathNodes: ["n3", "n1", "n2"], count: 1, ribbon: [1], justAdded: -1, kHit: -1, resultVal: null, doneNodes: [],
+      action: "Enter solve(2). solve(2.left = null) → return.", kind: "call" },
+
+    { line: [14, 15], active: "n2", stack: [
+        { id: "f_outer", label: "kthSmallest", sub: "waiting" },
+        { id: "f_n3", label: "solve(3, 3)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 3)", sub: "waiting on RIGHT" },
+        { id: "f_n2", label: "solve(2, 3)", sub: "count=2" }
+      ],
+      pathNodes: ["n3", "n1", "n2"], count: 2, ribbon: [1, 2], justAdded: 1, kHit: -1, resultVal: null, doneNodes: [],
+      action: "count++ → 2. Visit node 2 (second inorder value).", kind: "visit" },
+
+    { line: [15, 19], active: "n2", stack: [
+        { id: "f_outer", label: "kthSmallest", sub: "waiting" },
+        { id: "f_n3", label: "solve(3, 3)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 3)", sub: "waiting on RIGHT" },
+        { id: "f_n2", label: "solve(2, 3)", sub: "2 != 3, recurse RIGHT (null)" }
+      ],
+      pathNodes: ["n3", "n1", "n2"], count: 2, ribbon: [1, 2], justAdded: -1, kHit: -1, resultVal: null, doneNodes: [],
+      action: "count (2) == k (3)? NO. solve(2.right = null) → return. solve(2) returns.", kind: "return" },
+
+    { line: [20], active: "n1", stack: [
+        { id: "f_outer", label: "kthSmallest", sub: "waiting" },
+        { id: "f_n3", label: "solve(3, 3)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 3)", sub: "return" }
+      ],
+      pathNodes: ["n3"], count: 2, ribbon: [1, 2], justAdded: -1, kHit: -1, resultVal: null, doneNodes: ["n1", "n2"],
+      action: "solve(1) returns.", kind: "return" },
+
+    { line: [14, 15, 16, 17], active: "n3", stack: [
+        { id: "f_outer", label: "kthSmallest", sub: "waiting" },
+        { id: "f_n3", label: "solve(3, 3)", sub: "count=3, MATCH ★" }
+      ],
+      pathNodes: ["n3"], count: 3, ribbon: [1, 2, 3], justAdded: 2, kHit: 2, resultVal: 3, doneNodes: ["n1", "n2"],
+      action: "Back in solve(3). count++ → 3. count == k → result = node.val = 3. ★ RECORD. Return (short-circuit, don't recurse right).", kind: "update" },
+
+    { line: [5], active: null, stack: [],
+      pathNodes: [], count: 3, ribbon: [1, 2, 3], justAdded: -1, kHit: 2, resultVal: 3, doneNodes: ["n1", "n2", "n3"],
+      action: "Return result = 3. ★ Done. Node 4 was never visited — inorder walk stopped at the 3rd smallest.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const countVEl = document.getElementById('countV');
+  const kVEl = document.getElementById('kV');
+  const resultVEl = document.getElementById('resultV');
+  const resultPillEl = document.getElementById('resultPill');
+  const ribbonRowEl = document.getElementById('ribbonRow');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.active ? nodes[s.active].val : '—';
+    countVEl.textContent = s.count;
+    kVEl.textContent = '3';
+    resultVEl.textContent = s.resultVal !== null ? s.resultVal : '—';
+    if (s.kHit === s.justAdded && s.resultVal !== null) {
+      resultPillEl.classList.remove('updated');
+      void resultPillEl.offsetWidth;
+      resultPillEl.classList.add('updated');
+    } else {
+      resultPillEl.classList.remove('updated');
+    }
+    // Tree
+    const pathSet = new Set(s.pathNodes);
+    const doneSet = new Set(s.doneNodes);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-stack', 'done');
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-stack');
+      } else if (doneSet.has(key)) {
+        el.classList.add('done');
+      }
+    });
+    // Ribbon
+    ribbonRowEl.innerHTML = '';
+    s.ribbon.forEach((v, i) => {
+      if (i > 0) {
+        const arr = document.createElement('span');
+        arr.className = 'ribbon-arrow';
+        const label = document.createElement('div');
+        label.className = 'diff';
+        label.textContent = '<';
+        label.style.color = '#4de88c';
+        const a = document.createElement('div'); a.textContent = '';
+        arr.appendChild(label); arr.appendChild(a);
+        ribbonRowEl.appendChild(arr);
+      }
+      const cell = document.createElement('span');
+      cell.className = 'ribbon-cell';
+      if (i === s.justAdded) { cell.classList.add('just-added'); }
+      if (i === s.kHit) {
+        cell.style.background = '#0f4a2a';
+        cell.style.borderColor = '#4de88c';
+        cell.style.color = '#fff';
+        cell.style.fontSize = '15px';
+      }
+      cell.textContent = v;
+      ribbonRowEl.appendChild(cell);
+    });
+    if (s.ribbon.length === 0) {
+      const empty = document.createElement('span');
+      empty.style.color = '#6a7a9a'; empty.style.fontStyle = 'italic'; empty.style.fontSize = '11px';
+      empty.textContent = '[empty]';
+      ribbonRowEl.appendChild(empty);
+    }
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
