@@ -64,6 +64,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [230](https://kinny94.github.io/dsa-visualizations/lc230-kth-smallest-element-bst.html) | Kth Smallest Element in a BST | BST · Inorder · counter + early stop |
 | [173](https://kinny94.github.io/dsa-visualizations/lc173-binary-search-tree-iterator.html) | Binary Search Tree Iterator | BST · Lazy iterative inorder |
 | [1382](https://kinny94.github.io/dsa-visualizations/lc1382-balance-a-binary-search-tree.html) | Balance a Binary Search Tree | BST · Inorder + LC 108 compose |
+| [226](https://kinny94.github.io/dsa-visualizations/lc226-invert-binary-tree.html) | Invert Binary Tree | Binary Tree · Recursion · mirror |
 
 ## Adding a new animation
 

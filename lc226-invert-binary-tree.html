@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 226 — Invert Binary Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: auto;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.phase { font-weight: bold; }
+  .pill.phase.extract { background: #0a3a1a; color: #4de88c; }
+  .pill.phase.build { background: #3a1f4a; color: #c89aff; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.range .pill-v { color: #ffd87a; }
+  /* Two trees panel */
+  .trees-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 6px;
+  }
+  .tree-half { position: relative; background: #0a1a35; border-radius: 3px; padding: 4px; }
+  .tree-half .half-label {
+    position: absolute;
+    top: 4px; left: 8px;
+    font-size: 10px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Monaco', monospace;
+  }
+  svg { display: block; width: 100%; height: 250px; }
+  .tree-half.dimmed svg { opacity: 0.4; transition: opacity 0.3s; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+  .node.created circle, .node.created text.val { opacity: 1; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.visited circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.visited text.val { fill: #4de88c; }
+  .edge {
+    stroke: #3a3a4a;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+  .edge.visible { opacity: 1; stroke: #4de88c; stroke-width: 2.5; }
+  .edge.just-wired { stroke: #ffd87a; stroke-width: 3; }
+  /* Sorted array */
+  .arr-wrap { padding: 10px; background: #0f1529; border-radius: 4px; }
+  .arr-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-family: 'Monaco', monospace; }
+  .arr-cells { display: flex; gap: 4px; flex-wrap: wrap; }
+  .arr-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 42px;
+    padding: 6px 8px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+    transition: all 0.25s;
+  }
+  .arr-cell .cell-val { font-weight: bold; color: #ffd87a; font-size: 14px; }
+  .arr-cell .cell-idx { font-size: 9px; color: #888; margin-top: 2px; }
+  .arr-cell.just-added {
+    background: #0f4a2a;
+    border-color: #4de88c;
+    color: #fff;
+    animation: appendFlash 0.4s ease-out;
+  }
+  @keyframes appendFlash {
+    from { transform: scale(0.7); background: #4de88c; color: #000; }
+    to { transform: scale(1); }
+  }
+  .arr-cell.in-range { background: #1f2a4a; border-color: #4a6a8a; }
+  .arr-cell.mid { background: #2a1f4a; border-color: #c89aff; border-width: 2px; }
+  .arr-cell.mid .cell-val { color: #d8b8ff; }
+  .arr-cell.consumed { opacity: 0.4; }
+  /* Action */
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-visit { background: #4de88c; color: #1a1a2e; }
+  .kind-emit { background: #0f9950; color: white; }
+  .kind-create { background: #c89aff; color: #1a1a2e; }
+  .kind-wire { background: #ffd87a; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  /* Stack */
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 226 — Invert Binary Tree</h1>
+    <div class="subtitle">Post-order recursion: invert left, invert right, swap children. input = [4, 2, 7, 1, 3, 6, 9]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill range"><span class="pill-k">left child</span><span class="pill-v" id="leftV">—</span></span>
+      <span class="pill node"><span class="pill-k">right child</span><span class="pill-v" id="rightV">—</span></span>
+    </div>
+    <div class="trees-wrap">
+      <div class="tree-half" id="leftHalf">
+        <div class="half-label">input (as-is)</div>
+        <svg id="treeIn" viewBox="0 0 320 250" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="tree-half" id="rightHalf">
+        <div class="half-label">output (inverted)</div>
+        <svg id="treeOut" viewBox="0 0 320 250" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </div>
+
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Two primitives, glued</div>
+      Simplest “transform every node” recursion. No accumulator, no cross-subtree data flow. Post-order variant: invert both subtrees, then swap children. Pre-order variant (swap first, then recurse) works too — order is independent since each subtree’s invert is self-contained.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public TreeNode invertTree(TreeNode root) {",
+    "    if (root == null) {",
+    "        return null;",
+    "    }",
+    "    TreeNode left  = invertTree(root.left);",
+    "    TreeNode right = invertTree(root.right);",
+    "    root.left  = right;",
+    "    root.right = left;",
+    "    return root;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREES ============
+  // Input: [4, 2, 7, 1, 3, 6, 9]
+  const inNodes = {
+    in4: { x: 160, y:  40, r: 20, val: '4' },
+    in2: { x:  90, y: 100, r: 20, val: '2' },
+    in7: { x: 230, y: 100, r: 20, val: '7' },
+    in1: { x:  50, y: 180, r: 20, val: '1' },
+    in3: { x: 130, y: 180, r: 20, val: '3' },
+    in6: { x: 190, y: 180, r: 20, val: '6' },
+    in9: { x: 270, y: 180, r: 20, val: '9' }
+  };
+  const inEdges = [
+    { id: 'ie_4_2', from: 'in4', to: 'in2' },
+    { id: 'ie_4_7', from: 'in4', to: 'in7' },
+    { id: 'ie_2_1', from: 'in2', to: 'in1' },
+    { id: 'ie_2_3', from: 'in2', to: 'in3' },
+    { id: 'ie_7_6', from: 'in7', to: 'in6' },
+    { id: 'ie_7_9', from: 'in7', to: 'in9' }
+  ];
+  // Output inverted: [4, 7, 2, 9, 6, 3, 1]
+  const outNodes = {
+    on4: { x: 160, y:  40, r: 20, val: '4' },
+    on7: { x:  90, y: 100, r: 20, val: '7' },
+    on2: { x: 230, y: 100, r: 20, val: '2' },
+    on9: { x:  50, y: 180, r: 20, val: '9' },
+    on6: { x: 130, y: 180, r: 20, val: '6' },
+    on3: { x: 190, y: 180, r: 20, val: '3' },
+    on1: { x: 270, y: 180, r: 20, val: '1' }
+  };
+  const outEdges = [
+    { id: 'oe_4_7', from: 'on4', to: 'on7' },
+    { id: 'oe_4_2', from: 'on4', to: 'on2' },
+    { id: 'oe_7_9', from: 'on7', to: 'on9' },
+    { id: 'oe_7_6', from: 'on7', to: 'on6' },
+    { id: 'oe_2_3', from: 'on2', to: 'on3' },
+    { id: 'oe_2_1', from: 'on2', to: 'on1' }
+  ];
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  function buildTree(svgId, nodesMap, edgesList, alwaysVisible) {
+    const svg = document.getElementById(svgId);
+    const edgeEls = {};
+    edgesList.forEach(e => {
+      const a = nodesMap[e.from], b = nodesMap[e.to];
+      const line = document.createElementNS(SVGNS, 'line');
+      line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+      line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+      line.setAttribute('class', 'edge' + (alwaysVisible ? ' visible' : ''));
+      svg.appendChild(line);
+      edgeEls[e.id] = line;
+    });
+    const nodeEls = {};
+    Object.entries(nodesMap).forEach(([key, n]) => {
+      const g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('class', 'node' + (alwaysVisible ? ' created' : ''));
+      const circle = document.createElementNS(SVGNS, 'circle');
+      circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+      g.appendChild(circle);
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+      t.setAttribute('class', 'val');
+      t.textContent = n.val;
+      g.appendChild(t);
+      svg.appendChild(g);
+      nodeEls[key] = g;
+    });
+    return { nodeEls, edgeEls };
+  }
+  const inTree = buildTree('treeIn', inNodes, inEdges, true);
+  const outTree = buildTree('treeOut', outNodes, outEdges, false);
+
+
+  // ============ STEP DATA ============
+  // As recursion unwinds post-order, each node "appears" on the right (inverted) tree in its final
+  // inverted position. Edges wire up as the parent returns.
+  //   active: id on either side (inX for input-side highlight, onX for output-side creation)
+  //   inStack: input-side nodes on the call stack
+  //   inActive: input-side current frame
+  //   outCreated: ids of output-side nodes placed so far
+  //   outActive: id just placed / being wired
+  //   outWired: edges drawn
+  //   outJustWired: latest edge
+  //   leftChild / rightChild: pill values for the swap step
+  const steps = [
+    { line: [1, 2, 3, 4], active: "in4", stack: [{ id: "f_outer", label: "invertTree(root)", sub: "root != null, recurse" }],
+      inStack: ["in4"], inVisited: [], inActive: "in4",
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      leftChild: null, rightChild: null,
+      action: "Enter invertTree(root = 4). root != null → proceed.", kind: "call" },
+
+    { line: [5], active: "in2", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "recurse LEFT (2)" }
+      ],
+      inStack: ["in4", "in2"], inVisited: [], inActive: "in2",
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      leftChild: null, rightChild: null,
+      action: "left = invertTree(4.left = 2). Descend into LEFT subtree.", kind: "call" },
+
+    { line: [5], active: "in1", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "waiting on LEFT" },
+        { id: "f_in2", label: "invertTree(2)", sub: "recurse LEFT (1)" }
+      ],
+      inStack: ["in4", "in2", "in1"], inVisited: [], inActive: "in1",
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      leftChild: null, rightChild: null,
+      action: "left = invertTree(2.left = 1).", kind: "call" },
+
+    { line: [1, 2, 3, 5, 6, 7, 8, 9, 10], active: "in1", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "waiting on LEFT" },
+        { id: "f_in2", label: "invertTree(2)", sub: "waiting on LEFT" },
+        { id: "f_in1", label: "invertTree(1)", sub: "leaf, no-op swap" }
+      ],
+      inStack: ["in4", "in2", "in1"], inVisited: ["in1"], inActive: "in1",
+      outCreated: ["on1"], outActive: "on1", outWired: [], outJustWired: null,
+      leftChild: "null", rightChild: "null",
+      action: "invertTree(1): both children null → recursive calls return null. Swap null/null (no-op). Return node 1. ★ Placed on right at its final inverted position (right-right).", kind: "create" },
+
+    { line: [6], active: "in3", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "waiting on LEFT" },
+        { id: "f_in2", label: "invertTree(2)", sub: "recurse RIGHT (3)" }
+      ],
+      inStack: ["in4", "in2", "in3"], inVisited: ["in1"], inActive: "in3",
+      outCreated: ["on1"], outActive: null, outWired: [], outJustWired: null,
+      leftChild: null, rightChild: null,
+      action: "right = invertTree(2.right = 3). Descend.", kind: "call" },
+
+    { line: [1, 2, 3, 5, 6, 7, 8, 9, 10], active: "in3", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "waiting on LEFT" },
+        { id: "f_in2", label: "invertTree(2)", sub: "waiting on RIGHT" },
+        { id: "f_in3", label: "invertTree(3)", sub: "leaf, no-op swap" }
+      ],
+      inStack: ["in4", "in2", "in3"], inVisited: ["in1", "in3"], inActive: "in3",
+      outCreated: ["on1", "on3"], outActive: "on3", outWired: [], outJustWired: null,
+      leftChild: "null", rightChild: "null",
+      action: "invertTree(3): leaf, no-op swap. Return node 3. ★ Placed on right at right-left position (where left child of 2 used to be — inversion in action).", kind: "create" },
+
+    { line: [7, 8, 9], active: "in2", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "waiting on LEFT" },
+        { id: "f_in2", label: "invertTree(2)", sub: "swap: left=3, right=1" }
+      ],
+      inStack: ["in4", "in2"], inVisited: ["in1", "in3"], inActive: "in2",
+      outCreated: ["on2", "on1", "on3"], outActive: "on2", outWired: ["oe_2_1", "oe_2_3"], outJustWired: "oe_2_1",
+      leftChild: "3", rightChild: "1",
+      action: "Back in invertTree(2). SWAP: root.left = right (= 3), root.right = left (= 1). ★ Wire up edges on the right: 2 → 3 (left), 2 → 1 (right). Return node 2.", kind: "wire" },
+
+    { line: [5], active: "in7", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "recurse RIGHT (7)" }
+      ],
+      inStack: ["in4", "in7"], inVisited: ["in1", "in3", "in2"], inActive: "in7",
+      outCreated: ["on2", "on1", "on3"], outActive: null, outWired: ["oe_2_1", "oe_2_3"], outJustWired: null,
+      leftChild: null, rightChild: null,
+      action: "right = invertTree(4.right = 7). Descend into RIGHT subtree.", kind: "call" },
+
+    { line: [1, 2, 3, 5, 6, 7, 8, 9, 10], active: "in6", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "waiting on RIGHT" },
+        { id: "f_in7", label: "invertTree(7)", sub: "waiting on LEFT" },
+        { id: "f_in6", label: "invertTree(6)", sub: "leaf, no-op swap" }
+      ],
+      inStack: ["in4", "in7", "in6"], inVisited: ["in1", "in3", "in2"], inActive: "in6",
+      outCreated: ["on2", "on1", "on3", "on6"], outActive: "on6", outWired: ["oe_2_1", "oe_2_3"], outJustWired: null,
+      leftChild: "null", rightChild: "null",
+      action: "invertTree(7.left = 6): leaf, no-op. Return node 6. ★ Placed at left-right (right child of 7 in inverted tree).", kind: "create" },
+
+    { line: [1, 2, 3, 5, 6, 7, 8, 9, 10], active: "in9", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "waiting on RIGHT" },
+        { id: "f_in7", label: "invertTree(7)", sub: "waiting on RIGHT" },
+        { id: "f_in9", label: "invertTree(9)", sub: "leaf, no-op swap" }
+      ],
+      inStack: ["in4", "in7", "in9"], inVisited: ["in1", "in3", "in2", "in6"], inActive: "in9",
+      outCreated: ["on2", "on1", "on3", "on6", "on9"], outActive: "on9", outWired: ["oe_2_1", "oe_2_3"], outJustWired: null,
+      leftChild: "null", rightChild: "null",
+      action: "invertTree(7.right = 9): leaf, no-op. Return node 9. ★ Placed at left-left.", kind: "create" },
+
+    { line: [7, 8, 9], active: "in7", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "waiting on RIGHT" },
+        { id: "f_in7", label: "invertTree(7)", sub: "swap: left=9, right=6" }
+      ],
+      inStack: ["in4", "in7"], inVisited: ["in1", "in3", "in2", "in6", "in9"], inActive: "in7",
+      outCreated: ["on7", "on2", "on1", "on3", "on6", "on9"], outActive: "on7",
+      outWired: ["oe_2_1", "oe_2_3", "oe_7_9", "oe_7_6"], outJustWired: "oe_7_9",
+      leftChild: "9", rightChild: "6",
+      action: "Back in invertTree(7). SWAP: root.left = right (= 9), root.right = left (= 6). Wire 7 → 9 (left), 7 → 6 (right). Return node 7.", kind: "wire" },
+
+    { line: [7, 8, 9], active: "in4", stack: [
+        { id: "f_outer", label: "invertTree(root)", sub: "waiting" },
+        { id: "f_in4", label: "invertTree(4)", sub: "swap: left=7, right=2" }
+      ],
+      inStack: ["in4"], inVisited: ["in1", "in3", "in2", "in6", "in9", "in7"], inActive: "in4",
+      outCreated: ["on4", "on7", "on2", "on1", "on3", "on6", "on9"], outActive: "on4",
+      outWired: ["oe_2_1", "oe_2_3", "oe_7_9", "oe_7_6", "oe_4_7", "oe_4_2"], outJustWired: "oe_4_7",
+      leftChild: "7", rightChild: "2",
+      action: "Back in invertTree(4). SWAP: root.left = right (= 7), root.right = left (= 2). Wire 4 → 7 (left), 4 → 2 (right). ★ Full inversion complete.", kind: "wire" },
+
+    { line: [10], active: null, stack: [],
+      inStack: [], inVisited: ["in1", "in3", "in2", "in6", "in9", "in7", "in4"], inActive: null,
+      outCreated: ["on4", "on7", "on2", "on1", "on3", "on6", "on9"], outActive: null,
+      outWired: ["oe_2_1", "oe_2_3", "oe_7_9", "oe_7_6", "oe_4_7", "oe_4_2"], outJustWired: null,
+      leftChild: null, rightChild: null,
+      action: "Return root. ★ Done. Each node visited exactly once; swaps happen post-order as recursion unwinds.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const leftVEl = document.getElementById('leftV');
+  const rightVEl = document.getElementById('rightV');
+  const leftHalfEl = document.getElementById('leftHalf');
+  const rightHalfEl = document.getElementById('rightHalf');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pill: node + left/right swap vals
+    if (s.active) {
+      const n = inNodes[s.active] || outNodes[s.active];
+      nodeVEl.textContent = n ? n.val : '—';
+    } else {
+      nodeVEl.textContent = '—';
+    }
+    leftVEl.textContent = s.leftChild !== null ? s.leftChild : '—';
+    rightVEl.textContent = s.rightChild !== null ? s.rightChild : '—';
+    // Input tree highlighting
+    const inStackSet = new Set(s.inStack);
+    const inVisitedSet = new Set(s.inVisited);
+    Object.keys(inTree.nodeEls).forEach(key => {
+      const el = inTree.nodeEls[key];
+      el.classList.remove('active', 'on-stack', 'visited');
+      if (key === s.inActive) {
+        el.classList.add('active');
+      } else if (inStackSet.has(key)) {
+        el.classList.add('on-stack');
+      } else if (inVisitedSet.has(key)) {
+        el.classList.add('visited');
+      }
+    });
+    // Output tree
+    const outCreatedSet = new Set(s.outCreated);
+    Object.keys(outTree.nodeEls).forEach(key => {
+      const el = outTree.nodeEls[key];
+      el.classList.remove('created', 'active', 'visited');
+      if (outCreatedSet.has(key)) { el.classList.add('created'); }
+      if (key === s.outActive) {
+        el.classList.add('active');
+      } else if (outCreatedSet.has(key) && key !== s.outActive) {
+        el.classList.add('visited');
+      }
+    });
+    const outWiredSet = new Set(s.outWired);
+    Object.keys(outTree.edgeEls).forEach(id => {
+      const el = outTree.edgeEls[id];
+      el.classList.remove('visible', 'just-wired');
+      if (outWiredSet.has(id)) { el.classList.add('visible'); }
+      if (id === s.outJustWired) { el.classList.add('just-wired'); }
+    });
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
