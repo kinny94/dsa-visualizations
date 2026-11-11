@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 687 — Longest Univalue Path</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.left .pill-v { color: #9ad4ff; }
+  .pill.right .pill-v { color: #ffd87a; }
+  .pill.through .pill-v { color: #c89aff; }
+  .pill.max .pill-v { color: #4de88c; }
+  .pill.max.updated { animation: maxPulse 0.5s ease-out; }
+  @keyframes maxPulse {
+    from { transform: scale(1.3); background: #4de88c; color: #000; }
+    to { transform: scale(1); }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 300px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #4a6a8a; fill: #1a2e4a; opacity: 0.55; }
+  .node.done text.val { opacity: 0.55; }
+  .node.in-longest circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; filter: drop-shadow(0 0 6px rgba(77, 232, 140, 0.55)); }
+  .node.in-longest text.val { fill: #4de88c; font-weight: bold; }
+  .node.null-ghost circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 8; }
+  .node.null-ghost text.val { display: none; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.univalue-left { stroke: #9ad4ff; stroke-width: 3; }
+  .edge.univalue-right { stroke: #ffd87a; stroke-width: 3; }
+  .edge.in-longest { stroke: #4de88c; stroke-width: 4; }
+  .edge.null { stroke-dasharray: 3,3; }
+  .ret-tag {
+    fill: #4de88c;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    font-weight: bold;
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #c89aff; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .kind-match { background: #0f9950; color: white; }
+  .kind-update { background: #4de88c; color: #1a1a2e; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-stack { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-longest { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 687 — Longest Univalue Path</h1>
+    <div class="subtitle">Post-order with two values: chain-DOWN propagates up, through-path (left+right) updates max · root = [5, 4, 5, 1, 1, null, 5]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code (int[1] wrapper)</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill left"><span class="pill-k">leftExt</span><span class="pill-v" id="leftV">—</span></span>
+      <span class="pill right"><span class="pill-k">rightExt</span><span class="pill-v" id="rightV">—</span></span>
+      <span class="pill through"><span class="pill-k">through</span><span class="pill-v" id="throughV">—</span></span>
+      <span class="pill max" id="maxPill"><span class="pill-k">max[0]</span><span class="pill-v" id="maxV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 300" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-stack"></div>on recursion stack</div>
+      <div class="legend-item"><div class="chip chip-longest"></div>on longest univalue path</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Two values per frame</div>
+      Sum <code>leftExt + rightExt</code> for the "through here" answer (updates max). Return <code>max(leftExt, rightExt)</code> up — a parent can only extend ONE side. Same template as LC 543 Diameter and LC 124 Max Path Sum.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public boolean isBalanced(TreeNode root) {",
+    "    return height(root) != -1;",
+    "}",
+    "",
+    "private int height(TreeNode node) {",
+    "    if (node == null) {",
+    "        return 0;",
+    "    }",
+    "    int left = height(node.left);",
+    "    if (left == -1) return -1;",
+    "    int right = height(node.right);",
+    "    if (right == -1) return -1;",
+    "    if (Math.abs(left - right) > 1) return -1;",
+    "    return Math.max(left, right) + 1;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // [5, 4, 5, 1, 1, null, 5]
+  //       5
+  //      / \
+  //     4   5
+  //    /\    \
+  //   1  1    5
+  const nodes = {
+    n1:    { x: 320, y:  40, r: 20, val: '1' },
+    n2L:   { x: 180, y: 110, r: 20, val: '2' },
+    n2R:   { x: 460, y: 110, r: 20, val: '2' },
+    n3L:   { x: 100, y: 180, r: 20, val: '3' },
+    n3R:   { x: 260, y: 180, r: 20, val: '3' },
+    n4LL:  { x:  50, y: 250, r: 20, val: '4' },
+    n4LR:  { x: 150, y: 250, r: 20, val: '4' },
+    // null ghosts
+    n2R_L: { x: 420, y: 180, r: 6, isNull: true },
+    n2R_R: { x: 500, y: 180, r: 6, isNull: true },
+    n3R_L: { x: 230, y: 240, r: 6, isNull: true },
+    n3R_R: { x: 290, y: 240, r: 6, isNull: true },
+    n4LL_L: { x:  25, y: 290, r: 5, isNull: true },
+    n4LL_R: { x:  75, y: 290, r: 5, isNull: true },
+    n4LR_L: { x: 125, y: 290, r: 5, isNull: true },
+    n4LR_R: { x: 175, y: 290, r: 5, isNull: true }
+  };
+  const edges = [
+    { id: "e_1_2", from: 'n1', to: 'n2' },
+    { id: "e_1_3", from: 'n1', to: 'n3' },
+    { id: "e_2_4", from: 'n2', to: 'n4' },
+    { id: "e_2_5", from: 'n2', to: 'n5' },
+    { id: "e_3_L", from: 'n3', to: 'n3L', isNull: true },
+    { id: "e_3_R", from: 'n3', to: 'n3R', isNull: true },
+    { id: "e_4_L", from: 'n4', to: 'n4L', isNull: true },
+    { id: "e_4_R", from: 'n4', to: 'n4R', isNull: true },
+    { id: "e_5_L", from: 'n5', to: 'n5L', isNull: true },
+    { id: "e_5_R", from: 'n5', to: 'n5R', isNull: true }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge' + (e.isNull ? ' null' : ''));
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  const retTagEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.isNull ? ' null-ghost' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    if (!n.isNull) {
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+      t.setAttribute('class', 'val');
+      t.textContent = n.val;
+      g.appendChild(t);
+    }
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    // Return tag
+    const tag = document.createElementNS(SVGNS, 'text');
+    tag.setAttribute('x', n.x + (n.r || 8) + 10); tag.setAttribute('y', n.y + 4);
+    tag.setAttribute('class', 'ret-tag');
+    tag.textContent = '';
+    svg.appendChild(tag);
+    retTagEls[key] = tag;
+  });
+
+  // ============ STEP DATA ============
+  // Unbalanced tree:
+  //          1
+  //         / \
+  //        2   2
+  //       /\
+  //      3  3
+  //     /\
+  //    4  4
+  const steps = [
+    { line: [2], active: null, stack: [{ id: "f_outer", label: "isBalanced(root)", sub: "call height(1)" }],
+      pathNodes: [], leftExt: null, rightExt: null, through: null, max: '—', maxUpdated: false,
+      returned: {}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Init. Call height(root = 1).", kind: "call" },
+
+    { line: [5, 6], active: "n1", stack: [
+        { id: "f_outer", label: "isBalanced(root)", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "entry" }
+      ],
+      pathNodes: ["n1"], leftExt: null, rightExt: null, through: null, max: '—', maxUpdated: false,
+      returned: {}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Enter height(1). Recurse LEFT.", kind: "call" },
+
+    { line: [9], active: "n2L", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "waiting on LEFT" },
+        { id: "f_n2L", label: "height(2 L)", sub: "recurse LEFT" }
+      ],
+      pathNodes: ["n1", "n2L"], leftExt: null, rightExt: null, through: null, max: '—', maxUpdated: false,
+      returned: {}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "height(1.left = 2 L). Descending.", kind: "call" },
+
+    { line: [9], active: "n3L", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "waiting on LEFT" },
+        { id: "f_n2L", label: "height(2 L)", sub: "waiting on LEFT" },
+        { id: "f_n3L", label: "height(3 L)", sub: "recurse LEFT" }
+      ],
+      pathNodes: ["n1", "n2L", "n3L"], leftExt: null, rightExt: null, through: null, max: '—', maxUpdated: false,
+      returned: {}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "height(2.left = 3 L). Descending.", kind: "call" },
+
+    { line: [5, 6, 9, 10, 11, 12, 13, 14], active: "n4LL", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "waiting on LEFT" },
+        { id: "f_n2L", label: "height(2 L)", sub: "waiting on LEFT" },
+        { id: "f_n3L", label: "height(3 L)", sub: "waiting on LEFT" },
+        { id: "f_n4LL", label: "height(4 LL)", sub: "leaf, return 1" }
+      ],
+      pathNodes: ["n1", "n2L", "n3L", "n4LL"], leftExt: 0, rightExt: 0, through: 0, max: 1, maxUpdated: false,
+      returned: {"n4LL": 1}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "height(4 LL): both children null → leftH=0, rightH=0, |0|<=1. Return max(0,0)+1 = 1.", kind: "return" },
+
+    { line: [11], active: "n3L", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "waiting on LEFT" },
+        { id: "f_n2L", label: "height(2 L)", sub: "waiting on LEFT" },
+        { id: "f_n3L", label: "height(3 L)", sub: "leftH=1, recurse RIGHT" }
+      ],
+      pathNodes: ["n1", "n2L", "n3L"], leftExt: 1, rightExt: null, through: null, max: '—', maxUpdated: false,
+      returned: {"n4LL": 1}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Back in height(3 L). leftH = 1 (not -1, so no short-circuit). Recurse RIGHT: height(3.right = 4 LR).", kind: "call" },
+
+    { line: [5, 6, 9, 10, 11, 12, 13, 14], active: "n4LR", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "waiting on LEFT" },
+        { id: "f_n2L", label: "height(2 L)", sub: "waiting on LEFT" },
+        { id: "f_n3L", label: "height(3 L)", sub: "waiting on RIGHT" },
+        { id: "f_n4LR", label: "height(4 LR)", sub: "leaf, return 1" }
+      ],
+      pathNodes: ["n1", "n2L", "n3L", "n4LR"], leftExt: 0, rightExt: 0, through: 0, max: 1, maxUpdated: false,
+      returned: {"n4LL": 1, "n4LR": 1}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "height(4 LR): leaf. Return 1.", kind: "return" },
+
+    { line: [13, 14], active: "n3L", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "waiting on LEFT" },
+        { id: "f_n2L", label: "height(2 L)", sub: "waiting on LEFT" },
+        { id: "f_n3L", label: "height(3 L)", sub: "|1-1|=0 OK, return 2" }
+      ],
+      pathNodes: ["n1", "n2L"], leftExt: 1, rightExt: 1, through: 0, max: 2, maxUpdated: false,
+      returned: {"n4LL": 1, "n4LR": 1, "n3L": 2}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Back in height(3 L). rightH = 1. |leftH - rightH| = 0 <= 1 ✓. Return max(1,1)+1 = 2.", kind: "return" },
+
+    { line: [11], active: "n2L", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "waiting on LEFT" },
+        { id: "f_n2L", label: "height(2 L)", sub: "leftH=2, recurse RIGHT" }
+      ],
+      pathNodes: ["n1", "n2L"], leftExt: 2, rightExt: null, through: null, max: '—', maxUpdated: false,
+      returned: {"n4LL": 1, "n4LR": 1, "n3L": 2}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Back in height(2 L). leftH = 2. Recurse RIGHT: height(2.right = 3 R).", kind: "call" },
+
+    { line: [5, 6, 9, 10, 11, 12, 13, 14], active: "n3R", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "waiting on LEFT" },
+        { id: "f_n2L", label: "height(2 L)", sub: "waiting on RIGHT" },
+        { id: "f_n3R", label: "height(3 R)", sub: "leaf, return 1" }
+      ],
+      pathNodes: ["n1", "n2L", "n3R"], leftExt: 0, rightExt: 0, through: 0, max: 1, maxUpdated: false,
+      returned: {"n4LL": 1, "n4LR": 1, "n3L": 2, "n3R": 1}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "height(3 R): leaf. Return 1.", kind: "return" },
+
+    { line: [13, 14], active: "n2L", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "waiting on LEFT" },
+        { id: "f_n2L", label: "height(2 L)", sub: "|2-1|=1 OK, return 3" }
+      ],
+      pathNodes: ["n1", "n2L"], leftExt: 2, rightExt: 1, through: 1, max: 3, maxUpdated: false,
+      returned: {"n4LL": 1, "n4LR": 1, "n3L": 2, "n3R": 1, "n2L": 3}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Back in height(2 L). rightH = 1. |leftH - rightH| = 1 <= 1 ✓. Return max(2,1)+1 = 3. (Still balanced here.)", kind: "return" },
+
+    { line: [11], active: "n1", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "leftH=3, recurse RIGHT" }
+      ],
+      pathNodes: ["n1"], leftExt: 3, rightExt: null, through: null, max: '—', maxUpdated: false,
+      returned: {"n4LL": 1, "n4LR": 1, "n3L": 2, "n3R": 1, "n2L": 3}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "Back in height(1). leftH = 3. Recurse RIGHT: height(1.right = 2 R).", kind: "call" },
+
+    { line: [5, 6, 9, 10, 11, 12, 13, 14], active: "n2R", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "waiting on RIGHT" },
+        { id: "f_n2R", label: "height(2 R)", sub: "leaf, return 1" }
+      ],
+      pathNodes: ["n1", "n2R"], leftExt: 0, rightExt: 0, through: 0, max: 1, maxUpdated: false,
+      returned: {"n4LL": 1, "n4LR": 1, "n3L": 2, "n3R": 1, "n2L": 3, "n2R": 1}, univalueEdges: [], longestEdges: [], longestNodes: [],
+      action: "height(2 R): leaf. Return 1.", kind: "return" },
+
+    { line: [13], active: "n1", stack: [
+        { id: "f_outer", label: "isBalanced", sub: "waiting" },
+        { id: "f_n1", label: "height(1)", sub: "|3-1|=2 > 1 ★ return -1" }
+      ],
+      pathNodes: ["n1"], leftExt: 3, rightExt: 1, through: 2, max: -1, maxUpdated: true,
+      returned: {"n4LL": 1, "n4LR": 1, "n3L": 2, "n3R": 1, "n2L": 3, "n2R": 1, "n1": -1},
+      univalueEdges: ["e_1_2L", "e_2L_3L", "e_3L_4LL", "e_1_2R"],
+      longestEdges: ["e_1_2L", "e_2L_3L", "e_3L_4LL", "e_1_2R"], longestNodes: ["n1", "n2L", "n3L", "n4LL", "n2R"],
+      action: "Back in height(1). rightH = 1. |leftH - rightH| = |3 - 1| = 2 > 1 ★ UNBALANCED. Return -1.", kind: "update" },
+
+    { line: [2], active: null, stack: [],
+      pathNodes: [], leftExt: 3, rightExt: 1, through: 2, max: -1, maxUpdated: false,
+      returned: {"n4LL": 1, "n4LR": 1, "n3L": 2, "n3R": 1, "n2L": 3, "n2R": 1, "n1": -1},
+      univalueEdges: ["e_1_2L", "e_2L_3L", "e_3L_4LL", "e_1_2R"],
+      longestEdges: ["e_1_2L", "e_2L_3L", "e_3L_4LL", "e_1_2R"], longestNodes: ["n1", "n2L", "n3L", "n4LL", "n2R"],
+      action: "Back in isBalanced. height(root) = -1. -1 != -1 is FALSE → return false. Tree is NOT balanced. ★", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const leftVEl = document.getElementById('leftV');
+  const rightVEl = document.getElementById('rightV');
+  const throughVEl = document.getElementById('throughV');
+  const maxVEl = document.getElementById('maxV');
+  const maxPillEl = document.getElementById('maxPill');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    nodeVEl.textContent = s.active ? nodes[s.active].val : '—';
+    leftVEl.textContent = s.leftExt !== null ? s.leftExt : '—';
+    rightVEl.textContent = s.rightExt !== null ? s.rightExt : '—';
+    throughVEl.textContent = s.through !== null ? s.through : '—';
+    maxVEl.textContent = s.max;
+    if (s.maxUpdated) {
+      maxPillEl.classList.remove('updated');
+      // force reflow
+      void maxPillEl.offsetWidth;
+      maxPillEl.classList.add('updated');
+    } else {
+      maxPillEl.classList.remove('updated');
+    }
+    // Tree nodes
+    const pathSet = new Set(s.pathNodes);
+    const longestSet = new Set(s.longestNodes);
+    const returnedKeys = Object.keys(s.returned);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-stack', 'done', 'in-longest');
+      if (longestSet.has(key)) {
+        el.classList.add('in-longest');
+      } else if (key === s.active) {
+        el.classList.add('active');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-stack');
+      } else if (returnedKeys.includes(key)) {
+        el.classList.add('done');
+      }
+      // Return tag
+      retTagEls[key].textContent = s.returned[key] !== undefined ? `=${s.returned[key]}` : '';
+    });
+    // Edges
+    const univSet = new Set(s.univalueEdges);
+    const longestEdgeSet = new Set(s.longestEdges);
+    edges.forEach(e => {
+      const line = edgeEls[e.id];
+      line.classList.remove('univalue-left', 'univalue-right', 'in-longest');
+      if (longestEdgeSet.has(e.id)) {
+        line.classList.add('in-longest');
+      } else if (univSet.has(e.id)) {
+        line.classList.add('univalue-right');
+      }
+    });
+    // Call stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

@@ -318,20 +318,18 @@
   //    /\    \
   //   1  1    5
   const nodes = {
-    n5r:  { x: 320, y:  50, r: 22, val: '5' },
-    n4:   { x: 180, y: 140, r: 22, val: '4' },
-    n5m:  { x: 460, y: 140, r: 22, val: '5' },
-    n1a:  { x: 110, y: 230, r: 22, val: '1' },
-    n1b:  { x: 250, y: 230, r: 22, val: '1' },
-    n5l:  { x: 510, y: 230, r: 22, val: '5' },
+    n1:   { x: 320, y:  50, r: 22, val: '1' },
+    n2:   { x: 180, y: 140, r: 22, val: '2' },
+    n3:   { x: 460, y: 140, r: 22, val: '3' },
+    n4:   { x: 110, y: 230, r: 22, val: '4' },
+    n5:   { x: 250, y: 230, r: 22, val: '5' },
     // null ghosts
-    n5m_L: { x: 410, y: 230, r: 8, isNull: true },
-    n1a_L: { x:  80, y: 280, r: 6, isNull: true },
-    n1a_R: { x: 140, y: 280, r: 6, isNull: true },
-    n1b_L: { x: 220, y: 280, r: 6, isNull: true },
-    n1b_R: { x: 280, y: 280, r: 6, isNull: true },
-    n5l_L: { x: 480, y: 280, r: 6, isNull: true },
-    n5l_R: { x: 540, y: 280, r: 6, isNull: true }
+    n3L:  { x: 420, y: 230, r: 6, isNull: true },
+    n3R:  { x: 500, y: 230, r: 6, isNull: true },
+    n4L:  { x:  80, y: 275, r: 6, isNull: true },
+    n4R:  { x: 140, y: 275, r: 6, isNull: true },
+    n5L:  { x: 220, y: 275, r: 6, isNull: true },
+    n5R:  { x: 280, y: 275, r: 6, isNull: true }
   };
   const edges = [
     { id: "e_1_2", from: 'n1', to: 'n2' },
