@@ -63,6 +63,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [98](https://kinny94.github.io/dsa-visualizations/lc98-validate-binary-search-tree.html) | Validate Binary Search Tree | BST · Inorder · strictly-increasing |
 | [230](https://kinny94.github.io/dsa-visualizations/lc230-kth-smallest-element-bst.html) | Kth Smallest Element in a BST | BST · Inorder · counter + early stop |
 | [173](https://kinny94.github.io/dsa-visualizations/lc173-binary-search-tree-iterator.html) | Binary Search Tree Iterator | BST · Lazy iterative inorder |
+| [1382](https://kinny94.github.io/dsa-visualizations/lc1382-balance-a-binary-search-tree.html) | Balance a Binary Search Tree | BST · Inorder + LC 108 compose |
 
 ## Adding a new animation
 

@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 1382 — Balance a BST</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: auto;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.phase { font-weight: bold; }
+  .pill.phase.extract { background: #0a3a1a; color: #4de88c; }
+  .pill.phase.build { background: #3a1f4a; color: #c89aff; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.range .pill-v { color: #ffd87a; }
+  /* Two trees panel */
+  .trees-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 6px;
+  }
+  .tree-half { position: relative; background: #0a1a35; border-radius: 3px; padding: 4px; }
+  .tree-half .half-label {
+    position: absolute;
+    top: 4px; left: 8px;
+    font-size: 10px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Monaco', monospace;
+  }
+  svg { display: block; width: 100%; height: 250px; }
+  .tree-half.dimmed svg { opacity: 0.4; transition: opacity 0.3s; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+  .node.created circle, .node.created text.val { opacity: 1; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.visited circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.visited text.val { fill: #4de88c; }
+  .edge {
+    stroke: #3a3a4a;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+  .edge.visible { opacity: 1; stroke: #4de88c; stroke-width: 2.5; }
+  .edge.just-wired { stroke: #ffd87a; stroke-width: 3; }
+  /* Sorted array */
+  .arr-wrap { padding: 10px; background: #0f1529; border-radius: 4px; }
+  .arr-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-family: 'Monaco', monospace; }
+  .arr-cells { display: flex; gap: 4px; flex-wrap: wrap; }
+  .arr-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 42px;
+    padding: 6px 8px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+    transition: all 0.25s;
+  }
+  .arr-cell .cell-val { font-weight: bold; color: #ffd87a; font-size: 14px; }
+  .arr-cell .cell-idx { font-size: 9px; color: #888; margin-top: 2px; }
+  .arr-cell.just-added {
+    background: #0f4a2a;
+    border-color: #4de88c;
+    color: #fff;
+    animation: appendFlash 0.4s ease-out;
+  }
+  @keyframes appendFlash {
+    from { transform: scale(0.7); background: #4de88c; color: #000; }
+    to { transform: scale(1); }
+  }
+  .arr-cell.in-range { background: #1f2a4a; border-color: #4a6a8a; }
+  .arr-cell.mid { background: #2a1f4a; border-color: #c89aff; border-width: 2px; }
+  .arr-cell.mid .cell-val { color: #d8b8ff; }
+  .arr-cell.consumed { opacity: 0.4; }
+  /* Action */
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-visit { background: #4de88c; color: #1a1a2e; }
+  .kind-emit { background: #0f9950; color: white; }
+  .kind-create { background: #c89aff; color: #1a1a2e; }
+  .kind-wire { background: #ffd87a; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  /* Stack */
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 1382 — Balance a Binary Search Tree</h1>
+    <div class="subtitle">Phase 1: inorder extract → sorted list. Phase 2: LC 108 mid-as-root rebuild. input = [1, null, 2, null, 3, null, 4]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill phase extract" id="phasePill">PHASE 1: EXTRACT</span>
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill range"><span class="pill-k">range</span><span class="pill-v" id="rangeV">—</span></span>
+    </div>
+    <div class="trees-wrap">
+      <div class="tree-half" id="leftHalf">
+        <div class="half-label">input (unbalanced)</div>
+        <svg id="treeIn" viewBox="0 0 320 250" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="tree-half" id="rightHalf">
+        <div class="half-label">output (balanced)</div>
+        <svg id="treeOut" viewBox="0 0 320 250" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </div>
+    <div class="arr-wrap">
+      <div class="arr-label">sorted (inorder of input)</div>
+      <div class="arr-cells" id="arrRow"></div>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Two primitives, glued</div>
+      Phase 1 reuses the LC 783/98/230/173/538 “BST + inorder = sorted” template. Phase 2 reuses LC 108’s “sorted → balanced BST” template. No new algorithm — just composition.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public TreeNode balanceBST(TreeNode root) {",
+    "    List<Integer> sorted = new ArrayList<>();",
+    "    inorder(root, sorted);",
+    "    return build(sorted, 0, sorted.size() - 1);",
+    "}",
+    "",
+    "private void inorder(TreeNode node, List<Integer> out) {",
+    "    if (node == null) return;",
+    "    inorder(node.left, out);",
+    "    out.add(node.val);",
+    "    inorder(node.right, out);",
+    "}",
+    "",
+    "private TreeNode build(List<Integer> sorted, int low, int high) {",
+    "    if (low > high) return null;",
+    "    int mid = low + (high - low) / 2;",
+    "    TreeNode node = new TreeNode(sorted.get(mid));",
+    "    node.left  = build(sorted, low, mid - 1);",
+    "    node.right = build(sorted, mid + 1, high);",
+    "    return node;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREES ============
+  // Input: right-skewed chain 1 → 2 → 3 → 4
+  const inNodes = {
+    in1: { x: 100, y:  40, r: 20, val: '1' },
+    in2: { x: 160, y:  95, r: 20, val: '2' },
+    in3: { x: 220, y: 150, r: 20, val: '3' },
+    in4: { x: 280, y: 205, r: 20, val: '4' }
+  };
+  const inEdges = [
+    { id: 'ie_1_2', from: 'in1', to: 'in2' },
+    { id: 'ie_2_3', from: 'in2', to: 'in3' },
+    { id: 'ie_3_4', from: 'in3', to: 'in4' }
+  ];
+  // Output balanced tree: build picks mid of [0..3] = 1 (val 2) as root
+  //     2
+  //    / \
+  //   1   3
+  //        \
+  //         4
+  const outNodes = {
+    on2: { x: 160, y:  40, r: 20, val: '2' },
+    on1: { x:  90, y: 110, r: 20, val: '1' },
+    on3: { x: 220, y: 110, r: 20, val: '3' },
+    on4: { x: 280, y: 180, r: 20, val: '4' }
+  };
+  const outEdges = [
+    { id: 'oe_2_1', from: 'on2', to: 'on1' },
+    { id: 'oe_2_3', from: 'on2', to: 'on3' },
+    { id: 'oe_3_4', from: 'on3', to: 'on4' }
+  ];
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  function buildTree(svgId, nodesMap, edgesList, alwaysVisible) {
+    const svg = document.getElementById(svgId);
+    const edgeEls = {};
+    edgesList.forEach(e => {
+      const a = nodesMap[e.from], b = nodesMap[e.to];
+      const line = document.createElementNS(SVGNS, 'line');
+      line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+      line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+      line.setAttribute('class', 'edge' + (alwaysVisible ? ' visible' : ''));
+      svg.appendChild(line);
+      edgeEls[e.id] = line;
+    });
+    const nodeEls = {};
+    Object.entries(nodesMap).forEach(([key, n]) => {
+      const g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('class', 'node' + (alwaysVisible ? ' created' : ''));
+      const circle = document.createElementNS(SVGNS, 'circle');
+      circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+      g.appendChild(circle);
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+      t.setAttribute('class', 'val');
+      t.textContent = n.val;
+      g.appendChild(t);
+      svg.appendChild(g);
+      nodeEls[key] = g;
+    });
+    return { nodeEls, edgeEls };
+  }
+  const inTree = buildTree('treeIn', inNodes, inEdges, true);
+  const outTree = buildTree('treeOut', outNodes, outEdges, false);
+
+  // ============ ARRAY ============
+  const arrRowEl = document.getElementById('arrRow');
+  const arrCells = [];
+  // The array will be populated dynamically; we pre-create 4 cells for the final size
+  for (let i = 0; i < 4; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'arr-cell';
+    cell.style.visibility = 'hidden';
+    const val = document.createElement('div'); val.className = 'cell-val'; val.textContent = '';
+    const idx = document.createElement('div'); idx.className = 'cell-idx'; idx.textContent = `[${i}]`;
+    cell.appendChild(val); cell.appendChild(idx);
+    arrRowEl.appendChild(cell);
+    arrCells.push(cell);
+  }
+
+  // ============ STEP DATA ============
+  // phase: "extract" or "build"
+  // active: node id (may be inX or onX)
+  // stack: call frames
+  // inStack / inVisited / inActive — for input tree highlighting
+  // outCreated / outActive / outInStack — for output tree
+  // outEdges wired
+  // arr: values in sorted so far
+  // justAddedArr: index just added
+  // range: {low, high, mid} for build phase (or null)
+  const steps = [
+    // ===== Phase 1: Extract =====
+    { phase: "extract", line: [2, 3], active: null, stack: [{ id: "f_outer", label: "balanceBST(root)", sub: "init sorted=[], call inorder(1)" }],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      arr: [], justAddedArr: -1, range: null,
+      action: "Init sorted = []. Call inorder(root = 1).", kind: "call" },
+
+    { phase: "extract", line: [7, 8, 9], active: "in1", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_in1", label: "inorder(1)", sub: "recurse LEFT (null)" }
+      ],
+      inStack: ["in1"], inVisited: [], inActive: "in1",
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      arr: [], justAddedArr: -1, range: null,
+      action: "Enter inorder(1). inorder(1.left = null) → return.", kind: "call" },
+
+    { phase: "extract", line: [10], active: "in1", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_in1", label: "inorder(1)", sub: "out.add(1)" }
+      ],
+      inStack: ["in1"], inVisited: ["in1"], inActive: "in1",
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      arr: [1], justAddedArr: 0, range: null,
+      action: "out.add(node.val = 1). sorted = [1].", kind: "emit" },
+
+    { phase: "extract", line: [11], active: "in1", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_in1", label: "inorder(1)", sub: "recurse RIGHT" }
+      ],
+      inStack: ["in1"], inVisited: ["in1"], inActive: "in1",
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      arr: [1], justAddedArr: -1, range: null,
+      action: "inorder(1.right = 2).", kind: "call" },
+
+    { phase: "extract", line: [7, 8, 9, 10], active: "in2", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_in1", label: "inorder(1)", sub: "waiting" },
+        { id: "f_in2", label: "inorder(2)", sub: "out.add(2)" }
+      ],
+      inStack: ["in1", "in2"], inVisited: ["in1", "in2"], inActive: "in2",
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      arr: [1, 2], justAddedArr: 1, range: null,
+      action: "Enter inorder(2). Left is null, out.add(2). sorted = [1, 2].", kind: "emit" },
+
+    { phase: "extract", line: [11, 7, 8, 9, 10], active: "in3", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_in1", label: "inorder(1)", sub: "waiting" },
+        { id: "f_in2", label: "inorder(2)", sub: "waiting" },
+        { id: "f_in3", label: "inorder(3)", sub: "out.add(3)" }
+      ],
+      inStack: ["in1", "in2", "in3"], inVisited: ["in1", "in2", "in3"], inActive: "in3",
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      arr: [1, 2, 3], justAddedArr: 2, range: null,
+      action: "inorder(2.right = 3). Left null, out.add(3). sorted = [1, 2, 3].", kind: "emit" },
+
+    { phase: "extract", line: [11, 7, 8, 9, 10, 11], active: "in4", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_in1", label: "inorder(1)", sub: "waiting" },
+        { id: "f_in2", label: "inorder(2)", sub: "waiting" },
+        { id: "f_in3", label: "inorder(3)", sub: "waiting" },
+        { id: "f_in4", label: "inorder(4)", sub: "out.add(4), right null" }
+      ],
+      inStack: ["in1", "in2", "in3", "in4"], inVisited: ["in1", "in2", "in3", "in4"], inActive: "in4",
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: 3, range: null,
+      action: "inorder(3.right = 4). Leaf, out.add(4). sorted = [1, 2, 3, 4]. All recursions unwind.", kind: "emit" },
+
+    { phase: "extract", line: [4], active: null, stack: [{ id: "f_outer", label: "balanceBST", sub: "call build(sorted, 0, 3)" }],
+      inStack: [], inVisited: ["in1", "in2", "in3", "in4"], inActive: null,
+      outCreated: [], outActive: null, outWired: [], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: null,
+      action: "Phase 1 done. sorted = [1, 2, 3, 4]. Call build(sorted, 0, 3). ★ Switch to Phase 2.", kind: "return" },
+
+    // ===== Phase 2: Build =====
+    { phase: "build", line: [13, 14, 15, 16], active: "on2", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "mid=1, val=2" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2"], outActive: "on2", outWired: [], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 0, high: 3, mid: 1 },
+      action: "Enter build(0, 3). mid = 0 + (3-0)/2 = 1. sorted[1] = 2. Create TreeNode(2) — root of balanced tree.", kind: "create" },
+
+    { phase: "build", line: [17], active: "on2", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "recurse LEFT [0, 0]" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2"], outActive: "on2", outWired: [], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 0, high: 3, mid: 1 },
+      action: "Call build(sorted, 0, 0) for left subtree.", kind: "call" },
+
+    { phase: "build", line: [13, 14, 15, 16, 17, 18, 19], active: "on1", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "waiting on LEFT" },
+        { id: "f_0_0", label: "build(0, 0)", sub: "leaf TreeNode(1)" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2", "on1"], outActive: "on1", outWired: [], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 0, high: 0, mid: 0 },
+      action: "Enter build(0, 0). mid = 0. sorted[0] = 1. Create TreeNode(1). Both children build(0, -1) and build(1, 0) return null → leaf. Return TreeNode(1).", kind: "create" },
+
+    { phase: "build", line: [17], active: "on2", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "root.left = 1" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2", "on1"], outActive: "on2", outWired: ["oe_2_1"], outJustWired: "oe_2_1",
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 0, high: 3, mid: 1 },
+      action: "Back in build(0, 3). Wire TreeNode(2).left = TreeNode(1). ★ Edge wired.", kind: "wire" },
+
+    { phase: "build", line: [18], active: "on2", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "recurse RIGHT [2, 3]" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2", "on1"], outActive: "on2", outWired: ["oe_2_1"], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 0, high: 3, mid: 1 },
+      action: "Call build(sorted, 2, 3) for right subtree.", kind: "call" },
+
+    { phase: "build", line: [13, 14, 15, 16], active: "on3", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "waiting on RIGHT" },
+        { id: "f_2_3", label: "build(2, 3)", sub: "mid=2, val=3" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2", "on1", "on3"], outActive: "on3", outWired: ["oe_2_1"], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 2, high: 3, mid: 2 },
+      action: "Enter build(2, 3). mid = 2 + (3-2)/2 = 2. sorted[2] = 3. Create TreeNode(3).", kind: "create" },
+
+    { phase: "build", line: [17, 13, 14], active: "on3", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "waiting on RIGHT" },
+        { id: "f_2_3", label: "build(2, 3)", sub: "LEFT [2, 1] → null" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2", "on1", "on3"], outActive: "on3", outWired: ["oe_2_1"], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 2, high: 3, mid: 2 },
+      action: "Call build(2, mid-1 = 1). low (2) > high (1) → return null.", kind: "return" },
+
+    { phase: "build", line: [18], active: "on3", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "waiting on RIGHT" },
+        { id: "f_2_3", label: "build(2, 3)", sub: "recurse RIGHT [3, 3]" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2", "on1", "on3"], outActive: "on3", outWired: ["oe_2_1"], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 2, high: 3, mid: 2 },
+      action: "Call build(3, 3) for right subtree.", kind: "call" },
+
+    { phase: "build", line: [13, 14, 15, 16, 17, 18, 19], active: "on4", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "waiting on RIGHT" },
+        { id: "f_2_3", label: "build(2, 3)", sub: "waiting on RIGHT" },
+        { id: "f_3_3", label: "build(3, 3)", sub: "leaf TreeNode(4)" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2", "on1", "on3", "on4"], outActive: "on4", outWired: ["oe_2_1"], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 3, high: 3, mid: 3 },
+      action: "Enter build(3, 3). sorted[3] = 4. Create TreeNode(4). Leaf. Return.", kind: "create" },
+
+    { phase: "build", line: [18], active: "on3", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "waiting on RIGHT" },
+        { id: "f_2_3", label: "build(2, 3)", sub: "root.right = 4, return" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2", "on1", "on3", "on4"], outActive: "on3", outWired: ["oe_2_1", "oe_3_4"], outJustWired: "oe_3_4",
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 2, high: 3, mid: 2 },
+      action: "Back in build(2, 3). Wire TreeNode(3).right = TreeNode(4). ★ Edge wired. Return TreeNode(3).", kind: "wire" },
+
+    { phase: "build", line: [18], active: "on2", stack: [
+        { id: "f_outer", label: "balanceBST", sub: "waiting" },
+        { id: "f_0_3", label: "build(0, 3)", sub: "root.right = 3, return" }
+      ],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2", "on1", "on3", "on4"], outActive: "on2", outWired: ["oe_2_1", "oe_3_4", "oe_2_3"], outJustWired: "oe_2_3",
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: { low: 0, high: 3, mid: 1 },
+      action: "Back in build(0, 3). Wire TreeNode(2).right = TreeNode(3). ★ Edge wired. Return TreeNode(2).", kind: "wire" },
+
+    { phase: "build", line: [4], active: null, stack: [],
+      inStack: [], inVisited: [], inActive: null,
+      outCreated: ["on2", "on1", "on3", "on4"], outActive: null, outWired: ["oe_2_1", "oe_3_4", "oe_2_3"], outJustWired: null,
+      arr: [1, 2, 3, 4], justAddedArr: -1, range: null,
+      action: "Return TreeNode(2). ★ Balanced BST complete: {2, left:1, right:{3, right:4}}. Height = 3 vs input’s height = 4.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const phasePillEl = document.getElementById('phasePill');
+  const nodeVEl = document.getElementById('nodeV');
+  const rangeVEl = document.getElementById('rangeV');
+  const leftHalfEl = document.getElementById('leftHalf');
+  const rightHalfEl = document.getElementById('rightHalf');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    phasePillEl.textContent = s.phase === 'extract' ? 'PHASE 1: EXTRACT' : 'PHASE 2: BUILD';
+    phasePillEl.className = 'pill phase ' + s.phase;
+    leftHalfEl.classList.toggle('dimmed', s.phase === 'build');
+    // Pill: node + range
+    if (s.active) {
+      const n = inNodes[s.active] || outNodes[s.active];
+      nodeVEl.textContent = n ? n.val : '—';
+    } else {
+      nodeVEl.textContent = '—';
+    }
+    if (s.range) {
+      rangeVEl.textContent = `[${s.range.low}, ${s.range.high}] mid=${s.range.mid}`;
+    } else {
+      rangeVEl.textContent = '—';
+    }
+    // Input tree highlighting
+    const inStackSet = new Set(s.inStack);
+    const inVisitedSet = new Set(s.inVisited);
+    Object.keys(inTree.nodeEls).forEach(key => {
+      const el = inTree.nodeEls[key];
+      el.classList.remove('active', 'on-stack', 'visited');
+      if (key === s.inActive) {
+        el.classList.add('active');
+      } else if (inStackSet.has(key)) {
+        el.classList.add('on-stack');
+      } else if (inVisitedSet.has(key)) {
+        el.classList.add('visited');
+      }
+    });
+    // Output tree
+    const outCreatedSet = new Set(s.outCreated);
+    Object.keys(outTree.nodeEls).forEach(key => {
+      const el = outTree.nodeEls[key];
+      el.classList.remove('created', 'active', 'visited');
+      if (outCreatedSet.has(key)) { el.classList.add('created'); }
+      if (key === s.outActive) {
+        el.classList.add('active');
+      } else if (outCreatedSet.has(key) && key !== s.outActive) {
+        el.classList.add('visited');
+      }
+    });
+    const outWiredSet = new Set(s.outWired);
+    Object.keys(outTree.edgeEls).forEach(id => {
+      const el = outTree.edgeEls[id];
+      el.classList.remove('visible', 'just-wired');
+      if (outWiredSet.has(id)) { el.classList.add('visible'); }
+      if (id === s.outJustWired) { el.classList.add('just-wired'); }
+    });
+    // Array
+    arrCells.forEach((cell, i) => {
+      cell.classList.remove('just-added', 'in-range', 'mid', 'consumed');
+      cell.style.visibility = (i < s.arr.length) ? 'visible' : 'hidden';
+      if (i < s.arr.length) {
+        cell.querySelector('.cell-val').textContent = s.arr[i];
+      }
+      if (i === s.justAddedArr) { cell.classList.add('just-added'); }
+      if (s.range && i >= s.range.low && i <= s.range.high) {
+        cell.classList.add('in-range');
+      }
+      if (s.range && i === s.range.mid) { cell.classList.add('mid'); }
+    });
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
