@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 173 — BST Iterator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: auto;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.method { background: #2a1f4a; color: #c89aff; font-weight: bold; }
+  .pill.returned .pill-v { color: #4de88c; }
+  .pill.hasNext .pill-v { color: #ffd87a; }
+  .tree-wrap {
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 280px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.in-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.in-stack text.val { fill: #ffd87a; }
+  .node.walking circle { stroke: #9ad4ff; stroke-width: 3; fill: #0f2a4a; }
+  .node.walking text.val { fill: #cde8ff; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.done text.val { fill: #4de88c; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  /* Stack panel (bottom-up) */
+  .stack-wrap {
+    padding: 10px;
+    background: #0f1529;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+  }
+  .stack-label {
+    display: flex;
+    justify-content: space-between;
+    color: #aaa;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .stack-col {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 4px;
+    padding: 6px 8px;
+    background: #0a1a35;
+    border-radius: 3px;
+    min-height: 44px;
+  }
+  .stack-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #ffa500;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #ffd87a;
+    transition: all 0.2s;
+  }
+  .stack-cell.top { border-color: #9ad4ff; background: #0f2a4a; color: #cde8ff; }
+  .stack-cell.just-pushed {
+    background: #0f4a2a;
+    border-color: #4de88c;
+    color: #fff;
+    animation: pushFlash 0.4s ease-out;
+  }
+  @keyframes pushFlash {
+    from { transform: translateY(10px); opacity: 0.3; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .stack-cell.just-popped {
+    background: #4a0f1f;
+    border-color: #ff8ca0;
+    color: #fff;
+    opacity: 0.55;
+  }
+  .stack-empty { color: #6a7a9a; font-style: italic; font-size: 11px; text-align: center; }
+  /* Output list */
+  .out-wrap {
+    padding: 10px;
+    background: #0f1529;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+  }
+  .out-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .out-cells {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px;
+    background: #0a1a35;
+    border-radius: 3px;
+    min-height: 32px;
+  }
+  .out-tok {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    background: #0f3460;
+    border-radius: 3px;
+    color: #4de88c;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .out-tok.new { animation: slideIn 0.4s ease-out; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f4a2a; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-ctor { background: #c89aff; color: #1a1a2e; }
+  .kind-next { background: #e94560; color: white; }
+  .kind-has { background: #ffd87a; color: #1a1a2e; }
+  .kind-push { background: #0f9950; color: white; }
+  .kind-pop { background: #ff8ca0; color: #1a1a2e; }
+  .kind-emit { background: #4de88c; color: #1a1a2e; }
+  .kind-walk { background: #9ad4ff; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  /* Call log (right panel) */
+  .calllog-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .calllog-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #666;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .calllog-list li.active {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .calllog-list li.done {
+    opacity: 0.55;
+    border-left-color: #4de88c;
+  }
+  .calllog-list li .ret {
+    color: #4de88c;
+    font-weight: bold;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-stack { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-walking { background: #0f2a4a; border: 2px solid #9ad4ff; }
+  .chip-active { background: #e94560; }
+  .chip-done { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 173 — Binary Search Tree Iterator</h1>
+    <div class="subtitle">Lazy iterative inorder: stack holds leftmost-chain · next() pops + pushes right subtree’s leftmost chain · BST = [7, 3, 15, null, null, 9, 20]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill method" id="methodPill">—</span>
+      <span class="pill returned"><span class="pill-k">returned</span><span class="pill-v" id="retV">—</span></span>
+      <span class="pill hasNext"><span class="pill-k">hasNext</span><span class="pill-v" id="hasV">—</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="stack-wrap">
+      <div class="stack-label"><span>stack (top on top)</span><span>bottom</span></div>
+      <div class="stack-col" id="stackCol"></div>
+    </div>
+    <div class="out-wrap">
+      <div class="out-label">next() returns → (should match inorder = [3, 7, 9, 15, 20])</div>
+      <div class="out-cells" id="outCells"></div>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-ctor" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Method calls</div>
+    <ul class="calllog-list" id="calllog"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-walking"></div>walker (pushLeft cursor)</div>
+      <div class="legend-item"><div class="chip chip-stack"></div>on stack</div>
+      <div class="legend-item"><div class="chip chip-active"></div>just popped / emitted</div>
+      <div class="legend-item"><div class="chip chip-done"></div>processed (returned by next)</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">LC 94 inorder, paused</div>
+      Same iterative-inorder stack idiom as LC 94 — but the stack lives as an instance field so the walk can pause between <code>next()</code> calls. Each node pushed and popped once across the whole iteration → O(1) amortized per next.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "class BSTIterator {",
+    "    private Deque<TreeNode> stack = new ArrayDeque<>();",
+    "",
+    "    public BSTIterator(TreeNode root) {",
+    "        pushLeft(root);",
+    "    }",
+    "",
+    "    public int next() {",
+    "        TreeNode node = stack.pop();",
+    "        pushLeft(node.right);",
+    "        return node.val;",
+    "    }",
+    "",
+    "    public boolean hasNext() {",
+    "        return !stack.isEmpty();",
+    "    }",
+    "",
+    "    private void pushLeft(TreeNode node) {",
+    "        while (node != null) {",
+    "            stack.push(node);",
+    "            node = node.left;",
+    "        }",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // [7, 3, 15, null, null, 9, 20]
+  //       7
+  //      / \
+  //     3   15
+  //        /  \
+  //       9    20
+  const nodes = {
+    n7:  { x: 320, y:  40, r: 22, val: '7' },
+    n3:  { x: 180, y: 130, r: 22, val: '3' },
+    n15: { x: 460, y: 130, r: 22, val: '15' },
+    n9:  { x: 400, y: 220, r: 22, val: '9' },
+    n20: { x: 520, y: 220, r: 22, val: '20' }
+  };
+  const edges = [
+    { id: 'e_7_3',  from: 'n7',  to: 'n3' },
+    { id: 'e_7_15', from: 'n7',  to: 'n15' },
+    { id: 'e_15_9', from: 'n15', to: 'n9' },
+    { id: 'e_15_20',from: 'n15', to: 'n20' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // methodName: which API method is executing this step
+  // stackArr: array of node ids (top last)
+  // justPushed / justPopped: node id highlighted
+  // walker: current pushLeft cursor (highlighted blue)
+  // out: array of vals emitted by next() so far
+  // retVal: current step's return value (null / val / true / false)
+  // hasV: current hasNext state for display
+  // callLog: array of { method, status, ret? } for right panel
+  // doneNodes: nodes emitted by next() (green)
+  const steps = [
+    { line: [4, 5], methodName: "BSTIterator(root)", retVal: null, hasV: null,
+      stackArr: [], justPushed: null, justPopped: null, walker: "n7",
+      out: [], newOut: 0, doneNodes: [],
+      callLog: [{ method: "new BSTIterator(root)", status: "active" }],
+      action: "Construct iterator. Call pushLeft(root = 7).", kind: "ctor" },
+
+    { line: [18, 19, 20, 21], methodName: "pushLeft", retVal: null, hasV: null,
+      stackArr: ["n7"], justPushed: "n7", justPopped: null, walker: "n3",
+      out: [], newOut: 0, doneNodes: [],
+      callLog: [{ method: "new BSTIterator(root)", status: "active" }],
+      action: "pushLeft: push 7, walker = 7.left = 3.", kind: "push" },
+
+    { line: [18, 19, 20, 21], methodName: "pushLeft", retVal: null, hasV: null,
+      stackArr: ["n7", "n3"], justPushed: "n3", justPopped: null, walker: null,
+      out: [], newOut: 0, doneNodes: [],
+      callLog: [{ method: "new BSTIterator(root)", status: "active" }],
+      action: "pushLeft: push 3, walker = 3.left = null → exit while. Stack = [7, 3].", kind: "push" },
+
+    { line: [6], methodName: "BSTIterator(root)", retVal: null, hasV: null,
+      stackArr: ["n7", "n3"], justPushed: null, justPopped: null, walker: null,
+      out: [], newOut: 0, doneNodes: [],
+      callLog: [{ method: "new BSTIterator(root)", status: "done", ret: "" }],
+      action: "Constructor done. Iterator ready with stack holding entire leftmost chain [7, 3].", kind: "return" },
+
+    { line: [14, 15], methodName: "hasNext()", retVal: true, hasV: true,
+      stackArr: ["n7", "n3"], justPushed: null, justPopped: null, walker: null,
+      out: [], newOut: 0, doneNodes: [],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" }
+      ],
+      action: "hasNext() → return !stack.isEmpty() = true.", kind: "has" },
+
+    { line: [8, 9], methodName: "next()", retVal: null, hasV: true,
+      stackArr: ["n7"], justPushed: null, justPopped: "n3", walker: null,
+      out: [], newOut: 0, doneNodes: [],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "active" }
+      ],
+      action: "next(): pop → node 3.", kind: "pop" },
+
+    { line: [10, 18, 19], methodName: "next()", retVal: null, hasV: true,
+      stackArr: ["n7"], justPushed: null, justPopped: null, walker: null,
+      out: [], newOut: 0, doneNodes: ["n3"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "active" }
+      ],
+      action: "pushLeft(3.right = null) → while condition false → no push.", kind: "walk" },
+
+    { line: [11], methodName: "next()", retVal: 3, hasV: true,
+      stackArr: ["n7"], justPushed: null, justPopped: null, walker: null,
+      out: [3], newOut: 1, doneNodes: ["n3"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" }
+      ],
+      action: "return node.val = 3. ★ First next() output.", kind: "emit" },
+
+    { line: [14, 15], methodName: "hasNext()", retVal: true, hasV: true,
+      stackArr: ["n7"], justPushed: null, justPopped: null, walker: null,
+      out: [3], newOut: 0, doneNodes: ["n3"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" }
+      ],
+      action: "hasNext() → true.", kind: "has" },
+
+    { line: [8, 9], methodName: "next()", retVal: null, hasV: true,
+      stackArr: [], justPushed: null, justPopped: "n7", walker: null,
+      out: [3], newOut: 0, doneNodes: ["n3"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "active" }
+      ],
+      action: "next(): pop → node 7.", kind: "pop" },
+
+    { line: [10, 18, 19, 20, 21], methodName: "next()", retVal: null, hasV: true,
+      stackArr: ["n15"], justPushed: "n15", justPopped: null, walker: "n9",
+      out: [3], newOut: 0, doneNodes: ["n3"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "active" }
+      ],
+      action: "pushLeft(7.right = 15): push 15, walker = 15.left = 9.", kind: "push" },
+
+    { line: [18, 19, 20, 21], methodName: "next()", retVal: null, hasV: true,
+      stackArr: ["n15", "n9"], justPushed: "n9", justPopped: null, walker: null,
+      out: [3], newOut: 0, doneNodes: ["n3"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "active" }
+      ],
+      action: "pushLeft: push 9, walker = 9.left = null → exit. Stack = [15, 9].", kind: "push" },
+
+    { line: [11], methodName: "next()", retVal: 7, hasV: true,
+      stackArr: ["n15", "n9"], justPushed: null, justPopped: null, walker: null,
+      out: [3, 7], newOut: 1, doneNodes: ["n3", "n7"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "7" }
+      ],
+      action: "return 7. ★ Right subtree’s leftmost chain now queued on the stack — lazy walk resumes.", kind: "emit" },
+
+    { line: [8, 9], methodName: "next()", retVal: null, hasV: true,
+      stackArr: ["n15"], justPushed: null, justPopped: "n9", walker: null,
+      out: [3, 7], newOut: 0, doneNodes: ["n3", "n7"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "7" },
+        { method: "next()", status: "active" }
+      ],
+      action: "next(): pop → node 9.", kind: "pop" },
+
+    { line: [10, 18, 19], methodName: "next()", retVal: null, hasV: true,
+      stackArr: ["n15"], justPushed: null, justPopped: null, walker: null,
+      out: [3, 7], newOut: 0, doneNodes: ["n3", "n7", "n9"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "7" },
+        { method: "next()", status: "active" }
+      ],
+      action: "pushLeft(9.right = null) → no push.", kind: "walk" },
+
+    { line: [11], methodName: "next()", retVal: 9, hasV: true,
+      stackArr: ["n15"], justPushed: null, justPopped: null, walker: null,
+      out: [3, 7, 9], newOut: 1, doneNodes: ["n3", "n7", "n9"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "7" },
+        { method: "next()", status: "done", ret: "9" }
+      ],
+      action: "return 9.", kind: "emit" },
+
+    { line: [8, 9], methodName: "next()", retVal: null, hasV: true,
+      stackArr: [], justPushed: null, justPopped: "n15", walker: null,
+      out: [3, 7, 9], newOut: 0, doneNodes: ["n3", "n7", "n9"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "7" },
+        { method: "next()", status: "done", ret: "9" },
+        { method: "next()", status: "active" }
+      ],
+      action: "next(): pop → node 15.", kind: "pop" },
+
+    { line: [10, 18, 19, 20, 21], methodName: "next()", retVal: null, hasV: true,
+      stackArr: ["n20"], justPushed: "n20", justPopped: null, walker: null,
+      out: [3, 7, 9], newOut: 0, doneNodes: ["n3", "n7", "n9"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "7" },
+        { method: "next()", status: "done", ret: "9" },
+        { method: "next()", status: "active" }
+      ],
+      action: "pushLeft(15.right = 20): push 20, walker = 20.left = null → exit. Stack = [20].", kind: "push" },
+
+    { line: [11], methodName: "next()", retVal: 15, hasV: true,
+      stackArr: ["n20"], justPushed: null, justPopped: null, walker: null,
+      out: [3, 7, 9, 15], newOut: 1, doneNodes: ["n3", "n7", "n9", "n15"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "7" },
+        { method: "next()", status: "done", ret: "9" },
+        { method: "next()", status: "done", ret: "15" }
+      ],
+      action: "return 15.", kind: "emit" },
+
+    { line: [8, 9], methodName: "next()", retVal: null, hasV: true,
+      stackArr: [], justPushed: null, justPopped: "n20", walker: null,
+      out: [3, 7, 9, 15], newOut: 0, doneNodes: ["n3", "n7", "n9", "n15"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "7" },
+        { method: "next()", status: "done", ret: "9" },
+        { method: "next()", status: "done", ret: "15" },
+        { method: "next()", status: "active" }
+      ],
+      action: "next(): pop → node 20.", kind: "pop" },
+
+    { line: [10, 11, 18, 19], methodName: "next()", retVal: 20, hasV: false,
+      stackArr: [], justPushed: null, justPopped: null, walker: null,
+      out: [3, 7, 9, 15, 20], newOut: 1, doneNodes: ["n3", "n7", "n9", "n15", "n20"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "7" },
+        { method: "next()", status: "done", ret: "9" },
+        { method: "next()", status: "done", ret: "15" },
+        { method: "next()", status: "done", ret: "20" }
+      ],
+      action: "pushLeft(20.right = null) → no push. return 20. Stack now empty.", kind: "emit" },
+
+    { line: [14, 15], methodName: "hasNext()", retVal: false, hasV: false,
+      stackArr: [], justPushed: null, justPopped: null, walker: null,
+      out: [3, 7, 9, 15, 20], newOut: 0, doneNodes: ["n3", "n7", "n9", "n15", "n20"],
+      callLog: [
+        { method: "new BSTIterator(root)", status: "done", ret: "" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "3" },
+        { method: "hasNext()", status: "done", ret: "true" },
+        { method: "next()", status: "done", ret: "7" },
+        { method: "next()", status: "done", ret: "9" },
+        { method: "next()", status: "done", ret: "15" },
+        { method: "next()", status: "done", ret: "20" },
+        { method: "hasNext()", status: "done", ret: "false" }
+      ],
+      action: "hasNext() → stack empty → false. Iteration complete.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevOutLen = 0;
+  const methodPillEl = document.getElementById('methodPill');
+  const retVEl = document.getElementById('retV');
+  const hasVEl = document.getElementById('hasV');
+  const stackColEl = document.getElementById('stackCol');
+  const outCellsEl = document.getElementById('outCells');
+  const callLogEl = document.getElementById('calllog');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    methodPillEl.textContent = s.methodName;
+    retVEl.textContent = s.retVal !== null ? s.retVal : '—';
+    hasVEl.textContent = s.hasV === null ? '—' : String(s.hasV);
+    // Tree
+    const stackSet = new Set(s.stackArr);
+    const doneSet = new Set(s.doneNodes);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('in-stack', 'walking', 'active', 'done');
+      if (s.justPopped === key) {
+        el.classList.add('active');
+      } else if (s.justPushed === key) {
+        el.classList.add('active');
+      } else if (s.walker === key) {
+        el.classList.add('walking');
+      } else if (stackSet.has(key)) {
+        el.classList.add('in-stack');
+      } else if (doneSet.has(key)) {
+        el.classList.add('done');
+      }
+    });
+    // Stack panel (column-reverse → first child at bottom visually)
+    stackColEl.innerHTML = '';
+    s.stackArr.forEach((k, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'stack-cell';
+      if (i === s.stackArr.length - 1) { cell.classList.add('top'); }
+      if (k === s.justPushed) { cell.classList.add('just-pushed'); }
+      cell.textContent = nodes[k].val;
+      stackColEl.appendChild(cell);
+    });
+    if (s.justPopped) {
+      const cell = document.createElement('div');
+      cell.className = 'stack-cell just-popped';
+      cell.textContent = nodes[s.justPopped].val;
+      stackColEl.appendChild(cell);
+    }
+    if (s.stackArr.length === 0 && !s.justPopped) {
+      const empty = document.createElement('div');
+      empty.className = 'stack-empty';
+      empty.textContent = '[empty]';
+      stackColEl.appendChild(empty);
+    }
+    // Output cells
+    outCellsEl.innerHTML = '';
+    if (s.out.length === 0) {
+      const empty = document.createElement('span');
+      empty.style.color = '#6a7a9a'; empty.style.fontStyle = 'italic'; empty.style.fontSize = '11px';
+      empty.textContent = '[]';
+      outCellsEl.appendChild(empty);
+    } else {
+      s.out.forEach((v, i) => {
+        const tok = document.createElement('span');
+        tok.className = 'out-tok';
+        if (i >= prevOutLen) { tok.classList.add('new'); }
+        tok.textContent = v;
+        outCellsEl.appendChild(tok);
+      });
+    }
+    prevOutLen = s.out.length;
+    // Call log
+    callLogEl.innerHTML = '';
+    s.callLog.forEach(entry => {
+      const li = document.createElement('li');
+      li.classList.add(entry.status);
+      const m = document.createElement('span');
+      m.textContent = entry.method;
+      li.appendChild(m);
+      if (entry.ret !== undefined && entry.ret !== '') {
+        const r = document.createElement('span');
+        r.className = 'ret';
+        r.textContent = '→ ' + entry.ret;
+        li.appendChild(r);
+      }
+      callLogEl.appendChild(li);
+    });
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevOutLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevOutLen = stepIdx > 0 ? steps[stepIdx - 1].out.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
