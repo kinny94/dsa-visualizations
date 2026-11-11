@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 297 — Serialize + Deserialize Binary Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: auto;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.phase { font-weight: bold; }
+  .pill.phase.serialize { background: #0a3a1a; color: #4de88c; }
+  .pill.phase.deserialize { background: #3a1f4a; color: #c89aff; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.i .pill-v { color: #ffd87a; }
+  .tree-wrap {
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 260px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+  .node.created circle, .node.created text.val { opacity: 1; }
+  .node.in-queue circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.in-queue text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #4de88c; fill: #0f3a1f; opacity: 1; }
+  .node.done text.val { fill: #4de88c; }
+  .edge {
+    stroke: #3a3a4a;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+  .edge.visible { opacity: 1; stroke: #4de88c; stroke-width: 2.5; }
+  .edge.just-wired { stroke: #ffd87a; stroke-width: 3; }
+  /* Queue panel */
+  .q-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    background: #0f1529;
+    border-radius: 4px;
+  }
+  .q-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-family: 'Monaco', monospace; }
+  .q-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    flex-wrap: wrap;
+  }
+  .q-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #ffa500;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    color: #ffd87a;
+    font-size: 13px;
+  }
+  .q-cell.null { opacity: 0.6; font-style: italic; border-style: dashed; color: #aaa; }
+  .q-cell.just-polled {
+    background: #4a0f1f;
+    border-color: #ff8ca0;
+    color: #fff;
+    opacity: 0.6;
+  }
+  .q-cell.just-offered {
+    background: #0f4a2a;
+    border-color: #4de88c;
+    color: #fff;
+  }
+  .q-empty { color: #6a7a9a; font-style: italic; font-size: 11px; }
+  /* String display */
+  .str-wrap {
+    padding: 10px;
+    background: #0f1529;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+  }
+  .str-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .str-cells {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 6px;
+    background: #0a1a35;
+    border-radius: 3px;
+    min-height: 34px;
+  }
+  .str-tok {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffd87a;
+  }
+  .str-tok.null-tok { color: #aaa; background: #2a1a1a; }
+  .str-tok.just-appended {
+    background: #0f4a2a;
+    color: #fff;
+    animation: appendFlash 0.4s ease-out;
+  }
+  @keyframes appendFlash {
+    from { transform: scale(0.7); background: #4de88c; color: #000; }
+    to { transform: scale(1); }
+  }
+  .str-tok.highlight {
+    background: #4a3010;
+    border: 1px solid #ffa500;
+    color: #fff;
+  }
+  .str-tok.consumed { opacity: 0.4; }
+  /* Action */
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-poll { background: #e94560; color: white; }
+  .kind-emit { background: #4de88c; color: #1a1a2e; }
+  .kind-offer { background: #0f9950; color: white; }
+  .kind-create { background: #c89aff; color: #1a1a2e; }
+  .kind-wire { background: #ffd87a; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-queue { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-done { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 297 — Serialize + Deserialize Binary Tree</h1>
+    <div class="subtitle">BFS with “#” null sentinels · LinkedList queue (null-is-sentinel) · tree = [1, 2, 3, null, null, 4, 5] · roundtrip demo</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill phase" id="phasePill">—</span>
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill i"><span class="pill-k">i (deserialize)</span><span class="pill-v" id="iV">—</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 220" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="q-wrap">
+      <div class="q-label">Queue (front → back)</div>
+      <div class="q-row" id="qRow"></div>
+    </div>
+    <div class="str-wrap">
+      <div class="str-label"><span>Serialized string</span><span id="strCount"></span></div>
+      <div class="str-cells" id="strCells"></div>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call frames</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active / polled node</div>
+      <div class="legend-item"><div class="chip chip-queue"></div>in queue</div>
+      <div class="legend-item"><div class="chip chip-done"></div>processed</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">LinkedList, not ArrayDeque</div>
+      Nulls are legitimate sentinels in BOTH directions — offered during serialize, read during deserialize. ArrayDeque.offer(null) throws NPE. Same rule as LC 958 / LC 101.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public String serialize(TreeNode root) {",
+    "    if (root == null) return \"\";",
+    "    Queue<TreeNode> queue = new LinkedList<>();",
+    "    StringBuilder sb = new StringBuilder();",
+    "    queue.offer(root);",
+    "    while (!queue.isEmpty()) {",
+    "        TreeNode node = queue.poll();",
+    "        if (node == null) {",
+    "            sb.append(\"#,\");",
+    "        } else {",
+    "            sb.append(node.val).append(\",\");",
+    "            queue.offer(node.left);",
+    "            queue.offer(node.right);",
+    "        }",
+    "    }",
+    "    return sb.toString();",
+    "}",
+    "",
+    "public TreeNode deserialize(String data) {",
+    "    if (data.isEmpty()) return null;",
+    "    String[] vals = data.split(\",\");",
+    "    TreeNode root = new TreeNode(parseInt(vals[0]));",
+    "    Queue<TreeNode> queue = new LinkedList<>();",
+    "    queue.offer(root);",
+    "    int i = 1;",
+    "    while (!queue.isEmpty()) {",
+    "        TreeNode node = queue.poll();",
+    "        if (!vals[i].equals(\"#\")) {",
+    "            node.left = new TreeNode(parseInt(vals[i]));",
+    "            queue.offer(node.left);",
+    "        }",
+    "        i++;",
+    "        if (!vals[i].equals(\"#\")) {",
+    "            node.right = new TreeNode(parseInt(vals[i]));",
+    "            queue.offer(node.right);",
+    "        }",
+    "        i++;",
+    "    }",
+    "    return root;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // [1, 2, 3, null, null, 4, 5]
+  //       1
+  //      / \
+  //     2   3
+  //        / \
+  //       4   5
+  const nodes = {
+    n1: { x: 320, y:  40, r: 22, val: '1' },
+    n2: { x: 180, y: 120, r: 22, val: '2' },
+    n3: { x: 460, y: 120, r: 22, val: '3' },
+    n4: { x: 400, y: 200, r: 22, val: '4' },
+    n5: { x: 520, y: 200, r: 22, val: '5' }
+  };
+  const edges = [
+    { id: 'e_1_2', from: 'n1', to: 'n2' },
+    { id: 'e_1_3', from: 'n1', to: 'n3' },
+    { id: 'e_3_4', from: 'n3', to: 'n4' },
+    { id: 'e_3_5', from: 'n3', to: 'n5' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // phase: "serialize" or "deserialize"
+  // nodeId: current frame's node id
+  // iVal: deserialize cursor i (or null)
+  // treeNodes: {created: [ids], active: id, done: [ids], inQueue: [ids]} rendered on tree
+  // edgesSet: edge ids wired so far
+  // justWired: edge id just wired this step
+  // queue: array of {k: nodeId, isNull: bool}
+  // justPolled / justOffered: highlight markers
+  // tokens: serialized string tokens so far (array)
+  // justAppended: index of last token appended this step
+  // highlightTok: index of token currently being consumed in deserialize
+  // consumedTok: how many tokens have been consumed so far in deserialize
+  // stack: frame display
+  const steps = [
+    // ===== SERIALIZE =====
+    { phase: "serialize", line: [1, 2, 3, 4, 5], nodeId: null, iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: null, done: [], inQueue: ["n1"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"n1"}], justPolled: null, justOffered: [{k:"n1"}],
+      tokens: [], justAppended: -1, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "offer(root), sb=\\\"\\\"" }],
+      action: "serialize: root != null. Create LinkedList, StringBuilder. offer(root=1). queue=[1].", kind: "call" },
+
+    { phase: "serialize", line: [6, 7], nodeId: "n1", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: "n1", done: [], inQueue: [],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [], justPolled: {k:"n1"}, justOffered: [],
+      tokens: [], justAppended: -1, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "poll → 1" }],
+      action: "while: not empty. Poll → node 1.", kind: "poll" },
+
+    { phase: "serialize", line: [8, 10, 11], nodeId: "n1", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: "n1", done: [], inQueue: [],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [], justPolled: null, justOffered: [],
+      tokens: ["1"], justAppended: 0, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "emit \\\"1,\\\"" }],
+      action: "node != null. sb.append(\\\"1,\\\").", kind: "emit" },
+
+    { phase: "serialize", line: [12, 13], nodeId: "n1", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: null, done: ["n1"], inQueue: ["n2","n3"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"n2"}, {k:"n3"}], justPolled: null, justOffered: [{k:"n2"}, {k:"n3"}],
+      tokens: ["1"], justAppended: -1, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "offer 2, 3" }],
+      action: "Offer 1.left=2 and 1.right=3. queue=[2, 3].", kind: "offer" },
+
+    { phase: "serialize", line: [6, 7], nodeId: "n2", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: "n2", done: ["n1"], inQueue: ["n3"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"n3"}], justPolled: {k:"n2"}, justOffered: [],
+      tokens: ["1"], justAppended: -1, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "poll → 2" }],
+      action: "Poll → node 2.", kind: "poll" },
+
+    { phase: "serialize", line: [8, 10, 11], nodeId: "n2", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: "n2", done: ["n1"], inQueue: ["n3"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"n3"}], justPolled: null, justOffered: [],
+      tokens: ["1", "2"], justAppended: 1, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "emit \\\"2,\\\"" }],
+      action: "node != null. sb.append(\\\"2,\\\").", kind: "emit" },
+
+    { phase: "serialize", line: [12, 13], nodeId: "n2", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: null, done: ["n1","n2"], inQueue: ["n3"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"n3"}, {k:"null_2L", isNull:true}, {k:"null_2R", isNull:true}],
+      justPolled: null, justOffered: [{k:"null_2L", isNull:true}, {k:"null_2R", isNull:true}],
+      tokens: ["1", "2"], justAppended: -1, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "offer null, null" }],
+      action: "Offer 2.left=null and 2.right=null. queue=[3, null, null].", kind: "offer" },
+
+    { phase: "serialize", line: [6, 7], nodeId: "n3", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: "n3", done: ["n1","n2"], inQueue: [],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"null_2L", isNull:true}, {k:"null_2R", isNull:true}],
+      justPolled: {k:"n3"}, justOffered: [],
+      tokens: ["1", "2"], justAppended: -1, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "poll → 3" }],
+      action: "Poll → node 3.", kind: "poll" },
+
+    { phase: "serialize", line: [8, 10, 11], nodeId: "n3", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: "n3", done: ["n1","n2"], inQueue: [],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"null_2L", isNull:true}, {k:"null_2R", isNull:true}],
+      justPolled: null, justOffered: [],
+      tokens: ["1", "2", "3"], justAppended: 2, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "emit \\\"3,\\\"" }],
+      action: "node != null. sb.append(\\\"3,\\\").", kind: "emit" },
+
+    { phase: "serialize", line: [12, 13], nodeId: "n3", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: null, done: ["n1","n2","n3"], inQueue: ["n4","n5"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"null_2L", isNull:true}, {k:"null_2R", isNull:true}, {k:"n4"}, {k:"n5"}],
+      justPolled: null, justOffered: [{k:"n4"}, {k:"n5"}],
+      tokens: ["1", "2", "3"], justAppended: -1, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "offer 4, 5" }],
+      action: "Offer 3.left=4 and 3.right=5. queue=[null, null, 4, 5].", kind: "offer" },
+
+    { phase: "serialize", line: [6, 7, 8, 9], nodeId: null, iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: null, done: ["n1","n2","n3"], inQueue: ["n4","n5"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"null_2R", isNull:true}, {k:"n4"}, {k:"n5"}],
+      justPolled: {k:"null_2L", isNull:true}, justOffered: [],
+      tokens: ["1", "2", "3", "#"], justAppended: 3, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "poll null → emit #" }],
+      action: "Poll null. node == null → sb.append(\\\"#,\\\"). Don't offer anything.", kind: "emit" },
+
+    { phase: "serialize", line: [6, 7, 8, 9], nodeId: null, iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: null, done: ["n1","n2","n3"], inQueue: ["n4","n5"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"n4"}, {k:"n5"}],
+      justPolled: {k:"null_2R", isNull:true}, justOffered: [],
+      tokens: ["1", "2", "3", "#", "#"], justAppended: 4, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "poll null → emit #" }],
+      action: "Poll null. Emit \\\"#,\\\".", kind: "emit" },
+
+    { phase: "serialize", line: [6, 7, 8, 10, 11, 12, 13], nodeId: "n4", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: "n4", done: ["n1","n2","n3"], inQueue: ["n5"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"n5"}, {k:"null_4L", isNull:true}, {k:"null_4R", isNull:true}],
+      justPolled: {k:"n4"},
+      justOffered: [{k:"null_4L", isNull:true}, {k:"null_4R", isNull:true}],
+      tokens: ["1", "2", "3", "#", "#", "4"], justAppended: 5, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "poll 4, emit, offer null ×2" }],
+      action: "Poll 4 → emit \\\"4,\\\" + offer null, null. queue=[5, null, null].", kind: "emit" },
+
+    { phase: "serialize", line: [6, 7, 8, 10, 11, 12, 13], nodeId: "n5", iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: "n5", done: ["n1","n2","n3","n4"], inQueue: [],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"null_4L", isNull:true}, {k:"null_4R", isNull:true},
+              {k:"null_5L", isNull:true}, {k:"null_5R", isNull:true}],
+      justPolled: {k:"n5"},
+      justOffered: [{k:"null_5L", isNull:true}, {k:"null_5R", isNull:true}],
+      tokens: ["1", "2", "3", "#", "#", "4", "5"], justAppended: 6, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "poll 5, emit, offer null ×2" }],
+      action: "Poll 5 → emit \\\"5,\\\" + offer null, null. queue=[null, null, null, null].", kind: "emit" },
+
+    { phase: "serialize", line: [6, 7, 8, 9], nodeId: null, iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: null, done: ["n1","n2","n3","n4","n5"], inQueue: [],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [],
+      justPolled: null, justOffered: [],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: 10, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "poll 4 nulls → emit \\\"#\\\" × 4" }],
+      action: "Poll the remaining 4 nulls → emit \\\"#,\\\" × 4. Queue drained.", kind: "emit" },
+
+    { phase: "serialize", line: [16], nodeId: null, iVal: null,
+      created: ["n1","n2","n3","n4","n5"], active: null, done: ["n1","n2","n3","n4","n5"], inQueue: [],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [], justPolled: null, justOffered: [],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_s", label: "serialize(root)", sub: "return sb.toString()" }],
+      action: "Return \\\"1,2,3,#,#,4,5,#,#,#,#,\\\". ★ Serialize done.", kind: "return" },
+
+    // ===== DESERIALIZE =====
+    { phase: "deserialize", line: [19, 20, 21], nodeId: null, iVal: null,
+      created: [], active: null, done: [], inQueue: [],
+      edgesSet: [], justWired: null,
+      queue: [], justPolled: null, justOffered: [],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: null, consumedTok: 0,
+      stack: [{ id: "f_d", label: "deserialize(data)", sub: "split tokens" }],
+      action: "deserialize: data not empty. vals = split(data, \\\",\\\"). Tree view cleared — reconstructing bottom-up.", kind: "call" },
+
+    { phase: "deserialize", line: [22, 23, 24, 25], nodeId: "n1", iVal: 1,
+      created: ["n1"], active: "n1", done: [], inQueue: ["n1"],
+      edgesSet: [], justWired: null,
+      queue: [{k:"n1"}], justPolled: null, justOffered: [{k:"n1"}],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: 0, consumedTok: 1,
+      stack: [{ id: "f_d", label: "deserialize(data)", sub: "root = TreeNode(1), i=1" }],
+      action: "vals[0]=\\\"1\\\". root = new TreeNode(1). offer(root). i = 1.", kind: "create" },
+
+    { phase: "deserialize", line: [27, 28], nodeId: "n1", iVal: 1,
+      created: ["n1"], active: "n1", done: [], inQueue: [],
+      edgesSet: [], justWired: null,
+      queue: [], justPolled: {k:"n1"}, justOffered: [],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: 1, consumedTok: 1,
+      stack: [{ id: "f_d", label: "deserialize(data)", sub: "poll 1, check vals[1]" }],
+      action: "Poll node=1. vals[1]=\\\"2\\\" ≠ \\\"#\\\" → create left.", kind: "poll" },
+
+    { phase: "deserialize", line: [29, 30, 31, 32], nodeId: "n1", iVal: 2,
+      created: ["n1","n2"], active: "n1", done: [], inQueue: ["n2"],
+      edgesSet: ["e_1_2"], justWired: "e_1_2",
+      queue: [{k:"n2"}], justPolled: null, justOffered: [{k:"n2"}],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: 1, consumedTok: 2,
+      stack: [{ id: "f_d", label: "deserialize(data)", sub: "1.left = 2" }],
+      action: "node.left = new TreeNode(2). offer(2). i++ → 2. ★ Edge wired.", kind: "create" },
+
+    { line: [33, 34, 35, 36, 37], phase: "deserialize", nodeId: "n1", iVal: 3,
+      created: ["n1","n2","n3"], active: "n1", done: [], inQueue: ["n2","n3"],
+      edgesSet: ["e_1_2","e_1_3"], justWired: "e_1_3",
+      queue: [{k:"n2"}, {k:"n3"}], justPolled: null, justOffered: [{k:"n3"}],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: 2, consumedTok: 3,
+      stack: [{ id: "f_d", label: "deserialize(data)", sub: "1.right = 3" }],
+      action: "vals[2]=\\\"3\\\" ≠ \\\"#\\\" → node.right = new TreeNode(3). offer(3). i++ → 3. ★ Edge wired.", kind: "create" },
+
+    { phase: "deserialize", line: [27, 28, 33], nodeId: "n2", iVal: 5,
+      created: ["n1","n2","n3"], active: "n2", done: ["n1"], inQueue: ["n3"],
+      edgesSet: ["e_1_2","e_1_3"], justWired: null,
+      queue: [{k:"n3"}], justPolled: {k:"n2"}, justOffered: [],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: 4, consumedTok: 5,
+      stack: [{ id: "f_d", label: "deserialize(data)", sub: "poll 2, both children #" }],
+      action: "Poll 2. vals[3]=\\\"#\\\" → skip left. i→4. vals[4]=\\\"#\\\" → skip right. i→5.", kind: "poll" },
+
+    { phase: "deserialize", line: [27, 28, 29, 30, 31], nodeId: "n3", iVal: 6,
+      created: ["n1","n2","n3","n4"], active: "n3", done: ["n1","n2"], inQueue: ["n4"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4"], justWired: "e_3_4",
+      queue: [{k:"n4"}], justPolled: null, justOffered: [{k:"n4"}],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: 5, consumedTok: 6,
+      stack: [{ id: "f_d", label: "deserialize(data)", sub: "3.left = 4" }],
+      action: "Poll 3. vals[5]=\\\"4\\\" ≠ \\\"#\\\" → node.left = new TreeNode(4). offer(4). i→6. ★ Edge wired.", kind: "create" },
+
+    { phase: "deserialize", line: [33, 34, 35, 36, 37], nodeId: "n3", iVal: 7,
+      created: ["n1","n2","n3","n4","n5"], active: "n3", done: ["n1","n2"], inQueue: ["n4","n5"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: "e_3_5",
+      queue: [{k:"n4"}, {k:"n5"}], justPolled: null, justOffered: [{k:"n5"}],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: 6, consumedTok: 7,
+      stack: [{ id: "f_d", label: "deserialize(data)", sub: "3.right = 5" }],
+      action: "vals[6]=\\\"5\\\" ≠ \\\"#\\\" → node.right = new TreeNode(5). offer(5). i→7. ★ Edge wired.", kind: "create" },
+
+    { phase: "deserialize", line: [27, 28, 33], nodeId: "n4", iVal: 9,
+      created: ["n1","n2","n3","n4","n5"], active: "n4", done: ["n1","n2","n3"], inQueue: ["n5"],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [{k:"n5"}], justPolled: {k:"n4"}, justOffered: [],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: 8, consumedTok: 9,
+      stack: [{ id: "f_d", label: "deserialize(data)", sub: "poll 4, both #" }],
+      action: "Poll 4. vals[7]=\\\"#\\\" → skip left. i→8. vals[8]=\\\"#\\\" → skip right. i→9.", kind: "poll" },
+
+    { phase: "deserialize", line: [27, 28, 33], nodeId: "n5", iVal: 11,
+      created: ["n1","n2","n3","n4","n5"], active: "n5", done: ["n1","n2","n3","n4"], inQueue: [],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [], justPolled: {k:"n5"}, justOffered: [],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: 10, consumedTok: 11,
+      stack: [{ id: "f_d", label: "deserialize(data)", sub: "poll 5, both #" }],
+      action: "Poll 5. vals[9]=\\\"#\\\" → skip left. i→10. vals[10]=\\\"#\\\" → skip right. i→11.", kind: "poll" },
+
+    { phase: "deserialize", line: [39], nodeId: null, iVal: 11,
+      created: ["n1","n2","n3","n4","n5"], active: null, done: ["n1","n2","n3","n4","n5"], inQueue: [],
+      edgesSet: ["e_1_2","e_1_3","e_3_4","e_3_5"], justWired: null,
+      queue: [], justPolled: null, justOffered: [],
+      tokens: ["1", "2", "3", "#", "#", "4", "5", "#", "#", "#", "#"], justAppended: -1, highlightTok: null, consumedTok: 11,
+      stack: [],
+      action: "Queue empty. Return root. ★ Roundtrip complete: serialize → string → deserialize → identical tree.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const phasePillEl = document.getElementById('phasePill');
+  const nodeVEl = document.getElementById('nodeV');
+  const iVEl = document.getElementById('iV');
+  const qRowEl = document.getElementById('qRow');
+  const strCellsEl = document.getElementById('strCells');
+  const strCountEl = document.getElementById('strCount');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Phase pill
+    phasePillEl.textContent = s.phase === 'serialize' ? 'SERIALIZE' : 'DESERIALIZE';
+    phasePillEl.className = 'pill phase ' + s.phase;
+    // Node/i pills
+    if (s.nodeId && nodes[s.nodeId]) {
+      nodeVEl.textContent = nodes[s.nodeId].val;
+    } else {
+      nodeVEl.textContent = s.nodeId === null ? '—' : 'null';
+    }
+    iVEl.textContent = s.iVal !== null ? s.iVal : '—';
+    // Tree
+    const createdSet = new Set(s.created);
+    const doneSet = new Set(s.done);
+    const inQueueSet = new Set(s.inQueue);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('created', 'active', 'done', 'in-queue');
+      if (createdSet.has(key)) { el.classList.add('created'); }
+      if (key === s.active) { el.classList.add('active'); }
+      else if (inQueueSet.has(key)) { el.classList.add('in-queue'); }
+      else if (doneSet.has(key)) { el.classList.add('done'); }
+    });
+    const edgeSet = new Set(s.edgesSet);
+    Object.keys(edgeEls).forEach(id => {
+      const el = edgeEls[id];
+      el.classList.remove('visible', 'just-wired');
+      if (edgeSet.has(id)) { el.classList.add('visible'); }
+      if (id === s.justWired) { el.classList.add('just-wired'); }
+    });
+    // Queue
+    qRowEl.innerHTML = '';
+    if (s.justPolled) {
+      const cell = document.createElement('span');
+      cell.className = 'q-cell just-polled' + (s.justPolled.isNull ? ' null' : '');
+      cell.textContent = s.justPolled.isNull ? 'null' : nodes[s.justPolled.k].val;
+      qRowEl.appendChild(cell);
+      const arr = document.createElement('span');
+      arr.style.color = '#666'; arr.style.fontSize = '11px';
+      arr.textContent = '⟵';
+      qRowEl.appendChild(arr);
+    }
+    s.queue.forEach(q => {
+      const cell = document.createElement('span');
+      cell.className = 'q-cell' + (q.isNull ? ' null' : '');
+      const offeredNow = s.justOffered.some(o => o.k === q.k && !!o.isNull === !!q.isNull);
+      if (offeredNow) { cell.classList.add('just-offered'); }
+      cell.textContent = q.isNull ? 'null' : nodes[q.k].val;
+      qRowEl.appendChild(cell);
+    });
+    if (s.queue.length === 0 && !s.justPolled) {
+      const empty = document.createElement('span');
+      empty.className = 'q-empty';
+      empty.textContent = '[empty]';
+      qRowEl.appendChild(empty);
+    }
+    // String
+    strCellsEl.innerHTML = '';
+    s.tokens.forEach((t, i) => {
+      const cell = document.createElement('span');
+      cell.className = 'str-tok';
+      if (t === '#') { cell.classList.add('null-tok'); }
+      if (i === s.justAppended) { cell.classList.add('just-appended'); }
+      if (i === s.highlightTok) { cell.classList.add('highlight'); }
+      if (i < s.consumedTok && i !== s.highlightTok) { cell.classList.add('consumed'); }
+      cell.textContent = t;
+      strCellsEl.appendChild(cell);
+    });
+    strCountEl.textContent = s.tokens.length ? `${s.tokens.length} tokens` : '';
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
