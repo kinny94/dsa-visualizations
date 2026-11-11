@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 1110 — Delete Nodes and Return Forest</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 300px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.isroot .pill-v { color: #9ad4ff; }
+  .pill.del .pill-v { color: #ff8ca0; }
+  .pill.forest .pill-v { color: #4de88c; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 320px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.to-delete circle {
+    stroke: #ff8ca0;
+    stroke-dasharray: 3,3;
+  }
+  .node.to-delete text.val { fill: #ff8ca0; }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.deleted circle { fill: #4a0f1f; stroke: #ff5570; stroke-dasharray: 2,3; opacity: 0.5; }
+  .node.deleted text.val { fill: #ff8ca0; opacity: 0.5; text-decoration: line-through; }
+  .node.forest-root circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; filter: drop-shadow(0 0 6px rgba(77, 232, 140, 0.55)); }
+  .node.forest-root text.val { fill: #4de88c; font-weight: bold; }
+  .node.kept circle { stroke: #4a6a8a; fill: #1a2e4a; }
+  .node.null-ghost circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 6; }
+  .node.null-ghost text.val { display: none; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.25s; }
+  .edge.cut { stroke: #ff5570; stroke-dasharray: 3,3; opacity: 0.3; }
+  .edge.null { stroke-dasharray: 3,3; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #c89aff; color: #1a1a2e; }
+  .kind-add { background: #4de88c; color: #1a1a2e; }
+  .kind-delete { background: #ff5570; color: white; }
+  .kind-cut { background: #ff8ca0; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+    margin-top: 6px;
+  }
+  .result-list li {
+    padding: 5px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #4de88c;
+    color: #4de88c;
+    font-weight: bold;
+  }
+  .result-list li.new { animation: slideIn 0.4s ease-out; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f4a2a; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-todel { background: #1a2e4a; border: 2px dashed #ff8ca0; }
+  .chip-active { background: #e94560; }
+  .chip-deleted { background: #4a0f1f; border: 2px dashed #ff5570; }
+  .chip-root { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 1110 — Delete Nodes and Return Forest</h1>
+    <div class="subtitle">Post-order DFS with isRoot flag · deleted node’s non-null children become new forest roots · tree = [1, 2, 3, 4, 5, 6, 7], to_delete = [3, 5]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill isroot"><span class="pill-k">isRoot</span><span class="pill-v" id="isRootV">—</span></span>
+      <span class="pill del"><span class="pill-k">deleted</span><span class="pill-v" id="delV">—</span></span>
+      <span class="pill forest"><span class="pill-k">forest size</span><span class="pill-v" id="forestV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="panel-title" style="margin-top: 14px;">Forest roots</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-todel"></div>in to_delete set</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-deleted"></div>deleted</div>
+      <div class="legend-item"><div class="chip chip-root"></div>forest root</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">isRoot flag</div>
+      True if the node is the original root OR its parent was just deleted. Add to forest when <code>isRoot && !deleted</code>. Pass <code>deleted</code> as the child’s isRoot — that’s how orphaned children become new roots.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public List<TreeNode> delNodes(TreeNode root, int[] to_delete) {",
+    "    Set<Integer> set = new HashSet<>();",
+    "    for (int i : to_delete) set.add(i);",
+    "    List<TreeNode> result = new ArrayList<>();",
+    "    solve(root, set, result, true);",
+    "    return result;",
+    "}",
+    "",
+    "private TreeNode solve(TreeNode node, Set<Integer> set,",
+    "                       List<TreeNode> result, boolean isRoot) {",
+    "    if (node == null) return null;",
+    "    boolean deleted = set.contains(node.val);",
+    "    if (isRoot && !deleted) {",
+    "        result.add(node);",
+    "    }",
+    "    node.left  = solve(node.left,  set, result, deleted);",
+    "    node.right = solve(node.right, set, result, deleted);",
+    "    return deleted ? null : node;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // [1, 2, 3, 4, 5, 6, 7], to_delete = {3, 5}
+  //       1
+  //      / \
+  //     2   3    ← to delete
+  //    /\   /\
+  //   4  5 6  7   ← 5 to delete
+  const nodes = {
+    n1: { x: 320, y:  50, r: 22, val: '1' },
+    n2: { x: 180, y: 140, r: 22, val: '2' },
+    n3: { x: 460, y: 140, r: 22, val: '3', toDelete: true },
+    n4: { x: 110, y: 230, r: 22, val: '4' },
+    n5: { x: 250, y: 230, r: 22, val: '5', toDelete: true },
+    n6: { x: 390, y: 230, r: 22, val: '6' },
+    n7: { x: 530, y: 230, r: 22, val: '7' }
+  };
+  const edges = [
+    { id: 'e_1_2', from: 'n1', to: 'n2' },
+    { id: 'e_1_3', from: 'n1', to: 'n3' },
+    { id: 'e_2_4', from: 'n2', to: 'n4' },
+    { id: 'e_2_5', from: 'n2', to: 'n5' },
+    { id: 'e_3_6', from: 'n3', to: 'n6' },
+    { id: 'e_3_7', from: 'n3', to: 'n7' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.toDelete ? ' to-delete' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // Each step:
+  //   line: active code lines
+  //   active: node id of current frame
+  //   isRoot: boolean (for pill)
+  //   deleted: boolean (for pill)
+  //   stack: call frames
+  //   pathNodes: on-stack path
+  //   deletedNodes: node ids already marked deleted
+  //   forestRoots: node ids added to forest
+  //   cutEdges: edge ids that have been detached
+  //   result: ordered list of forest root ids (for right-panel display)
+  //   newResult: 0 or 1
+  const steps = [
+    { line: [2, 3, 4, 5], active: null, isRoot: null, deleted: null,
+      stack: [{ id: "f_outer", label: "delNodes(root, [3, 5])", sub: "set = {3, 5}, call solve(1, true)" }],
+      pathNodes: [], deletedNodes: [], forestRoots: [], cutEdges: [],
+      result: [], newResult: 0,
+      action: "Init HashSet = {3, 5}. Call solve(root=1, set, result, isRoot=true).", kind: "call" },
+
+    { line: [9, 11, 12], active: "n1", isRoot: true, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, isRoot=true)", sub: "not deleted" }
+      ],
+      pathNodes: ["n1"], deletedNodes: [], forestRoots: [], cutEdges: [],
+      result: [], newResult: 0,
+      action: "Enter solve(1, isRoot=true). deleted = set.contains(1) = false.", kind: "check" },
+
+    { line: [13, 14], active: "n1", isRoot: true, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, isRoot=true)", sub: "add to forest" }
+      ],
+      pathNodes: ["n1"], deletedNodes: [], forestRoots: ["n1"], cutEdges: [],
+      result: ["n1"], newResult: 1,
+      action: "isRoot && !deleted → result.add(1). ★ Node 1 is a forest root.", kind: "add" },
+
+    { line: [16], active: "n1", isRoot: true, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "recurse LEFT (isRoot=false)" }
+      ],
+      pathNodes: ["n1"], deletedNodes: [], forestRoots: ["n1"], cutEdges: [],
+      result: ["n1"], newResult: 0,
+      action: "Call solve(1.left = 2, set, result, isRoot=false [since 1 is not deleted]).", kind: "call" },
+
+    { line: [9, 11, 12, 16], active: "n2", isRoot: false, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "solve(2, false)", sub: "not deleted, recurse LEFT" }
+      ],
+      pathNodes: ["n1", "n2"], deletedNodes: [], forestRoots: ["n1"], cutEdges: [],
+      result: ["n1"], newResult: 0,
+      action: "Enter solve(2, isRoot=false). deleted = false, isRoot false → skip add. Call solve(2.left = 4, false).", kind: "call" },
+
+    { line: [9, 11, 12, 16, 17, 18], active: "n4", isRoot: false, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "solve(2, false)", sub: "waiting on LEFT" },
+        { id: "f_n4", label: "solve(4, false)", sub: "leaf, return node 4" }
+      ],
+      pathNodes: ["n1", "n2", "n4"], deletedNodes: [], forestRoots: ["n1"], cutEdges: [],
+      result: ["n1"], newResult: 0,
+      action: "solve(4, false): not in delete set, both children null → return node 4.", kind: "return" },
+
+    { line: [17], active: "n2", isRoot: false, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "solve(2, false)", sub: "recurse RIGHT (isRoot=false)" }
+      ],
+      pathNodes: ["n1", "n2"], deletedNodes: [], forestRoots: ["n1"], cutEdges: [],
+      result: ["n1"], newResult: 0,
+      action: "Back in solve(2). node.left = 4 (unchanged). Call solve(2.right = 5, isRoot=false).", kind: "call" },
+
+    { line: [9, 11, 12], active: "n5", isRoot: false, deleted: true,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "solve(2, false)", sub: "waiting on RIGHT" },
+        { id: "f_n5", label: "solve(5, false)", sub: "deleted = true" }
+      ],
+      pathNodes: ["n1", "n2", "n5"], deletedNodes: [], forestRoots: ["n1"], cutEdges: [],
+      result: ["n1"], newResult: 0,
+      action: "Enter solve(5, false). deleted = set.contains(5) = TRUE. Skip add (isRoot false anyway).", kind: "check" },
+
+    { line: [16, 17], active: "n5", isRoot: false, deleted: true,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "solve(2, false)", sub: "waiting on RIGHT" },
+        { id: "f_n5", label: "solve(5, false)", sub: "children isRoot=true (5 deleted)" }
+      ],
+      pathNodes: ["n1", "n2", "n5"], deletedNodes: [], forestRoots: ["n1"], cutEdges: [],
+      result: ["n1"], newResult: 0,
+      action: "Recurse into both children with isRoot=TRUE (because this node is being deleted). Both children are null → both return null.", kind: "call" },
+
+    { line: [18], active: "n5", isRoot: false, deleted: true,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on LEFT" },
+        { id: "f_n2", label: "solve(2, false)", sub: "RIGHT returned null" },
+        { id: "f_n5", label: "solve(5, false)", sub: "return null" }
+      ],
+      pathNodes: ["n1", "n2"], deletedNodes: ["n5"], forestRoots: ["n1"], cutEdges: ["e_2_5"],
+      result: ["n1"], newResult: 0,
+      action: "deleted → return null. ★ Node 5 deleted. In solve(2), node.right = null → edge 2→5 is cut.", kind: "delete" },
+
+    { line: [18], active: "n2", isRoot: false, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "LEFT returned node 2" },
+        { id: "f_n2", label: "solve(2, false)", sub: "return node 2" }
+      ],
+      pathNodes: ["n1"], deletedNodes: ["n5"], forestRoots: ["n1"], cutEdges: ["e_2_5"],
+      result: ["n1"], newResult: 0,
+      action: "solve(2) not deleted → return node 2. (Still in 1’s forest.)", kind: "return" },
+
+    { line: [17], active: "n1", isRoot: true, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "recurse RIGHT (isRoot=false)" }
+      ],
+      pathNodes: ["n1"], deletedNodes: ["n5"], forestRoots: ["n1"], cutEdges: ["e_2_5"],
+      result: ["n1"], newResult: 0,
+      action: "Back in solve(1). node.left = 2 (unchanged). Call solve(1.right = 3, isRoot=false).", kind: "call" },
+
+    { line: [9, 11, 12], active: "n3", isRoot: false, deleted: true,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "solve(3, false)", sub: "deleted = true" }
+      ],
+      pathNodes: ["n1", "n3"], deletedNodes: ["n5"], forestRoots: ["n1"], cutEdges: ["e_2_5"],
+      result: ["n1"], newResult: 0,
+      action: "Enter solve(3, false). deleted = set.contains(3) = TRUE.", kind: "check" },
+
+    { line: [16], active: "n3", isRoot: false, deleted: true,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "solve(3, false)", sub: "recurse LEFT (isRoot=TRUE)" }
+      ],
+      pathNodes: ["n1", "n3"], deletedNodes: ["n5"], forestRoots: ["n1"], cutEdges: ["e_2_5"],
+      result: ["n1"], newResult: 0,
+      action: "Call solve(3.left = 6, isRoot=TRUE [because parent 3 is being deleted → 6 will be orphaned]).", kind: "call" },
+
+    { line: [9, 11, 12, 13, 14], active: "n6", isRoot: true, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "solve(3, false)", sub: "waiting on LEFT" },
+        { id: "f_n6", label: "solve(6, TRUE)", sub: "add to forest" }
+      ],
+      pathNodes: ["n1", "n3", "n6"], deletedNodes: ["n5"], forestRoots: ["n1", "n6"], cutEdges: ["e_2_5"],
+      result: ["n1", "n6"], newResult: 1,
+      action: "Enter solve(6, isRoot=TRUE). deleted = false. isRoot && !deleted → result.add(6). ★ Node 6 becomes a new forest root (parent 3 was deleted).", kind: "add" },
+
+    { line: [16, 17, 18], active: "n6", isRoot: true, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "solve(3, false)", sub: "waiting on LEFT" },
+        { id: "f_n6", label: "solve(6, TRUE)", sub: "leaf, return node 6" }
+      ],
+      pathNodes: ["n1", "n3"], deletedNodes: ["n5"], forestRoots: ["n1", "n6"], cutEdges: ["e_2_5"],
+      result: ["n1", "n6"], newResult: 0,
+      action: "Both children null. Return node 6 (not deleted).", kind: "return" },
+
+    { line: [17], active: "n3", isRoot: false, deleted: true,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "solve(3, false)", sub: "recurse RIGHT (isRoot=TRUE)" }
+      ],
+      pathNodes: ["n1", "n3"], deletedNodes: ["n5"], forestRoots: ["n1", "n6"], cutEdges: ["e_2_5"],
+      result: ["n1", "n6"], newResult: 0,
+      action: "Call solve(3.right = 7, isRoot=TRUE [again, because 3 is being deleted]).", kind: "call" },
+
+    { line: [9, 11, 12, 13, 14, 16, 17, 18], active: "n7", isRoot: true, deleted: false,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "waiting on RIGHT" },
+        { id: "f_n3", label: "solve(3, false)", sub: "waiting on RIGHT" },
+        { id: "f_n7", label: "solve(7, TRUE)", sub: "add to forest, return" }
+      ],
+      pathNodes: ["n1", "n3", "n7"], deletedNodes: ["n5"], forestRoots: ["n1", "n6", "n7"], cutEdges: ["e_2_5"],
+      result: ["n1", "n6", "n7"], newResult: 1,
+      action: "solve(7, isRoot=TRUE): not deleted → result.add(7). ★ Leaf, both children null, return node 7.", kind: "add" },
+
+    { line: [18], active: "n3", isRoot: false, deleted: true,
+      stack: [
+        { id: "f_outer", label: "delNodes", sub: "waiting" },
+        { id: "f_n1", label: "solve(1, true)", sub: "RIGHT returned null" },
+        { id: "f_n3", label: "solve(3, false)", sub: "return null" }
+      ],
+      pathNodes: ["n1"], deletedNodes: ["n5", "n3"], forestRoots: ["n1", "n6", "n7"], cutEdges: ["e_2_5", "e_1_3", "e_3_6", "e_3_7"],
+      result: ["n1", "n6", "n7"], newResult: 0,
+      action: "deleted → return null. ★ Node 3 deleted. In solve(1), node.right = null → edge 1→3 cut. Edges 3→6 and 3→7 are also now logically cut (6 and 7 are new roots).", kind: "delete" },
+
+    { line: [18], active: "n1", isRoot: true, deleted: false,
+      stack: [{ id: "f_outer", label: "delNodes", sub: "solve returned node 1" }],
+      pathNodes: [], deletedNodes: ["n5", "n3"], forestRoots: ["n1", "n6", "n7"], cutEdges: ["e_2_5", "e_1_3", "e_3_6", "e_3_7"],
+      result: ["n1", "n6", "n7"], newResult: 0,
+      action: "solve(1) not deleted → return node 1.", kind: "return" },
+
+    { line: [6], active: null, isRoot: null, deleted: null,
+      stack: [],
+      pathNodes: [], deletedNodes: ["n5", "n3"], forestRoots: ["n1", "n6", "n7"], cutEdges: ["e_2_5", "e_1_3", "e_3_6", "e_3_7"],
+      result: ["n1", "n6", "n7"], newResult: 0,
+      action: "Return result = [1, 6, 7]. ★ Done. Forest has 3 trees: {1 → {2 → 4}}, {6}, {7}.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const isRootVEl = document.getElementById('isRootV');
+  const delVEl = document.getElementById('delV');
+  const forestVEl = document.getElementById('forestV');
+  const stackEl = document.getElementById('stack');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.active ? nodes[s.active].val : '—';
+    isRootVEl.textContent = s.isRoot === null ? '—' : String(s.isRoot);
+    delVEl.textContent = s.deleted === null ? '—' : String(s.deleted);
+    forestVEl.textContent = s.forestRoots.length;
+    // Tree
+    const pathSet = new Set(s.pathNodes);
+    const delSet = new Set(s.deletedNodes);
+    const forestSet = new Set(s.forestRoots);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      // Preserve to-delete class, clear others
+      const n = nodes[key];
+      el.classList.remove('on-stack', 'active', 'deleted', 'forest-root', 'kept');
+      // to-delete is kept as part of permanent styling
+      if (!n.toDelete) {
+        el.classList.toggle('to-delete', false);
+      }
+      if (delSet.has(key)) {
+        el.classList.add('deleted');
+      } else if (forestSet.has(key)) {
+        el.classList.add('forest-root');
+      } else if (key === s.active) {
+        el.classList.add('active');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-stack');
+      }
+    });
+    // Edges
+    const cutSet = new Set(s.cutEdges);
+    Object.keys(edgeEls).forEach(id => {
+      const el = edgeEls[id];
+      el.classList.remove('cut');
+      if (cutSet.has(id)) { el.classList.add('cut'); }
+    });
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    // Result
+    resultEl.innerHTML = '';
+    s.result.forEach((k, i) => {
+      const li = document.createElement('li');
+      li.textContent = 'node ' + nodes[k].val;
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
