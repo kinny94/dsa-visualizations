@@ -65,6 +65,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [173](https://kinny94.github.io/dsa-visualizations/lc173-binary-search-tree-iterator.html) | Binary Search Tree Iterator | BST · Lazy iterative inorder |
 | [1382](https://kinny94.github.io/dsa-visualizations/lc1382-balance-a-binary-search-tree.html) | Balance a Binary Search Tree | BST · Inorder + LC 108 compose |
 | [226](https://kinny94.github.io/dsa-visualizations/lc226-invert-binary-tree.html) | Invert Binary Tree | Binary Tree · Recursion · mirror |
+| [543](https://kinny94.github.io/dsa-visualizations/lc543-diameter-of-binary-tree.html) | Diameter of Binary Tree | Binary Tree · Post-order · two values |
 
 ## Adding a new animation
 
