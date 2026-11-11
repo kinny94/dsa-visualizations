@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 1026 — Max Diff Between Node and Ancestor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.min .pill-v { color: #9ad4ff; }
+  .pill.max .pill-v { color: #ffd87a; }
+  .pill.diff .pill-v { color: #4de88c; }
+  .pill.best .pill-v { color: #c89aff; }
+  .pill.best.updated { animation: bestPulse 0.5s ease-out; }
+  @keyframes bestPulse {
+    from { transform: scale(1.3); background: #c89aff; color: #000; }
+    to { transform: scale(1); }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    min-height: 0;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 300px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.on-path circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-path text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.path-min circle { stroke: #9ad4ff; stroke-width: 4; fill: #0f2a4a; }
+  .node.path-min text.val { fill: #cde8ff; }
+  .node.path-max circle { stroke: #ffd87a; stroke-width: 4; fill: #4a3010; }
+  .node.path-max text.val { fill: #fff2bf; }
+  .node.extremes circle { stroke: #c89aff; stroke-width: 4; fill: #2a1f4a; filter: drop-shadow(0 0 6px rgba(200, 154, 255, 0.5)); }
+  .node.extremes text.val { fill: #d8b8ff; }
+  .node.done circle { stroke: #4a6a8a; fill: #1a2e4a; opacity: 0.5; }
+  .node.done text.val { opacity: 0.5; }
+  .node.null-ghost circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 10; }
+  .node.null-ghost text.val { fill: #8a6a6a; font-size: 10px; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; }
+  .edge.null { stroke-dasharray: 3,3; }
+  .ret-tag {
+    fill: #4de88c;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    font-weight: bold;
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-update { background: #c89aff; color: #1a1a2e; }
+  .kind-leaf { background: #4de88c; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-path { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-min { background: #0f2a4a; border: 2px solid #9ad4ff; }
+  .chip-max { background: #4a3010; border: 2px solid #ffd87a; }
+  .chip-extremes { background: #2a1f4a; border: 2px solid #c89aff; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 1026 — Max Diff Between Node and Ancestor</h1>
+    <div class="subtitle">DFS carrying (minSoFar, maxSoFar) along root→node path · compute max−min at leaves · root = [8, 3, 10, 1, 6, null, 14]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill min"><span class="pill-k">min</span><span class="pill-v" id="minV">—</span></span>
+      <span class="pill max"><span class="pill-k">max</span><span class="pill-v" id="maxV">—</span></span>
+      <span class="pill diff"><span class="pill-k">leaf diff</span><span class="pill-v" id="diffV">—</span></span>
+      <span class="pill best" id="bestPill"><span class="pill-k">best</span><span class="pill-v" id="bestV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 300" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-path"></div>on root→node path</div>
+      <div class="legend-item"><div class="chip chip-min"></div>path min</div>
+      <div class="legend-item"><div class="chip chip-max"></div>path max</div>
+      <div class="legend-item"><div class="chip chip-extremes"></div>extremes of winning path</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Carry context down</div>
+      Parent’s state reaches children via arguments, not return values. Classic “context flows parent→child” pattern (same as LC 988, 129, 1448, 404).
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public int maxAncestorDiff(TreeNode root) {",
+    "    return solve(root, root.val, root.val);",
+    "}",
+    "",
+    "private int solve(TreeNode node, int min, int max) {",
+    "    if (node == null) {",
+    "        return max - min;",
+    "    }",
+    "    min = Math.min(min, node.val);",
+    "    max = Math.max(max, node.val);",
+    "    int leftMax  = solve(node.left,  min, max);",
+    "    int rightMax = solve(node.right, min, max);",
+    "    return Math.max(leftMax, rightMax);",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // [8, 3, 10, 1, 6, null, 14]
+  //        8
+  //       / \
+  //      3   10
+  //     /\     \
+  //    1  6    14
+  const nodes = {
+    n8:  { x: 320, y:  50, r: 22, val: '8' },
+    n3:  { x: 180, y: 140, r: 22, val: '3' },
+    n10: { x: 460, y: 140, r: 22, val: '10' },
+    n1:  { x: 110, y: 230, r: 22, val: '1' },
+    n6:  { x: 250, y: 230, r: 22, val: '6' },
+    n14: { x: 510, y: 230, r: 22, val: '14' },
+    // null ghosts
+    n10L: { x: 410, y: 230, r: 8, isNull: true },
+    n1L:  { x:  80, y: 285, r: 6, isNull: true },
+    n1R:  { x: 140, y: 285, r: 6, isNull: true },
+    n6L:  { x: 220, y: 285, r: 6, isNull: true },
+    n6R:  { x: 280, y: 285, r: 6, isNull: true },
+    n14L: { x: 480, y: 285, r: 6, isNull: true },
+    n14R: { x: 540, y: 285, r: 6, isNull: true }
+  };
+  const edges = [
+    { id: "e_8_3",  from: 'n8',  to: 'n3' },
+    { id: "e_8_10", from: 'n8',  to: 'n10' },
+    { id: "e_3_1",  from: 'n3',  to: 'n1' },
+    { id: "e_3_6",  from: 'n3',  to: 'n6' },
+    { id: "e_10_L", from: 'n10', to: 'n10L', isNull: true },
+    { id: "e_10_14",from: 'n10', to: 'n14' },
+    { id: "e_1_L",  from: 'n1',  to: 'n1L', isNull: true },
+    { id: "e_1_R",  from: 'n1',  to: 'n1R', isNull: true },
+    { id: "e_6_L",  from: 'n6',  to: 'n6L', isNull: true },
+    { id: "e_6_R",  from: 'n6',  to: 'n6R', isNull: true },
+    { id: "e_14_L", from: 'n14', to: 'n14L', isNull: true },
+    { id: "e_14_R", from: 'n14', to: 'n14R', isNull: true }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge' + (e.isNull ? ' null' : ''));
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  const retTagEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.isNull ? ' null-ghost' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    if (!n.isNull) {
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+      t.setAttribute('class', 'val');
+      t.textContent = n.val;
+      g.appendChild(t);
+    }
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    const tag = document.createElementNS(SVGNS, 'text');
+    tag.setAttribute('x', n.x + (n.r || 8) + 10); tag.setAttribute('y', n.y + 4);
+    tag.setAttribute('class', 'ret-tag');
+    tag.textContent = '';
+    svg.appendChild(tag);
+    retTagEls[key] = tag;
+  });
+
+  // ============ STEP DATA ============
+  // active: node id of current frame
+  // pathNodes: nodes on root→current path (incl active)
+  // minOwner / maxOwner: node id holding path-min / path-max (for extra highlight)
+  // min / max: current frame's min/max args
+  // leafDiff: value computed at leaf-null (max - min)
+  // best: running best (max of all returned)
+  // bestUpdated: true if updated this step
+  // extremesNodes: final winning path extremes
+  // stack: call frames
+  // returned: map node id → return value
+  // done: finished node ids
+  const steps = [
+    { line: [1, 2], active: null, stack: [{ id: "f_outer", label: "maxAncestorDiff(root)", sub: "call solve(8, 8, 8)" }],
+      pathNodes: [], minOwner: null, maxOwner: null, min: null, max: null, leafDiff: null, best: 0, bestUpdated: false,
+      extremesNodes: [], returned: {}, done: [],
+      action: "Enter maxAncestorDiff. Call solve(root=8, min=8, max=8). (Root seeds both.)", kind: "call" },
+
+    { line: [5, 6], active: "n8",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "entry" }
+      ],
+      pathNodes: ["n8"], minOwner: "n8", maxOwner: "n8", min: 8, max: 8, leafDiff: null, best: 0, bestUpdated: false,
+      extremesNodes: [], returned: {}, done: [],
+      action: "Enter solve(8, 8, 8). Node != null.", kind: "call" },
+
+    { line: [9, 10], active: "n8",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "min=8, max=8" }
+      ],
+      pathNodes: ["n8"], minOwner: "n8", maxOwner: "n8", min: 8, max: 8, leafDiff: null, best: 0, bestUpdated: false,
+      extremesNodes: [], returned: {}, done: [],
+      action: "min = min(8, 8) = 8. max = max(8, 8) = 8. (Unchanged — root is both.)", kind: "update" },
+
+    { line: [11], active: "n8",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "recurse LEFT" }
+      ],
+      pathNodes: ["n8"], minOwner: "n8", maxOwner: "n8", min: 8, max: 8, leafDiff: null, best: 0, bestUpdated: false,
+      extremesNodes: [], returned: {}, done: [],
+      action: "Call solve(node.left = 3, min=8, max=8).", kind: "call" },
+
+    // ===== solve(3, 8, 8) =====
+    { line: [5, 6, 9, 10], active: "n3",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "min=3, max=8" }
+      ],
+      pathNodes: ["n8", "n3"], minOwner: "n3", maxOwner: "n8", min: 3, max: 8, leafDiff: null, best: 0, bestUpdated: false,
+      extremesNodes: [], returned: {}, done: [],
+      action: "Enter solve(3, 8, 8). min = min(8, 3) = 3. max = max(8, 3) = 8. Path = {8, 3}.", kind: "update" },
+
+    { line: [11], active: "n3",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "recurse LEFT" }
+      ],
+      pathNodes: ["n8", "n3"], minOwner: "n3", maxOwner: "n8", min: 3, max: 8, leafDiff: null, best: 0, bestUpdated: false,
+      extremesNodes: [], returned: {}, done: [],
+      action: "Call solve(node.left = 1, min=3, max=8).", kind: "call" },
+
+    // ===== solve(1, 3, 8) =====
+    { line: [5, 6, 9, 10], active: "n1",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 3, 8)", sub: "min=1, max=8" }
+      ],
+      pathNodes: ["n8", "n3", "n1"], minOwner: "n1", maxOwner: "n8", min: 1, max: 8, leafDiff: null, best: 0, bestUpdated: false,
+      extremesNodes: [], returned: {}, done: [],
+      action: "Enter solve(1, 3, 8). min = min(3, 1) = 1. max unchanged = 8. Path = {8, 3, 1}.", kind: "update" },
+
+    { line: [5, 6, 7], active: "n1",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 1, 8)", sub: "null → 8 − 1 = 7" }
+      ],
+      pathNodes: ["n8", "n3", "n1"], minOwner: "n1", maxOwner: "n8", min: 1, max: 8, leafDiff: 7, best: 7, bestUpdated: true,
+      extremesNodes: ["n8", "n1"], returned: {}, done: [],
+      action: "Call solve(node.left = null, 1, 8). node == null → return max − min = 8 − 1 = 7. ★ best candidate.", kind: "leaf" },
+
+    { line: [5, 6, 7], active: "n1",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 1, 8)", sub: "right null → 7" }
+      ],
+      pathNodes: ["n8", "n3", "n1"], minOwner: "n1", maxOwner: "n8", min: 1, max: 8, leafDiff: 7, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {}, done: [],
+      action: "Call solve(node.right = null, 1, 8). Also returns 7.", kind: "leaf" },
+
+    { line: [13], active: "n1",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1, 1, 8)", sub: "return 7" }
+      ],
+      pathNodes: ["n8", "n3"], minOwner: "n3", maxOwner: "n8", min: 3, max: 8, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7}, done: [],
+      action: "Return max(7, 7) = 7 from solve(1).", kind: "return" },
+
+    { line: [12], active: "n3",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "leftMax=7, recurse RIGHT" }
+      ],
+      pathNodes: ["n8", "n3"], minOwner: "n3", maxOwner: "n8", min: 3, max: 8, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7}, done: ["n1"],
+      action: "Back in solve(3). leftMax = 7. Call solve(node.right = 6, min=3, max=8).", kind: "call" },
+
+    // ===== solve(6, 3, 8) =====
+    { line: [5, 6, 9, 10], active: "n6",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "waiting on RIGHT" },
+        { id: "f_n6", label: "solve(6, 3, 8)", sub: "min=3, max=8" }
+      ],
+      pathNodes: ["n8", "n3", "n6"], minOwner: "n3", maxOwner: "n8", min: 3, max: 8, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7}, done: ["n1"],
+      action: "Enter solve(6, 3, 8). min = min(3, 6) = 3 (unchanged). max = max(8, 6) = 8 (unchanged). Path = {8, 3, 6}.", kind: "update" },
+
+    { line: [5, 6, 7, 11, 12], active: "n6",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "waiting on RIGHT" },
+        { id: "f_n6", label: "solve(6, 3, 8)", sub: "both kids null → 5, 5" }
+      ],
+      pathNodes: ["n8", "n3", "n6"], minOwner: "n3", maxOwner: "n8", min: 3, max: 8, leafDiff: 5, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7}, done: ["n1"],
+      action: "Both children null. solve(null, 3, 8) returns max − min = 8 − 3 = 5. Both left and right calls return 5.", kind: "leaf" },
+
+    { line: [13], active: "n6",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "waiting on RIGHT" },
+        { id: "f_n6", label: "solve(6, 3, 8)", sub: "return 5" }
+      ],
+      pathNodes: ["n8", "n3"], minOwner: "n3", maxOwner: "n8", min: 3, max: 8, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5}, done: ["n1"],
+      action: "Return max(5, 5) = 5 from solve(6).", kind: "return" },
+
+    { line: [13], active: "n3",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3, 8, 8)", sub: "rightMax=5, return 7" }
+      ],
+      pathNodes: ["n8"], minOwner: "n8", maxOwner: "n8", min: 8, max: 8, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7}, done: ["n1", "n6"],
+      action: "Back in solve(3). rightMax = 5. Return max(7, 5) = 7 from solve(3).", kind: "return" },
+
+    { line: [12], active: "n8",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "leftMax=7, recurse RIGHT" }
+      ],
+      pathNodes: ["n8"], minOwner: "n8", maxOwner: "n8", min: 8, max: 8, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7}, done: ["n1", "n6", "n3"],
+      action: "Back in solve(8). leftMax = 7. Call solve(node.right = 10, min=8, max=8).", kind: "call" },
+
+    // ===== solve(10, 8, 8) =====
+    { line: [5, 6, 9, 10], active: "n10",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on RIGHT" },
+        { id: "f_n10", label: "solve(10, 8, 8)", sub: "min=8, max=10" }
+      ],
+      pathNodes: ["n8", "n10"], minOwner: "n8", maxOwner: "n10", min: 8, max: 10, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7}, done: ["n1", "n6", "n3"],
+      action: "Enter solve(10, 8, 8). min = min(8, 10) = 8. max = max(8, 10) = 10. Path = {8, 10}.", kind: "update" },
+
+    { line: [5, 6, 7, 11], active: "n10",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on RIGHT" },
+        { id: "f_n10", label: "solve(10, 8, 10)", sub: "left null → 2" }
+      ],
+      pathNodes: ["n8", "n10"], minOwner: "n8", maxOwner: "n10", min: 8, max: 10, leafDiff: 2, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7}, done: ["n1", "n6", "n3"],
+      action: "Call solve(node.left = null, 8, 10). Returns 10 − 8 = 2.", kind: "leaf" },
+
+    { line: [12], active: "n10",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on RIGHT" },
+        { id: "f_n10", label: "solve(10, 8, 10)", sub: "leftMax=2, recurse RIGHT" }
+      ],
+      pathNodes: ["n8", "n10"], minOwner: "n8", maxOwner: "n10", min: 8, max: 10, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7}, done: ["n1", "n6", "n3"],
+      action: "Call solve(node.right = 14, min=8, max=10).", kind: "call" },
+
+    // ===== solve(14, 8, 10) =====
+    { line: [5, 6, 9, 10], active: "n14",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on RIGHT" },
+        { id: "f_n10", label: "solve(10, 8, 10)", sub: "waiting on RIGHT" },
+        { id: "f_n14", label: "solve(14, 8, 10)", sub: "min=8, max=14" }
+      ],
+      pathNodes: ["n8", "n10", "n14"], minOwner: "n8", maxOwner: "n14", min: 8, max: 14, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7}, done: ["n1", "n6", "n3"],
+      action: "Enter solve(14, 8, 10). min unchanged = 8. max = max(10, 14) = 14. Path = {8, 10, 14}.", kind: "update" },
+
+    { line: [5, 6, 7, 11, 12], active: "n14",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on RIGHT" },
+        { id: "f_n10", label: "solve(10, 8, 10)", sub: "waiting on RIGHT" },
+        { id: "f_n14", label: "solve(14, 8, 14)", sub: "both kids null → 6, 6" }
+      ],
+      pathNodes: ["n8", "n10", "n14"], minOwner: "n8", maxOwner: "n14", min: 8, max: 14, leafDiff: 6, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7}, done: ["n1", "n6", "n3"],
+      action: "Both children null. solve(null, 8, 14) → 14 − 8 = 6. Not better than 7, so best stays.", kind: "leaf" },
+
+    { line: [13], active: "n14",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on RIGHT" },
+        { id: "f_n10", label: "solve(10, 8, 10)", sub: "waiting on RIGHT" },
+        { id: "f_n14", label: "solve(14, 8, 14)", sub: "return 6" }
+      ],
+      pathNodes: ["n8", "n10"], minOwner: "n8", maxOwner: "n10", min: 8, max: 10, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7, "n14": 6}, done: ["n1", "n6", "n3"],
+      action: "Return max(6, 6) = 6 from solve(14).", kind: "return" },
+
+    { line: [13], active: "n10",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "waiting" },
+        { id: "f_n8", label: "solve(8, 8, 8)", sub: "waiting on RIGHT" },
+        { id: "f_n10", label: "solve(10, 8, 10)", sub: "rightMax=6, return 6" }
+      ],
+      pathNodes: ["n8"], minOwner: "n8", maxOwner: "n8", min: 8, max: 8, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7, "n14": 6, "n10": 6}, done: ["n1", "n6", "n3", "n14"],
+      action: "Back in solve(10). leftMax=2, rightMax=6. Return max(2, 6) = 6.", kind: "return" },
+
+    { line: [13], active: "n8",
+      stack: [
+        { id: "f_outer", label: "maxAncestorDiff(root)", sub: "chainDown returned 7" }
+      ],
+      pathNodes: [], minOwner: null, maxOwner: null, min: null, max: null, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7, "n14": 6, "n10": 6, "n8": 7}, done: ["n1", "n6", "n3", "n14", "n10"],
+      action: "Back in solve(8). leftMax=7, rightMax=6. Return max(7, 6) = 7.", kind: "return" },
+
+    { line: [2], active: null, stack: [],
+      pathNodes: [], minOwner: null, maxOwner: null, min: null, max: null, leafDiff: null, best: 7, bestUpdated: false,
+      extremesNodes: ["n8", "n1"], returned: {"n1": 7, "n6": 5, "n3": 7, "n14": 6, "n10": 6, "n8": 7}, done: ["n1", "n6", "n3", "n14", "n10", "n8"],
+      action: "Return 7. ★ Done. Max ancestor-descendant diff: |8 − 1| = 7 on path {8, 3, 1}.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const minVEl = document.getElementById('minV');
+  const maxVEl = document.getElementById('maxV');
+  const diffVEl = document.getElementById('diffV');
+  const bestVEl = document.getElementById('bestV');
+  const bestPillEl = document.getElementById('bestPill');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    // Pills
+    nodeVEl.textContent = s.active ? nodes[s.active].val : '—';
+    minVEl.textContent = s.min !== null ? s.min : '—';
+    maxVEl.textContent = s.max !== null ? s.max : '—';
+    diffVEl.textContent = s.leafDiff !== null ? s.leafDiff : '—';
+    bestVEl.textContent = s.best;
+    if (s.bestUpdated) {
+      bestPillEl.classList.remove('updated');
+      void bestPillEl.offsetWidth;
+      bestPillEl.classList.add('updated');
+    } else {
+      bestPillEl.classList.remove('updated');
+    }
+    // Tree nodes
+    const pathSet = new Set(s.pathNodes);
+    const extremesSet = new Set(s.extremesNodes);
+    const returnedKeys = Object.keys(s.returned);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-path', 'path-min', 'path-max', 'done', 'extremes');
+      if (extremesSet.has(key) && !pathSet.has(key) && key !== s.active) {
+        el.classList.add('extremes');
+      } else if (key === s.active) {
+        el.classList.add('active');
+      } else if (key === s.minOwner && pathSet.has(key)) {
+        el.classList.add('path-min');
+      } else if (key === s.maxOwner && pathSet.has(key)) {
+        el.classList.add('path-max');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-path');
+      } else if (returnedKeys.includes(key)) {
+        el.classList.add('done');
+      }
+      // Ret tag
+      retTagEls[key].textContent = s.returned[key] !== undefined ? `=${s.returned[key]}` : '';
+    });
+    // Edges
+    edges.forEach(e => {
+      const line = edgeEls[e.id];
+      line.classList.remove('on-path');
+      if (pathSet.has(e.from) && pathSet.has(e.to)) {
+        line.classList.add('on-path');
+      }
+    });
+    // Call stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    // Action
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // ============ CONTROLS ============
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

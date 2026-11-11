@@ -55,6 +55,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [113](https://kinny94.github.io/dsa-visualizations/lc113-path-sum-ii.html) | Path Sum II | Binary Tree · DFS · path accumulator |
 | [437](https://kinny94.github.io/dsa-visualizations/lc437-path-sum-iii.html) | Path Sum III | Binary Tree · Prefix Sum · HashMap |
 | [687](https://kinny94.github.io/dsa-visualizations/lc687-longest-univalue-path.html) | Longest Univalue Path | Binary Tree · Post-order · two values |
+| [1026](https://kinny94.github.io/dsa-visualizations/lc1026-maximum-difference-between-node-and-ancestor.html) | Max Diff Between Node and Ancestor | Binary Tree · DFS · carry context down |
 
 ## Adding a new animation
 
