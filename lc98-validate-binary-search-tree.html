@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 98 — Validate Binary Search Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: auto;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.prev .pill-v { color: #9ad4ff; }
+  .pill.diff .pill-v { color: #ffd87a; }
+  .pill.min .pill-v { color: #4de88c; }
+  .pill.min.updated { animation: minPulse 0.5s ease-out; }
+  @keyframes minPulse {
+    from { transform: scale(1.3); background: #4de88c; color: #000; }
+    to { transform: scale(1); }
+  }
+  .tree-wrap {
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 280px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.25s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.25s;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.prev-node circle { stroke: #9ad4ff; stroke-width: 3; fill: #0f2a4a; }
+  .node.prev-node text.val { fill: #cde8ff; }
+  .node.done circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.done text.val { fill: #4de88c; }
+  .node.null-ghost circle { fill: #2a1a1a; stroke: #5a3a3a; stroke-dasharray: 3,3; r: 8; }
+  .node.null-ghost text.val { display: none; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; }
+  .edge.null { stroke-dasharray: 3,3; }
+  /* Sorted ribbon (visited inorder values) */
+  .ribbon-wrap {
+    padding: 10px;
+    background: #0f1529;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+  }
+  .ribbon-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .ribbon-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    flex-wrap: wrap;
+  }
+  .ribbon-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #ffd87a;
+    font-size: 13px;
+  }
+  .ribbon-cell.just-added {
+    background: #0f4a2a;
+    border-color: #4de88c;
+    color: #fff;
+    animation: appendFlash 0.4s ease-out;
+  }
+  .ribbon-cell.is-prev { background: #0f2a4a; border-color: #9ad4ff; color: #cde8ff; }
+  @keyframes appendFlash {
+    from { transform: scale(0.7); background: #4de88c; color: #000; }
+    to { transform: scale(1); }
+  }
+  .ribbon-arrow {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    color: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+  }
+  .ribbon-arrow .diff {
+    color: #ffd87a;
+    font-weight: bold;
+    margin-bottom: 1px;
+  }
+  .ribbon-arrow.is-min { color: #4de88c; }
+  .ribbon-arrow.is-min .diff { color: #4de88c; }
+  .ribbon-arrow.is-ok { color: #4de88c; }
+  .ribbon-arrow.is-ok .diff { color: #4de88c; }
+  .ribbon-arrow.is-violation { color: #ff5570; }
+  .ribbon-arrow.is-violation .diff { color: #ff5570; font-weight: bold; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #c89aff; color: #1a1a2e; }
+  .kind-visit { background: #4de88c; color: #1a1a2e; }
+  .kind-update { background: #ff8ca0; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-stack { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-prev { background: #0f2a4a; border: 2px solid #9ad4ff; }
+  .chip-done { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 98 — Validate Binary Search Tree</h1>
+    <div class="subtitle">Inorder walk + strictly-increasing check · same template as LC 783 · tree = [5, 1, 4, null, null, 3, 6] (INVALID BST — 3 lives in 5’s right subtree)</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill prev"><span class="pill-k">prev</span><span class="pill-v" id="prevV">null</span></span>
+      <span class="pill diff"><span class="pill-k">check</span><span class="pill-v" id="checkV">—</span></span>
+      <span class="pill min" id="verdictPill"><span class="pill-k">verdict</span><span class="pill-v" id="verdictV">—</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="ribbon-wrap">
+      <div class="ribbon-label">Inorder sequence (= sorted)</div>
+      <div class="ribbon-row" id="ribbonRow"></div>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-stack"></div>on recursion stack</div>
+      <div class="legend-item"><div class="chip chip-prev"></div>prev (previous inorder node)</div>
+      <div class="legend-item"><div class="chip chip-done"></div>visited</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Why only adjacent pairs</div>
+      Inorder of a valid BST is strictly increasing. Track <code>prev</code>; at each node, if <code>node.val &lt;= prev</code>, fail fast and bubble false up. No bounds needed — the single-variable prev tracker is enough.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "private Integer prev = null;",
+    "",
+    "public boolean isValidBST(TreeNode root) {",
+    "    return solve(root);",
+    "}",
+    "",
+    "private boolean solve(TreeNode node) {",
+    "    if (node == null) {",
+    "        return true;",
+    "    }",
+    "    if (!solve(node.left)) {",
+    "        return false;",
+    "    }",
+    "    if (prev != null && node.val <= prev) {",
+    "        return false;",
+    "    }",
+    "    prev = node.val;",
+    "    if (!solve(node.right)) {",
+    "        return false;",
+    "    }",
+    "    return true;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // BST: [4, 2, 6, 1, 3]
+  //       4
+  //      / \
+  //     2   6
+  //    /\
+  //   1  3
+  const nodes = {
+    n5: { x: 320, y:  50, r: 22, val: '5' },
+    n1: { x: 180, y: 140, r: 22, val: '1' },
+    n4: { x: 460, y: 140, r: 22, val: '4' },
+    n3: { x: 400, y: 230, r: 22, val: '3' },
+    n6: { x: 520, y: 230, r: 22, val: '6' },
+    n1L: { x: 150, y: 195, r: 6, isNull: true },
+    n1R: { x: 210, y: 195, r: 6, isNull: true }
+  };
+  const edges = [
+    { id: 'e_5_1', from: 'n5', to: 'n1' },
+    { id: 'e_5_4', from: 'n5', to: 'n4' },
+    { id: 'e_1_L', from: 'n1', to: 'n1L', isNull: true },
+    { id: 'e_1_R', from: 'n1', to: 'n1R', isNull: true },
+    { id: 'e_4_3', from: 'n4', to: 'n3' },
+    { id: 'e_4_6', from: 'n4', to: 'n6' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge' + (e.isNull ? ' null' : ''));
+    svg.appendChild(line);
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node' + (n.isNull ? ' null-ghost' : ''));
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    if (!n.isNull) {
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+      t.setAttribute('class', 'val');
+      t.textContent = n.val;
+      g.appendChild(t);
+    }
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // Each step has:
+  //   line (highlighted code lines)
+  //   active: current node id
+  //   stack: call frames
+  //   pathNodes: on recursion stack
+  //   prevId: id of node whose val is in prev (for prev pill display and tree highlight)
+  //   check: string shown in check pill ("—", "ok", "FAIL")
+  //   verdict: null (in progress), true, or false
+  //   verdictUpdated: animate pulse on verdict pill
+  //   ribbon: inorder sequence so far (array of vals)
+  //   justAdded: index of newest ribbon cell
+  //   violationIdx: index in ribbon where violation was caught (-1 or int)
+  //   doneNodes: fully returned
+  const steps = [
+    { line: [4], active: null, stack: [{ id: "f_outer", label: "isValidBST(root)", sub: "call solve(5)" }],
+      pathNodes: [], prevId: null, check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [], justAdded: -1, violationIdx: -1, doneNodes: [],
+      action: "Init prev = null. Call solve(root = 5).", kind: "call" },
+
+    { line: [7, 8], active: "n5", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "entry" }
+      ],
+      pathNodes: ["n5"], prevId: null, check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [], justAdded: -1, violationIdx: -1, doneNodes: [],
+      action: "Enter solve(5). node != null → proceed.", kind: "call" },
+
+    { line: [11], active: "n5", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "recurse LEFT" }
+      ],
+      pathNodes: ["n5"], prevId: null, check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [], justAdded: -1, violationIdx: -1, doneNodes: [],
+      action: "solve(5.left = 1).", kind: "call" },
+
+    { line: [7, 8, 11], active: "n1", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1)", sub: "recurse LEFT (null)" }
+      ],
+      pathNodes: ["n5", "n1"], prevId: null, check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [], justAdded: -1, violationIdx: -1, doneNodes: [],
+      action: "Enter solve(1). solve(1.left = null) → return true.", kind: "call" },
+
+    { line: [14, 15], active: "n1", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1)", sub: "prev=null → skip check" }
+      ],
+      pathNodes: ["n5", "n1"], prevId: null, check: "skip", verdict: null, verdictUpdated: false,
+      ribbon: [1], justAdded: 0, violationIdx: -1, doneNodes: [],
+      action: "Back in solve(1). prev == null → skip increasing-check. (First node seen.)", kind: "check" },
+
+    { line: [17], active: "n1", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1)", sub: "prev = 1" }
+      ],
+      pathNodes: ["n5", "n1"], prevId: "n1", check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [1], justAdded: -1, violationIdx: -1, doneNodes: [],
+      action: "prev = 1. (Record this node as previous for next inorder visit.)", kind: "check" },
+
+    { line: [18, 19], active: "n1", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "waiting on LEFT" },
+        { id: "f_n1", label: "solve(1)", sub: "recurse RIGHT (null)" }
+      ],
+      pathNodes: ["n5", "n1"], prevId: "n1", check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [1], justAdded: -1, violationIdx: -1, doneNodes: [],
+      action: "solve(1.right = null) → return true.", kind: "return" },
+
+    { line: [21], active: "n1", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "LEFT returned true" }
+      ],
+      pathNodes: ["n5"], prevId: "n1", check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [1], justAdded: -1, violationIdx: -1, doneNodes: ["n1"],
+      action: "solve(1) returns true.", kind: "return" },
+
+    { line: [14, 15], active: "n5", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "prev=1, 5 > 1 OK" }
+      ],
+      pathNodes: ["n5"], prevId: "n1", check: "ok", verdict: null, verdictUpdated: false,
+      ribbon: [1, 5], justAdded: 1, violationIdx: -1, doneNodes: ["n1"],
+      action: "Back in solve(5). prev = 1 (not null). Check 5 <= 1? NO (5 > 1). Pass. ✓", kind: "check" },
+
+    { line: [17], active: "n5", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "prev = 5" }
+      ],
+      pathNodes: ["n5"], prevId: "n5", check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [1, 5], justAdded: -1, violationIdx: -1, doneNodes: ["n1"],
+      action: "prev = 5.", kind: "check" },
+
+    { line: [18, 19], active: "n5", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "recurse RIGHT" }
+      ],
+      pathNodes: ["n5"], prevId: "n5", check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [1, 5], justAdded: -1, violationIdx: -1, doneNodes: ["n1"],
+      action: "solve(5.right = 4).", kind: "call" },
+
+    { line: [7, 8, 11], active: "n4", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "waiting on RIGHT" },
+        { id: "f_n4", label: "solve(4)", sub: "recurse LEFT" }
+      ],
+      pathNodes: ["n5", "n4"], prevId: "n5", check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [1, 5], justAdded: -1, violationIdx: -1, doneNodes: ["n1"],
+      action: "Enter solve(4). solve(4.left = 3).", kind: "call" },
+
+    { line: [7, 8, 11], active: "n3", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "waiting on RIGHT" },
+        { id: "f_n4", label: "solve(4)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3)", sub: "recurse LEFT (null)" }
+      ],
+      pathNodes: ["n5", "n4", "n3"], prevId: "n5", check: "—", verdict: null, verdictUpdated: false,
+      ribbon: [1, 5], justAdded: -1, violationIdx: -1, doneNodes: ["n1"],
+      action: "Enter solve(3). solve(3.left = null) → return true.", kind: "call" },
+
+    { line: [14, 15, 16], active: "n3", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "waiting on RIGHT" },
+        { id: "f_n4", label: "solve(4)", sub: "waiting on LEFT" },
+        { id: "f_n3", label: "solve(3)", sub: "prev=5, 3 <= 5 ★ FAIL" }
+      ],
+      pathNodes: ["n5", "n4", "n3"], prevId: "n5", check: "FAIL", verdict: false, verdictUpdated: true,
+      ribbon: [1, 5, 3], justAdded: 2, violationIdx: 1, doneNodes: ["n1"],
+      action: "★ VIOLATION! prev = 5, node.val = 3. Check 3 <= 5? YES → return false. Node 3 is in 5’s right subtree but 3 < 5 — the whole subtlety of LC 98 caught right here.", kind: "update" },
+
+    { line: [12], active: "n4", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "waiting on RIGHT" },
+        { id: "f_n4", label: "solve(4)", sub: "LEFT returned false" }
+      ],
+      pathNodes: ["n5", "n4"], prevId: "n5", check: "—", verdict: false, verdictUpdated: false,
+      ribbon: [1, 5, 3], justAdded: -1, violationIdx: 1, doneNodes: ["n1", "n3"],
+      action: "Back in solve(4). solve(node.left = 3) returned false → return false.", kind: "return" },
+
+    { line: [19], active: "n5", stack: [
+        { id: "f_outer", label: "isValidBST", sub: "waiting" },
+        { id: "f_n5", label: "solve(5)", sub: "RIGHT returned false" }
+      ],
+      pathNodes: ["n5"], prevId: "n5", check: "—", verdict: false, verdictUpdated: false,
+      ribbon: [1, 5, 3], justAdded: -1, violationIdx: 1, doneNodes: ["n1", "n3", "n4"],
+      action: "Back in solve(5). solve(node.right = 4) returned false → return false.", kind: "return" },
+
+    { line: [4], active: null, stack: [],
+      pathNodes: [], prevId: "n5", check: "—", verdict: false, verdictUpdated: false,
+      ribbon: [1, 5, 3], justAdded: -1, violationIdx: 1, doneNodes: ["n1", "n3", "n4", "n5"],
+      action: "Return false. ★ Done. Tree is NOT a valid BST — violation caught between inorder-positions 2 (5) and 3 (3).", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const prevVEl = document.getElementById('prevV');
+  const checkVEl = document.getElementById('checkV');
+  const verdictVEl = document.getElementById('verdictV');
+  const verdictPillEl = document.getElementById('verdictPill');
+  const ribbonRowEl = document.getElementById('ribbonRow');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.active ? nodes[s.active].val : '—';
+    prevVEl.textContent = s.prevId ? nodes[s.prevId].val : 'null';
+    checkVEl.textContent = s.check;
+    if (s.check === 'FAIL') {
+      checkVEl.style.color = '#ff8ca0';
+    } else if (s.check === 'ok') {
+      checkVEl.style.color = '#4de88c';
+    } else if (s.check === 'skip') {
+      checkVEl.style.color = '#c89aff';
+    } else {
+      checkVEl.style.color = '#ffd87a';
+    }
+    if (s.verdict === null) {
+      verdictVEl.textContent = '—';
+    } else if (s.verdict === true) {
+      verdictVEl.textContent = 'true';
+    } else {
+      verdictVEl.textContent = 'false';
+    }
+    if (s.verdict === false) {
+      verdictVEl.style.color = '#ff8ca0';
+    } else if (s.verdict === true) {
+      verdictVEl.style.color = '#4de88c';
+    } else {
+      verdictVEl.style.color = '#4de88c';
+    }
+    if (s.verdictUpdated) {
+      verdictPillEl.classList.remove('updated');
+      void verdictPillEl.offsetWidth;
+      verdictPillEl.classList.add('updated');
+    } else {
+      verdictPillEl.classList.remove('updated');
+    }
+    // Tree
+    const pathSet = new Set(s.pathNodes);
+    const doneSet = new Set(s.doneNodes);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'on-stack', 'prev-node', 'done');
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (key === s.prevId && doneSet.has(key)) {
+        el.classList.add('prev-node');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-stack');
+      } else if (doneSet.has(key)) {
+        el.classList.add('done');
+      }
+    });
+    // Ribbon
+    ribbonRowEl.innerHTML = '';
+    s.ribbon.forEach((v, i) => {
+      if (i > 0) {
+        const prev_v = s.ribbon[i - 1];
+        const arr = document.createElement('span');
+        arr.className = 'ribbon-arrow';
+        const isViolation = (i - 1 === s.violationIdx);
+        if (isViolation) { arr.classList.add('is-violation'); }
+        else if (v > prev_v) { arr.classList.add('is-ok'); }
+        const sym = document.createElement('div');
+        sym.className = 'diff';
+        if (isViolation) {
+          sym.textContent = String(prev_v) + ' > ' + String(v) + ' ✗';
+        } else if (v > prev_v) {
+          sym.textContent = '<';
+        } else {
+          sym.textContent = '↔';
+        }
+        const a = document.createElement('div'); a.textContent = '';
+        arr.appendChild(sym); arr.appendChild(a);
+        ribbonRowEl.appendChild(arr);
+      }
+      const cell = document.createElement('span');
+      cell.className = 'ribbon-cell';
+      if (i === s.justAdded) { cell.classList.add('just-added'); }
+      if (s.violationIdx === i - 1 && i === s.ribbon.length - 1) {
+        cell.style.background = '#4a0f1f';
+        cell.style.borderColor = '#ff5570';
+        cell.style.color = '#fff';
+      }
+      if (i === s.ribbon.length - 1 && s.prevId && nodes[s.prevId].val === String(v)) {
+        cell.classList.add('is-prev');
+      }
+      cell.textContent = v;
+      ribbonRowEl.appendChild(cell);
+    });
+    if (s.ribbon.length === 0) {
+      const empty = document.createElement('span');
+      empty.style.color = '#6a7a9a'; empty.style.fontStyle = 'italic'; empty.style.fontSize = '11px';
+      empty.textContent = '[empty]';
+      ribbonRowEl.appendChild(empty);
+    }
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

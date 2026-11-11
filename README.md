@@ -60,6 +60,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [106](https://kinny94.github.io/dsa-visualizations/lc106-construct-binary-tree-inorder-postorder.html) | Construct BT from Inorder + Postorder | Binary Tree · Divide & Conquer |
 | [297](https://kinny94.github.io/dsa-visualizations/lc297-serialize-deserialize-binary-tree.html) | Serialize + Deserialize Binary Tree | Binary Tree · BFS · null sentinels |
 | [783](https://kinny94.github.io/dsa-visualizations/lc783-minimum-distance-between-bst-nodes.html) | Minimum Distance Between BST Nodes | BST · Inorder · adjacent-pair |
+| [98](https://kinny94.github.io/dsa-visualizations/lc98-validate-binary-search-tree.html) | Validate Binary Search Tree | BST · Inorder · strictly-increasing |
 
 ## Adding a new animation
 
