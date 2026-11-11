@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 105 — Build BT from Preorder + Inorder</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: auto;
+  }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.lo .pill-v { color: #9ad4ff; }
+  .pill.hi .pill-v { color: #ffd87a; }
+  .pill.preidx .pill-v { color: #e94560; }
+  .pill.curr .pill-v { color: #4de88c; }
+  .arr-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background: #0f1529;
+    border-radius: 4px;
+  }
+  .arr-label {
+    color: #aaa;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Monaco', monospace;
+  }
+  .arr-cells {
+    display: flex;
+    gap: 4px;
+  }
+  .arr-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 42px;
+    padding: 6px 8px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+    transition: all 0.25s;
+  }
+  .arr-cell .cell-val { font-weight: bold; color: #ffd87a; font-size: 14px; }
+  .arr-cell .cell-idx { font-size: 9px; color: #888; margin-top: 2px; }
+  .arr-cell.in-range { background: #1f2a4a; border-color: #4a6a8a; }
+  .arr-cell.pre-cursor { background: #4a0f1f; border-color: #ff8ca0; border-width: 2px; }
+  .arr-cell.pre-cursor .cell-val { color: #fff; }
+  .arr-cell.pre-consumed { opacity: 0.4; background: #0a1a35; }
+  .arr-cell.in-low { border-color: #9ad4ff; border-width: 2px; }
+  .arr-cell.in-high { border-color: #ffd87a; border-width: 2px; }
+  .arr-cell.in-mid { background: #2a1f4a; border-color: #c89aff; border-width: 2px; }
+  .arr-cell.in-mid .cell-val { color: #d8b8ff; }
+  /* HashMap display */
+  .map-wrap { padding: 10px; background: #0f1529; border-radius: 4px; }
+  .map-label { color: #aaa; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-family: 'Monaco', monospace; }
+  .map-rows { display: flex; flex-wrap: wrap; gap: 4px; }
+  .map-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 8px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    transition: all 0.2s;
+  }
+  .map-entry .map-k { color: #9ad4ff; font-weight: bold; }
+  .map-entry .map-sep { color: #666; }
+  .map-entry .map-v { color: #ffd87a; font-weight: bold; }
+  .map-entry.looked-up { background: #2a1f4a; border-color: #c89aff; animation: lookupFlash 0.4s ease-out; }
+  @keyframes lookupFlash {
+    from { transform: scale(1.3); }
+    to { transform: scale(1); }
+  }
+  /* Tree */
+  .tree-wrap { padding: 8px; background: #0f1529; border-radius: 4px; }
+  svg { display: block; width: 100%; height: 240px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: all 0.3s;
+    opacity: 0;
+  }
+  .node.created circle, .node.created text.val { opacity: 1; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #4de88c; fill: #0f3a1f; }
+  .node.done text.val { fill: #4de88c; }
+  .edge {
+    stroke: #3a3a4a;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+  .edge.visible { opacity: 1; stroke: #4de88c; stroke-width: 2.5; }
+  .edge.just-wired { stroke: #ffd87a; stroke-width: 3; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-lookup { background: #c89aff; color: #1a1a2e; }
+  .kind-create { background: #4de88c; color: #1a1a2e; }
+  .kind-wire { background: #ffd87a; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-pre { background: #4a0f1f; border: 2px solid #ff8ca0; }
+  .chip-lo { background: transparent; border: 2px solid #9ad4ff; }
+  .chip-hi { background: transparent; border: 2px solid #ffd87a; }
+  .chip-mid { background: #2a1f4a; border: 2px solid #c89aff; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 105 — Build Binary Tree from Preorder + Inorder</h1>
+    <div class="subtitle">preorder[preIdx] = root · inorder split tells left vs right sizes · preorder = [3, 9, 20, 15, 7], inorder = [9, 3, 15, 20, 7]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="row pills">
+      <span class="pill lo"><span class="pill-k">low</span><span class="pill-v" id="loV">—</span></span>
+      <span class="pill hi"><span class="pill-k">high</span><span class="pill-v" id="hiV">—</span></span>
+      <span class="pill preidx"><span class="pill-k">index (preorder cursor)</span><span class="pill-v" id="preIdxV">0</span></span>
+      <span class="pill curr"><span class="pill-k">curr</span><span class="pill-v" id="currV">—</span></span>
+    </div>
+    <div class="arr-wrap">
+      <div class="arr-label">preorder</div>
+      <div class="arr-cells" id="preRow"></div>
+      <div class="arr-label" style="margin-top: 4px;">inorder</div>
+      <div class="arr-cells" id="inRow"></div>
+    </div>
+    <div class="map-wrap">
+      <div class="map-label">mapping: val → inorder index</div>
+      <div class="map-rows" id="mapRows"></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 240" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-pre"></div>preorder cursor (preIdx)</div>
+      <div class="legend-item"><div class="chip chip-lo"></div>inorder low</div>
+      <div class="legend-item"><div class="chip chip-hi"></div>inorder high</div>
+      <div class="legend-item"><div class="chip chip-mid"></div>inorder mid (root position)</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.5;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">Why preIdx is a global cursor</div>
+      preorder is already in [root, leftPreorder, rightPreorder] order recursively. Recurse LEFT FIRST — the cursor advances through the left subtree’s preorder entries before the right subtree’s. No preorder slicing needed.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "private int index;",
+    "",
+    "public TreeNode buildTree(int[] preorder, int[] inorder) {",
+    "    Map<Integer, Integer> mapping = new HashMap<>();",
+    "    for (int i = 0; i < inorder.length; i++) {",
+    "        mapping.put(inorder[i], i);",
+    "    }",
+    "    index = 0;",
+    "    return solve(preorder, 0, inorder.length - 1, mapping);",
+    "}",
+    "",
+    "private TreeNode solve(int[] preorder, int low, int high,",
+    "                       Map<Integer, Integer> mapping) {",
+    "    if (low > high) {",
+    "        return null;",
+    "    }",
+    "    int curr = preorder[index];",
+    "    index++;",
+    "    TreeNode root = new TreeNode(curr);",
+    "    if (low == high) {",
+    "        return root;",
+    "    }",
+    "    int inIndex = mapping.get(curr);",
+    "    root.left  = solve(preorder, low,  inIndex - 1, mapping);",
+    "    root.right = solve(preorder, inIndex + 1, high, mapping);",
+    "    return root;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ ARRAYS ============
+  const PRE = [3, 9, 20, 15, 7];
+  const IN  = [9, 3, 15, 20, 7];
+  const preRowEl = document.getElementById('preRow');
+  const inRowEl = document.getElementById('inRow');
+  const preCells = [];
+  const inCells = [];
+  PRE.forEach((v, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'arr-cell';
+    const val = document.createElement('div'); val.className = 'cell-val'; val.textContent = v;
+    const idx = document.createElement('div'); idx.className = 'cell-idx'; idx.textContent = `[${i}]`;
+    cell.appendChild(val); cell.appendChild(idx);
+    preRowEl.appendChild(cell);
+    preCells.push(cell);
+  });
+  IN.forEach((v, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'arr-cell';
+    const val = document.createElement('div'); val.className = 'cell-val'; val.textContent = v;
+    const idx = document.createElement('div'); idx.className = 'cell-idx'; idx.textContent = `[${i}]`;
+    cell.appendChild(val); cell.appendChild(idx);
+    inRowEl.appendChild(cell);
+    inCells.push(cell);
+  });
+
+  // ============ TREE ============
+  // Final tree layout:
+  //       3
+  //      / \
+  //     9   20
+  //        / \
+  //       15  7
+  const nodes = {
+    n3:  { x: 320, y:  50, r: 22, val: '3' },
+    n9:  { x: 180, y: 140, r: 22, val: '9' },
+    n20: { x: 460, y: 140, r: 22, val: '20' },
+    n15: { x: 400, y: 215, r: 22, val: '15' },
+    n7:  { x: 520, y: 215, r: 22, val: '7' }
+  };
+  const edges = [
+    { id: 'e_3_9',  from: 'n3',  to: 'n9' },
+    { id: 'e_3_20', from: 'n3',  to: 'n20' },
+    { id: 'e_20_15',from: 'n20', to: 'n15' },
+    { id: 'e_20_7', from: 'n20', to: 'n7' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEP DATA ============
+  // Each step snapshots:
+  //   low / high / preIdx / curr: pill values
+  //   mapKeys: map entries present (we build it incrementally during pre-pass)
+  //   lookedUp: map key just queried (highlight)
+  //   inRange: {low, high} highlighted inorder range
+  //   midIdx: inIndex marker on inorder
+  //   preConsumed: how many preorder cells are already consumed (opacity down)
+  //   preCursor: index at which cursor sits (not yet consumed — highlighted red)
+  //   createdNodes: array of node ids in tree
+  //   activeNode: current frame's root (highlighted)
+  //   doneNodes: fully returned nodes
+  //   edgesSet / justWired: edges drawn + newest
+  //   stack: frames
+  const steps = [
+    { line: [3, 4], low: null, high: null, preIdx: 0, curr: null,
+      mapKeys: [], lookedUp: null, inRange: null, midIdx: null,
+      preConsumed: 0, preCursor: null,
+      createdNodes: [], activeNode: null, doneNodes: [], edgesSet: [], justWired: null,
+      stack: [{ id: "f_outer", label: "buildTree(preorder, inorder)", sub: "build map" }],
+      action: "Begin. Create empty HashMap. Iterate inorder to populate it.", kind: "call" },
+
+    { line: [5, 6], low: null, high: null, preIdx: 0, curr: null,
+      mapKeys: [[9, 0]], lookedUp: null, inRange: null, midIdx: null,
+      preConsumed: 0, preCursor: null,
+      createdNodes: [], activeNode: null, doneNodes: [], edgesSet: [], justWired: null,
+      stack: [{ id: "f_outer", label: "buildTree(preorder, inorder)", sub: "mapping[9]=0" }],
+      action: "mapping.put(inorder[0]=9, 0). Now {9: 0}.", kind: "call" },
+
+    { line: [5, 6], low: null, high: null, preIdx: 0, curr: null,
+      mapKeys: [[9, 0], [3, 1]], lookedUp: null, inRange: null, midIdx: null,
+      preConsumed: 0, preCursor: null,
+      createdNodes: [], activeNode: null, doneNodes: [], edgesSet: [], justWired: null,
+      stack: [{ id: "f_outer", label: "buildTree(preorder, inorder)", sub: "mapping[3]=1" }],
+      action: "mapping.put(inorder[1]=3, 1). Now {9:0, 3:1}.", kind: "call" },
+
+    { line: [5, 6], low: null, high: null, preIdx: 0, curr: null,
+      mapKeys: [[9, 0], [3, 1], [15, 2]], lookedUp: null, inRange: null, midIdx: null,
+      preConsumed: 0, preCursor: null,
+      createdNodes: [], activeNode: null, doneNodes: [], edgesSet: [], justWired: null,
+      stack: [{ id: "f_outer", label: "buildTree(preorder, inorder)", sub: "mapping[15]=2" }],
+      action: "mapping.put(inorder[2]=15, 2).", kind: "call" },
+
+    { line: [5, 6], low: null, high: null, preIdx: 0, curr: null,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3]], lookedUp: null, inRange: null, midIdx: null,
+      preConsumed: 0, preCursor: null,
+      createdNodes: [], activeNode: null, doneNodes: [], edgesSet: [], justWired: null,
+      stack: [{ id: "f_outer", label: "buildTree(preorder, inorder)", sub: "mapping[20]=3" }],
+      action: "mapping.put(inorder[3]=20, 3).", kind: "call" },
+
+    { line: [5, 6], low: null, high: null, preIdx: 0, curr: null,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: null, midIdx: null,
+      preConsumed: 0, preCursor: null,
+      createdNodes: [], activeNode: null, doneNodes: [], edgesSet: [], justWired: null,
+      stack: [{ id: "f_outer", label: "buildTree(preorder, inorder)", sub: "map built" }],
+      action: "mapping.put(inorder[4]=7, 4). Map complete: {9:0, 3:1, 15:2, 20:3, 7:4}.", kind: "call" },
+
+    { line: [8, 9], low: 0, high: 4, preIdx: 0, curr: null,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 4], midIdx: null,
+      preConsumed: 0, preCursor: 0,
+      createdNodes: [], activeNode: null, doneNodes: [], edgesSet: [], justWired: null,
+      stack: [{ id: "f_outer", label: "buildTree(preorder, inorder)", sub: "call solve(0, 4)" }],
+      action: "index = 0. Call solve(preorder, low=0, high=4). Inorder range = [9, 3, 15, 20, 7].", kind: "call" },
+
+    // ===== solve(0, 4) =====
+    { line: [14, 15], low: 0, high: 4, preIdx: 0, curr: null,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 4], midIdx: null,
+      preConsumed: 0, preCursor: 0,
+      createdNodes: [], activeNode: null, doneNodes: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "low <= high" }
+      ],
+      action: "Enter solve(low=0, high=4). Check low > high? No.", kind: "call" },
+
+    { line: [17], low: 0, high: 4, preIdx: 0, curr: 3,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 4], midIdx: null,
+      preConsumed: 0, preCursor: 0,
+      createdNodes: [], activeNode: null, doneNodes: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "curr = preorder[0] = 3" }
+      ],
+      action: "curr = preorder[index = 0] = 3.", kind: "call" },
+
+    { line: [18, 19], low: 0, high: 4, preIdx: 1, curr: 3,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 4], midIdx: null,
+      preConsumed: 1, preCursor: 1,
+      createdNodes: ["n3"], activeNode: "n3", doneNodes: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "TreeNode(3)" }
+      ],
+      action: "index++ → 1. Create TreeNode(3). (This is the root of the whole tree.)", kind: "create" },
+
+    { line: [20, 21, 22, 23], low: 0, high: 4, preIdx: 1, curr: 3,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: "3", inRange: [0, 4], midIdx: 1,
+      preConsumed: 1, preCursor: 1,
+      createdNodes: ["n3"], activeNode: "n3", doneNodes: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "inIndex = mapping[3] = 1" }
+      ],
+      action: "low != high. inIndex = mapping.get(3) = 1. Split inorder: left = [0, 0] (just 9), right = [2, 4] (15, 20, 7).", kind: "lookup" },
+
+    { line: [24], low: 0, high: 4, preIdx: 1, curr: 3,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 4], midIdx: 1,
+      preConsumed: 1, preCursor: 1,
+      createdNodes: ["n3"], activeNode: "n3", doneNodes: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "recurse LEFT [0, 0]" }
+      ],
+      action: "Call solve(preorder, low=0, high=inIndex-1=0, mapping) → left subtree.", kind: "call" },
+
+    // ===== solve(0, 0) LEFT of 3 =====
+    { line: [14, 15], low: 0, high: 0, preIdx: 1, curr: null,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 0], midIdx: null,
+      preConsumed: 1, preCursor: 1,
+      createdNodes: ["n3"], activeNode: "n3", doneNodes: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_0", label: "solve(0, 0)", sub: "low == high" }
+      ],
+      action: "Enter solve(0, 0). low (0) > high (0)? No. Single-node range.", kind: "call" },
+
+    { line: [17, 18, 19], low: 0, high: 0, preIdx: 2, curr: 9,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 0], midIdx: null,
+      preConsumed: 2, preCursor: 2,
+      createdNodes: ["n3", "n9"], activeNode: "n9", doneNodes: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_0", label: "solve(0, 0)", sub: "TreeNode(9)" }
+      ],
+      action: "curr = preorder[1] = 9. index++ → 2. Create TreeNode(9).", kind: "create" },
+
+    { line: [20, 21, 22], low: 0, high: 0, preIdx: 2, curr: 9,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 0], midIdx: null,
+      preConsumed: 2, preCursor: 2,
+      createdNodes: ["n3", "n9"], activeNode: "n9", doneNodes: [], edgesSet: [], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on LEFT" },
+        { id: "f_0_0", label: "solve(0, 0)", sub: "leaf → return" }
+      ],
+      action: "low == high (both 0) → return root. (Short-circuit: leaf node, skip the two recursive calls that would both return null.)", kind: "return" },
+
+    { line: [24], low: 0, high: 4, preIdx: 2, curr: 3,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 4], midIdx: 1,
+      preConsumed: 2, preCursor: 2,
+      createdNodes: ["n3", "n9"], activeNode: "n3", doneNodes: ["n9"], edgesSet: ["e_3_9"], justWired: "e_3_9",
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "root.left = TreeNode(9)" }
+      ],
+      action: "Back in solve(0, 4). Wire root.left = TreeNode(9). ★ Edge wired.", kind: "wire" },
+
+    { line: [25], low: 0, high: 4, preIdx: 2, curr: 3,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 4], midIdx: 1,
+      preConsumed: 2, preCursor: 2,
+      createdNodes: ["n3", "n9"], activeNode: "n3", doneNodes: ["n9"], edgesSet: ["e_3_9"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "recurse RIGHT [2, 4]" }
+      ],
+      action: "Call solve(preorder, low=inIndex+1=2, high=4, mapping) → right subtree.", kind: "call" },
+
+    // ===== solve(2, 4) RIGHT of 3 =====
+    { line: [14, 15], low: 2, high: 4, preIdx: 2, curr: null,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [2, 4], midIdx: null,
+      preConsumed: 2, preCursor: 2,
+      createdNodes: ["n3", "n9"], activeNode: "n3", doneNodes: ["n9"], edgesSet: ["e_3_9"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_2_4", label: "solve(2, 4)", sub: "low <= high" }
+      ],
+      action: "Enter solve(2, 4). Check low > high? No. Inorder range = [15, 20, 7].", kind: "call" },
+
+    { line: [17, 18, 19], low: 2, high: 4, preIdx: 3, curr: 20,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [2, 4], midIdx: null,
+      preConsumed: 3, preCursor: 3,
+      createdNodes: ["n3", "n9", "n20"], activeNode: "n20", doneNodes: ["n9"], edgesSet: ["e_3_9"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_2_4", label: "solve(2, 4)", sub: "TreeNode(20)" }
+      ],
+      action: "curr = preorder[2] = 20. index++ → 3. Create TreeNode(20).", kind: "create" },
+
+    { line: [20, 21, 22, 23], low: 2, high: 4, preIdx: 3, curr: 20,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: "20", inRange: [2, 4], midIdx: 3,
+      preConsumed: 3, preCursor: 3,
+      createdNodes: ["n3", "n9", "n20"], activeNode: "n20", doneNodes: ["n9"], edgesSet: ["e_3_9"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_2_4", label: "solve(2, 4)", sub: "inIndex = mapping[20] = 3" }
+      ],
+      action: "low != high. inIndex = mapping.get(20) = 3. Split: left = [2, 2] (15), right = [4, 4] (7).", kind: "lookup" },
+
+    { line: [24], low: 2, high: 4, preIdx: 3, curr: 20,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [2, 4], midIdx: 3,
+      preConsumed: 3, preCursor: 3,
+      createdNodes: ["n3", "n9", "n20"], activeNode: "n20", doneNodes: ["n9"], edgesSet: ["e_3_9"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_2_4", label: "solve(2, 4)", sub: "recurse LEFT [2, 2]" }
+      ],
+      action: "Call solve(preorder, 2, 2, mapping) → left subtree of 20.", kind: "call" },
+
+    // ===== solve(2, 2) LEFT of 20 =====
+    { line: [14, 15, 17, 18, 19, 20, 21, 22], low: 2, high: 2, preIdx: 4, curr: 15,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [2, 2], midIdx: null,
+      preConsumed: 4, preCursor: 4,
+      createdNodes: ["n3", "n9", "n20", "n15"], activeNode: "n15", doneNodes: ["n9"], edgesSet: ["e_3_9"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_2_4", label: "solve(2, 4)", sub: "waiting on LEFT" },
+        { id: "f_2_2", label: "solve(2, 2)", sub: "leaf TreeNode(15)" }
+      ],
+      action: "Enter solve(2, 2). low <= high. curr = preorder[3] = 15. index→4. Create TreeNode(15). low == high → return (leaf).", kind: "create" },
+
+    { line: [24], low: 2, high: 4, preIdx: 4, curr: 20,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [2, 4], midIdx: 3,
+      preConsumed: 4, preCursor: 4,
+      createdNodes: ["n3", "n9", "n20", "n15"], activeNode: "n20", doneNodes: ["n9", "n15"],
+      edgesSet: ["e_3_9", "e_20_15"], justWired: "e_20_15",
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_2_4", label: "solve(2, 4)", sub: "TreeNode(20).left = 15" }
+      ],
+      action: "Back in solve(2, 4). Wire TreeNode(20).left = TreeNode(15). ★ Edge wired.", kind: "wire" },
+
+    { line: [25], low: 2, high: 4, preIdx: 4, curr: 20,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [2, 4], midIdx: 3,
+      preConsumed: 4, preCursor: 4,
+      createdNodes: ["n3", "n9", "n20", "n15"], activeNode: "n20", doneNodes: ["n9", "n15"],
+      edgesSet: ["e_3_9", "e_20_15"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_2_4", label: "solve(2, 4)", sub: "recurse RIGHT [4, 4]" }
+      ],
+      action: "Call solve(preorder, 4, 4, mapping) → right subtree of 20.", kind: "call" },
+
+    // ===== solve(4, 4) RIGHT of 20 =====
+    { line: [14, 15, 17, 18, 19, 20, 21, 22], low: 4, high: 4, preIdx: 5, curr: 7,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [4, 4], midIdx: null,
+      preConsumed: 5, preCursor: null,
+      createdNodes: ["n3", "n9", "n20", "n15", "n7"], activeNode: "n7", doneNodes: ["n9", "n15"],
+      edgesSet: ["e_3_9", "e_20_15"], justWired: null,
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_2_4", label: "solve(2, 4)", sub: "waiting on RIGHT" },
+        { id: "f_4_4", label: "solve(4, 4)", sub: "leaf TreeNode(7)" }
+      ],
+      action: "Enter solve(4, 4). low <= high. curr = preorder[4] = 7. index→5. Create TreeNode(7). low == high → return (leaf).", kind: "create" },
+
+    { line: [25, 26], low: 2, high: 4, preIdx: 5, curr: 20,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [2, 4], midIdx: 3,
+      preConsumed: 5, preCursor: null,
+      createdNodes: ["n3", "n9", "n20", "n15", "n7"], activeNode: "n20",
+      doneNodes: ["n9", "n15", "n7"], edgesSet: ["e_3_9", "e_20_15", "e_20_7"], justWired: "e_20_7",
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "waiting on RIGHT" },
+        { id: "f_2_4", label: "solve(2, 4)", sub: "TreeNode(20).right = 7, return" }
+      ],
+      action: "Back in solve(2, 4). Wire TreeNode(20).right = TreeNode(7). ★ Return TreeNode(20).", kind: "wire" },
+
+    { line: [25, 26], low: 0, high: 4, preIdx: 5, curr: 3,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: [0, 4], midIdx: 1,
+      preConsumed: 5, preCursor: null,
+      createdNodes: ["n3", "n9", "n20", "n15", "n7"], activeNode: "n3",
+      doneNodes: ["n9", "n15", "n7", "n20"], edgesSet: ["e_3_9", "e_20_15", "e_20_7", "e_3_20"], justWired: "e_3_20",
+      stack: [
+        { id: "f_outer", label: "buildTree(preorder, inorder)", sub: "waiting" },
+        { id: "f_0_4", label: "solve(0, 4)", sub: "TreeNode(3).right = 20, return" }
+      ],
+      action: "Back in solve(0, 4). Wire TreeNode(3).right = TreeNode(20). ★ Return TreeNode(3).", kind: "wire" },
+
+    { line: [9], low: null, high: null, preIdx: 5, curr: null,
+      mapKeys: [[9, 0], [3, 1], [15, 2], [20, 3], [7, 4]], lookedUp: null, inRange: null, midIdx: null,
+      preConsumed: 5, preCursor: null,
+      createdNodes: ["n3", "n9", "n20", "n15", "n7"], activeNode: null,
+      doneNodes: ["n9", "n15", "n7", "n20", "n3"], edgesSet: ["e_3_9", "e_20_15", "e_20_7", "e_3_20"], justWired: null,
+      stack: [],
+      action: "Return TreeNode(3). ★ Tree complete.", kind: "return" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const loVEl = document.getElementById('loV');
+  const hiVEl = document.getElementById('hiV');
+  const preIdxVEl = document.getElementById('preIdxV');
+  const currVEl = document.getElementById('currV');
+  const mapRowsEl = document.getElementById('mapRows');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    loVEl.textContent = s.low !== null ? s.low : '—';
+    hiVEl.textContent = s.high !== null ? s.high : '—';
+    preIdxVEl.textContent = s.preIdx;
+    currVEl.textContent = s.curr !== null ? s.curr : '—';
+    // Preorder cells
+    preCells.forEach((cell, i) => {
+      cell.classList.remove('pre-cursor', 'pre-consumed');
+      if (i < s.preConsumed) { cell.classList.add('pre-consumed'); }
+      if (i === s.preCursor) { cell.classList.add('pre-cursor'); }
+    });
+    // Inorder cells
+    inCells.forEach((cell, i) => {
+      cell.classList.remove('in-range', 'in-low', 'in-high', 'in-mid');
+      if (s.inRange && i >= s.inRange[0] && i <= s.inRange[1]) {
+        cell.classList.add('in-range');
+      }
+      if (s.inRange && i === s.inRange[0]) { cell.classList.add('in-low'); }
+      if (s.inRange && i === s.inRange[1]) { cell.classList.add('in-high'); }
+      if (s.midIdx !== null && i === s.midIdx) { cell.classList.add('in-mid'); }
+    });
+    // Map
+    mapRowsEl.innerHTML = '';
+    s.mapKeys.forEach(([k, v]) => {
+      const entry = document.createElement('span');
+      entry.className = 'map-entry';
+      if (String(k) === s.lookedUp) { entry.classList.add('looked-up'); }
+      const kEl = document.createElement('span'); kEl.className = 'map-k'; kEl.textContent = k;
+      const sep = document.createElement('span'); sep.className = 'map-sep'; sep.textContent = '→';
+      const vEl = document.createElement('span'); vEl.className = 'map-v'; vEl.textContent = v;
+      entry.appendChild(kEl); entry.appendChild(sep); entry.appendChild(vEl);
+      mapRowsEl.appendChild(entry);
+    });
+    if (s.mapKeys.length === 0) {
+      const empty = document.createElement('span');
+      empty.style.color = '#6a7a9a'; empty.style.fontStyle = 'italic'; empty.style.fontSize = '11px';
+      empty.textContent = '{}';
+      mapRowsEl.appendChild(empty);
+    }
+    // Tree
+    const createdSet = new Set(s.createdNodes);
+    const doneSet = new Set(s.doneNodes);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('created', 'active', 'done');
+      if (createdSet.has(key)) { el.classList.add('created'); }
+      if (key === s.activeNode) { el.classList.add('active'); }
+      else if (doneSet.has(key)) { el.classList.add('done'); }
+    });
+    const edgeSet = new Set(s.edgesSet);
+    Object.keys(edgeEls).forEach(id => {
+      const el = edgeEls[id];
+      el.classList.remove('visible', 'just-wired');
+      if (edgeSet.has(id)) { el.classList.add('visible'); }
+      if (id === s.justWired) { el.classList.add('just-wired'); }
+    });
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[empty — returned]';
+      stackEl.appendChild(li);
+    }
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
