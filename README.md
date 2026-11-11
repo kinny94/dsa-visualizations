@@ -59,6 +59,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [105](https://kinny94.github.io/dsa-visualizations/lc105-construct-binary-tree-preorder-inorder.html) | Construct BT from Preorder + Inorder | Binary Tree · Divide & Conquer |
 | [106](https://kinny94.github.io/dsa-visualizations/lc106-construct-binary-tree-inorder-postorder.html) | Construct BT from Inorder + Postorder | Binary Tree · Divide & Conquer |
 | [297](https://kinny94.github.io/dsa-visualizations/lc297-serialize-deserialize-binary-tree.html) | Serialize + Deserialize Binary Tree | Binary Tree · BFS · null sentinels |
+| [783](https://kinny94.github.io/dsa-visualizations/lc783-minimum-distance-between-bst-nodes.html) | Minimum Distance Between BST Nodes | BST · Inorder · adjacent-pair |
 
 ## Adding a new animation
 
