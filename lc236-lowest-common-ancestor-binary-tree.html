@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 236 — Lowest Common Ancestor of a Binary Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 300px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.p .pill-v { color: #9ad4ff; }
+  .pill.q .pill-v { color: #c89aff; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.ret .pill-v { color: #4de88c; }
+  .pill.lca .pill-v { color: #ffd87a; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 360px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.target-p circle { stroke: #9ad4ff; stroke-width: 3; }
+  .node.target-p text.val { fill: #9ad4ff; }
+  .node.target-q circle { stroke: #c89aff; stroke-width: 3; }
+  .node.target-q text.val { fill: #c89aff; }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.returned-null circle { stroke: #666; stroke-dasharray: 2,3; fill: #222; opacity: 0.6; }
+  .node.returned-null text.val { fill: #888; opacity: 0.6; }
+  .node.returned-nonnull circle { stroke: #4de88c; stroke-width: 3; fill: #0f3a1f; }
+  .node.returned-nonnull text.val { fill: #4de88c; font-weight: bold; }
+  .node.lca circle { stroke: #ffd87a; stroke-width: 5; fill: #4a3010; filter: drop-shadow(0 0 10px rgba(255, 216, 122, 0.7)); }
+  .node.lca text.val { fill: #ffd87a; font-weight: bold; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.25s; }
+  .edge.active-path { stroke: #ffa500; stroke-width: 3; }
+  .edge.return-path { stroke: #4de88c; stroke-width: 3; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #c89aff; color: #1a1a2e; }
+  .kind-match { background: #9ad4ff; color: #1a1a2e; }
+  .kind-return { background: #4de88c; color: #1a1a2e; }
+  .kind-lca { background: #ffd87a; color: #1a1a2e; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .legend { margin-top: 10px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-p { background: #1a2e4a; border: 2px solid #9ad4ff; }
+  .chip-q { background: #1a2e4a; border: 2px solid #c89aff; }
+  .chip-active { background: #e94560; }
+  .chip-ret { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-lca { background: #4a3010; border: 2px solid #ffd87a; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 236 — Lowest Common Ancestor of a Binary Tree</h1>
+    <div class="subtitle">Post-order DFS. Each node returns p/q/LCA if seen in its subtree, else null. tree = [3,5,1,6,2,0,8,null,null,7,4], p = 5, q = 4 → LCA = 5</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill p"><span class="pill-k">p</span><span class="pill-v">5</span></span>
+      <span class="pill q"><span class="pill-k">q</span><span class="pill-v">4</span></span>
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill ret"><span class="pill-k">return</span><span class="pill-v" id="retV">—</span></span>
+      <span class="pill lca"><span class="pill-k">LCA</span><span class="pill-v" id="lcaV">?</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 360" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-p"></div>target p</div>
+      <div class="legend-item"><div class="chip chip-q"></div>target q</div>
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-ret"></div>returned non-null</div>
+      <div class="legend-item"><div class="chip chip-lca"></div>LCA</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.55;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">return value protocol</div>
+      Each <code>solve(node)</code> returns:
+      <ul style="margin: 4px 0 0 14px;">
+        <li>its subtree’s LCA if both p and q are below, OR</li>
+        <li>p (or q) if only that one is below, OR</li>
+        <li>null if neither is below.</li>
+      </ul>
+      A node that sees non-null returns from BOTH children is the LCA (p went one way, q the other).
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public TreeNode lowestCommonAncestor(",
+    "        TreeNode root, TreeNode p, TreeNode q) {",
+    "    if (root == null || q == null || p == null) {",
+    "        return null;",
+    "    }",
+    "    return solve(root, p, q);",
+    "}",
+    "",
+    "private TreeNode solve(TreeNode node,",
+    "                       TreeNode p, TreeNode q) {",
+    "    if (node == null) {",
+    "        return null;",
+    "    }",
+    "    TreeNode left  = solve(node.left,  p, q);",
+    "    TreeNode right = solve(node.right, p, q);",
+    "    if (node == p || node == q) {",
+    "        return node;",
+    "    }",
+    "    if (left != null && right != null) {",
+    "        return node;",
+    "    }",
+    "    if (left != null) {",
+    "        return left;",
+    "    }",
+    "    return right;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  // [3,5,1,6,2,0,8,null,null,7,4]
+  //            3
+  //          /   \
+  //         5     1
+  //        /\    /\
+  //       6  2  0  8
+  //          /\
+  //         7  4
+  const nodes = {
+    n3: { x: 320, y:  40, r: 22, val: '3' },
+    n5: { x: 170, y: 125, r: 22, val: '5', p: true },
+    n1: { x: 470, y: 125, r: 22, val: '1' },
+    n6: { x:  95, y: 210, r: 22, val: '6' },
+    n2: { x: 245, y: 210, r: 22, val: '2' },
+    n0: { x: 395, y: 210, r: 22, val: '0' },
+    n8: { x: 545, y: 210, r: 22, val: '8' },
+    n7: { x: 195, y: 295, r: 22, val: '7' },
+    n4: { x: 295, y: 295, r: 22, val: '4', q: true }
+  };
+  const edges = [
+    { id: 'e_3_5', from: 'n3', to: 'n5' },
+    { id: 'e_3_1', from: 'n3', to: 'n1' },
+    { id: 'e_5_6', from: 'n5', to: 'n6' },
+    { id: 'e_5_2', from: 'n5', to: 'n2' },
+    { id: 'e_1_0', from: 'n1', to: 'n0' },
+    { id: 'e_1_8', from: 'n1', to: 'n8' },
+    { id: 'e_2_7', from: 'n2', to: 'n7' },
+    { id: 'e_2_4', from: 'n2', to: 'n4' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    line.dataset.id = e.id;
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    let cls = 'node';
+    if (n.p) cls += ' target-p';
+    if (n.q) cls += ' target-q';
+    g.setAttribute('class', cls);
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEPS ============
+  // Each step:
+  //   line: active code lines
+  //   active: node id of current frame (or null)
+  //   pathNodes: nodes currently on the call stack
+  //   returned: { nodeId: 'null' | 'p=5' | 'q=4' | 'LCA=5' }  // returned-value map
+  //   stack: frame cards
+  //   nodeV: display value for node pill
+  //   retV: display value for return pill
+  //   lca: final LCA node id or null
+  //   action: human description
+  //   kind: css kind
+  const steps = [
+    { line: [3, 4, 5, 6], active: null, pathNodes: [], returned: {}, stack: [
+        { label: "lowestCommonAncestor(root=3, p=5, q=4)", sub: "guards passed → call solve" }
+      ], nodeV: "—", retV: "—", lca: null,
+      action: "Entry point. root, p, q all non-null → call solve(3, p=5, q=4).", kind: "call" },
+
+    { line: [11, 13], active: "n3", pathNodes: ["n3"], returned: {}, stack: [
+        { label: "solve(3)", sub: "not null, recurse LEFT" }
+      ], nodeV: "3", retV: "—", lca: null,
+      action: "Enter solve(3). node != null → recurse LEFT into node 5.", kind: "call" },
+
+    { line: [11, 13], active: "n5", pathNodes: ["n3", "n5"], returned: {}, stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "recurse LEFT" }
+      ], nodeV: "5", retV: "—", lca: null,
+      action: "Enter solve(5). Recurse LEFT into node 6. (Note: we do NOT check p/q yet in this variant — it’s checked AFTER both recursions.)", kind: "call" },
+
+    { line: [11, 13], active: "n6", pathNodes: ["n3", "n5", "n6"], returned: {}, stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "waiting on LEFT" },
+        { label: "solve(6)", sub: "recurse LEFT (null)" }
+      ], nodeV: "6", retV: "—", lca: null,
+      action: "Enter solve(6). Recurse LEFT: child is null → immediately returns null.", kind: "call" },
+
+    { line: [14, 15, 16, 19, 22, 24], active: "n6", pathNodes: ["n3", "n5", "n6"],
+      returned: { n6: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "waiting on LEFT" },
+        { label: "solve(6)", sub: "left=null, right=null, node ≠ p/q → return null" }
+      ], nodeV: "6", retV: "null", lca: null,
+      action: "solve(6): left=null, right=null (both children null). node ≠ p/q. Both are null → return null.", kind: "return" },
+
+    { line: [14], active: "n5", pathNodes: ["n3", "n5"],
+      returned: { n6: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "left = null; recurse RIGHT" }
+      ], nodeV: "5", retV: "—", lca: null,
+      action: "Back in solve(5). left = null. Recurse RIGHT into node 2.", kind: "call" },
+
+    { line: [11, 13], active: "n2", pathNodes: ["n3", "n5", "n2"],
+      returned: { n6: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "waiting on RIGHT" },
+        { label: "solve(2)", sub: "recurse LEFT" }
+      ], nodeV: "2", retV: "—", lca: null,
+      action: "Enter solve(2). Recurse LEFT into node 7.", kind: "call" },
+
+    { line: [11, 13], active: "n7", pathNodes: ["n3", "n5", "n2", "n7"],
+      returned: { n6: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "waiting on RIGHT" },
+        { label: "solve(2)", sub: "waiting on LEFT" },
+        { label: "solve(7)", sub: "recurse LEFT (null)" }
+      ], nodeV: "7", retV: "—", lca: null,
+      action: "Enter solve(7). Recurse LEFT: null → null. Recurse RIGHT: null → null.", kind: "call" },
+
+    { line: [14, 15, 16, 19, 22, 24], active: "n7", pathNodes: ["n3", "n5", "n2", "n7"],
+      returned: { n6: "null", n7: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "waiting on RIGHT" },
+        { label: "solve(2)", sub: "waiting on LEFT" },
+        { label: "solve(7)", sub: "left=null, right=null, ≠ p/q → null" }
+      ], nodeV: "7", retV: "null", lca: null,
+      action: "solve(7): both children null, not p/q → return null.", kind: "return" },
+
+    { line: [14], active: "n2", pathNodes: ["n3", "n5", "n2"],
+      returned: { n6: "null", n7: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "waiting on RIGHT" },
+        { label: "solve(2)", sub: "left = null; recurse RIGHT" }
+      ], nodeV: "2", retV: "—", lca: null,
+      action: "Back in solve(2). left = null. Recurse RIGHT into node 4.", kind: "call" },
+
+    { line: [11, 13], active: "n4", pathNodes: ["n3", "n5", "n2", "n4"],
+      returned: { n6: "null", n7: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "waiting on RIGHT" },
+        { label: "solve(2)", sub: "waiting on RIGHT" },
+        { label: "solve(4)", sub: "recurse LEFT (null), RIGHT (null)" }
+      ], nodeV: "4", retV: "—", lca: null,
+      action: "Enter solve(4). Both children null → left=null, right=null.", kind: "call" },
+
+    { line: [15, 16], active: "n4", pathNodes: ["n3", "n5", "n2", "n4"],
+      returned: { n6: "null", n7: "null", n4: "q=4" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "waiting on RIGHT" },
+        { label: "solve(2)", sub: "waiting on RIGHT" },
+        { label: "solve(4)", sub: "node == q → return node 4" }
+      ], nodeV: "4", retV: "q=4", lca: null,
+      action: "★ solve(4): node == q. First match! Return node 4 up the stack.", kind: "match" },
+
+    { line: [15, 16, 19, 22, 24], active: "n2", pathNodes: ["n3", "n5", "n2"],
+      returned: { n6: "null", n7: "null", n4: "q=4", n2: "q=4" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "waiting on RIGHT" },
+        { label: "solve(2)", sub: "left=null, right=4, ≠ p/q → return right=4" }
+      ], nodeV: "2", retV: "q=4", lca: null,
+      action: "Back in solve(2). right = 4 (node 4). node ≠ p/q. Only right non-null → return right = 4. (q bubbles up through 2.)", kind: "return" },
+
+    { line: [15, 16], active: "n5", pathNodes: ["n3", "n5"],
+      returned: { n6: "null", n7: "null", n4: "q=4", n2: "q=4", n5: "p=5" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(5)", sub: "left=null, right=4, node == p → return node 5" }
+      ], nodeV: "5", retV: "p=5", lca: null,
+      action: "★ Back in solve(5). left=null, right=4. BUT node == p — the p/q check at lines 15–17 fires FIRST. Return node 5 (ignoring that right was non-null). This is why placement doesn’t matter: once we know this subtree contains p, we report p upward.", kind: "match" },
+
+    { line: [14], active: "n3", pathNodes: ["n3"],
+      returned: { n6: "null", n7: "null", n4: "q=4", n2: "q=4", n5: "p=5" },
+      stack: [
+        { label: "solve(3)", sub: "left = 5; recurse RIGHT" }
+      ], nodeV: "3", retV: "—", lca: null,
+      action: "Back in solve(3). left = node 5. Now recurse RIGHT into node 1.", kind: "call" },
+
+    { line: [11, 13], active: "n1", pathNodes: ["n3", "n1"],
+      returned: { n6: "null", n7: "null", n4: "q=4", n2: "q=4", n5: "p=5" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on RIGHT" },
+        { label: "solve(1)", sub: "recurse LEFT" }
+      ], nodeV: "1", retV: "—", lca: null,
+      action: "Enter solve(1). Recurse LEFT into node 0.", kind: "call" },
+
+    { line: [11, 13, 14, 15, 16, 19, 22, 24], active: "n0", pathNodes: ["n3", "n1", "n0"],
+      returned: { n6: "null", n7: "null", n4: "q=4", n2: "q=4", n5: "p=5", n0: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on RIGHT" },
+        { label: "solve(1)", sub: "waiting on LEFT" },
+        { label: "solve(0)", sub: "both children null, ≠ p/q → null" }
+      ], nodeV: "0", retV: "null", lca: null,
+      action: "solve(0): both children null, not p/q → return null.", kind: "return" },
+
+    { line: [14], active: "n1", pathNodes: ["n3", "n1"],
+      returned: { n6: "null", n7: "null", n4: "q=4", n2: "q=4", n5: "p=5", n0: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on RIGHT" },
+        { label: "solve(1)", sub: "left = null; recurse RIGHT" }
+      ], nodeV: "1", retV: "—", lca: null,
+      action: "Back in solve(1). left = null. Recurse RIGHT into node 8.", kind: "call" },
+
+    { line: [11, 13, 14, 15, 16, 19, 22, 24], active: "n8", pathNodes: ["n3", "n1", "n8"],
+      returned: { n6: "null", n7: "null", n4: "q=4", n2: "q=4", n5: "p=5", n0: "null", n8: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on RIGHT" },
+        { label: "solve(1)", sub: "waiting on RIGHT" },
+        { label: "solve(8)", sub: "both children null, ≠ p/q → null" }
+      ], nodeV: "8", retV: "null", lca: null,
+      action: "solve(8): both children null, not p/q → return null.", kind: "return" },
+
+    { line: [15, 16, 19, 22, 24], active: "n1", pathNodes: ["n3", "n1"],
+      returned: { n6: "null", n7: "null", n4: "q=4", n2: "q=4", n5: "p=5", n0: "null", n8: "null", n1: "null" },
+      stack: [
+        { label: "solve(3)", sub: "waiting on RIGHT" },
+        { label: "solve(1)", sub: "left=null, right=null, ≠ p/q → null" }
+      ], nodeV: "1", retV: "null", lca: null,
+      action: "solve(1): left=null, right=null, node ≠ p/q → return null. (Neither p nor q is in 1’s subtree.)", kind: "return" },
+
+    { line: [15, 16, 19, 22], active: "n3", pathNodes: ["n3"],
+      returned: { n6: "null", n7: "null", n4: "q=4", n2: "q=4", n5: "p=5", n0: "null", n8: "null", n1: "null", n3: "LCA=5" },
+      stack: [
+        { label: "solve(3)", sub: "left=5, right=null, ≠ p/q → return left=5" }
+      ], nodeV: "3", retV: "LCA=5", lca: "n5",
+      action: "★ Back in solve(3). left = node 5, right = null. node ≠ p/q. left != null, right == null → return left = node 5. Since nothing non-null came up from the right subtree, p AND q must both live under the left — and solve(5) already identified 5 as the ancestor.", kind: "lca" },
+
+    { line: [6], active: null, pathNodes: [],
+      returned: { n6: "null", n7: "null", n4: "q=4", n2: "q=4", n5: "p=5", n0: "null", n8: "null", n1: "null", n3: "LCA=5" },
+      stack: [],
+      nodeV: "—", retV: "LCA = 5", lca: "n5",
+      action: "Done. lowestCommonAncestor returns node 5. ★ That’s the LCA — the deepest node with both p and q in its subtree (p == 5 itself, q == 4 is a grandchild).", kind: "lca" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const retVEl = document.getElementById('retV');
+  const lcaVEl = document.getElementById('lcaV');
+  const stackEl = document.getElementById('stack');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.nodeV;
+    retVEl.textContent = s.retV;
+    lcaVEl.textContent = s.lca ? nodes[s.lca].val : "?";
+    const pathSet = new Set(s.pathNodes);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      const n = nodes[key];
+      el.classList.remove('on-stack', 'active', 'returned-null', 'returned-nonnull', 'lca');
+      // Preserve target-p/target-q
+      el.classList.toggle('target-p', !!n.p);
+      el.classList.toggle('target-q', !!n.q);
+      const ret = s.returned[key];
+      if (s.lca === key) {
+        el.classList.add('lca');
+      } else if (key === s.active) {
+        el.classList.add('active');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-stack');
+      } else if (ret === 'null') {
+        el.classList.add('returned-null');
+      } else if (ret && ret !== 'null') {
+        el.classList.add('returned-nonnull');
+      }
+    });
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[returned]';
+      stackEl.appendChild(li);
+    }
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1100);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
