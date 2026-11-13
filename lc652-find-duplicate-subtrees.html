@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 652 — Find Duplicate Subtrees</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.sig .pill-v { color: #9ad4ff; max-width: 220px; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
+  .pill.count .pill-v { color: #ffd87a; }
+  .pill.dup .pill-v { color: #4de88c; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 340px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.seen-once circle { stroke: #9ad4ff; stroke-width: 2; fill: #0f2a4a; }
+  .node.seen-once text.val { fill: #9ad4ff; }
+  .node.dup-root circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; filter: drop-shadow(0 0 8px rgba(77, 232, 140, 0.6)); }
+  .node.dup-root text.val { fill: #4de88c; font-weight: bold; }
+  .node.dup-copy circle { stroke: #4de88c; stroke-width: 2; stroke-dasharray: 3,3; fill: #0f2a1a; }
+  .node.dup-copy text.val { fill: #4de88c; opacity: 0.75; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.25s; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 70px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-build { background: #9ad4ff; color: #1a1a2e; }
+  .kind-first { background: #c89aff; color: #1a1a2e; }
+  .kind-dup { background: #4de88c; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+    word-break: break-all;
+  }
+  .map-table {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .map-table th, .map-table td {
+    text-align: left;
+    padding: 4px 6px;
+    border-bottom: 1px solid #0f3460;
+    vertical-align: top;
+  }
+  .map-table th {
+    color: #888;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+  .map-table .sig-cell {
+    color: #9ad4ff;
+    word-break: break-all;
+    max-width: 180px;
+  }
+  .map-table .count-cell {
+    color: #ffd87a;
+    font-weight: bold;
+    width: 24px;
+    text-align: right;
+  }
+  .map-table tr.new td { background: rgba(77, 232, 140, 0.08); }
+  .result-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+    margin-top: 4px;
+  }
+  .result-list li {
+    padding: 5px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #4de88c;
+    color: #4de88c;
+    font-weight: bold;
+    word-break: break-all;
+  }
+  .result-list li.new { animation: slideIn 0.4s ease-out; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f4a2a; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  .legend { margin-top: 12px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-seen { background: #0f2a4a; border: 2px solid #9ad4ff; }
+  .chip-dup { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-copy { background: #0f2a1a; border: 2px dashed #4de88c; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 652 — Find Duplicate Subtrees</h1>
+    <div class="subtitle">Post-order serialization + HashMap. Each node returns a signature "val,leftSig,rightSig" (with "#" for null). Add to result on count 1 → 2. tree = [1, 2, 3, 4, null, 2, 4, null, null, 4]</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill sig"><span class="pill-k">sig</span><span class="pill-v" id="sigV">—</span></span>
+      <span class="pill count"><span class="pill-k">count before</span><span class="pill-v" id="countV">—</span></span>
+      <span class="pill dup"><span class="pill-k">dups found</span><span class="pill-v" id="dupV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="panel-title" style="margin-top: 14px;">Signature map</div>
+    <table class="map-table" id="mapTable">
+      <thead><tr><th>Signature</th><th>#</th></tr></thead>
+      <tbody id="mapBody"></tbody>
+    </table>
+    <div class="panel-title" style="margin-top: 14px;">Duplicate roots</div>
+    <ul class="result-list" id="result"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-seen"></div>signature computed</div>
+      <div class="legend-item"><div class="chip chip-dup"></div>duplicate root (in result)</div>
+      <div class="legend-item"><div class="chip chip-copy"></div>subsequent duplicate</div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public List<TreeNode> findDuplicateSubtrees(TreeNode root) {",
+    "    List<TreeNode> result = new ArrayList<>();",
+    "    Map<String, Integer> seen = new HashMap<>();",
+    "    solve(root, seen, result);",
+    "    return result;",
+    "}",
+    "",
+    "private String solve(TreeNode node,",
+    "                     Map<String, Integer> seen,",
+    "                     List<TreeNode> result) {",
+    "    if (node == null) {",
+    "        return \"#\";",
+    "    }",
+    "    String leftStr  = solve(node.left,  seen, result);",
+    "    String rightStr = solve(node.right, seen, result);",
+    "    String sig = node.val + \",\" + leftStr + \",\" + rightStr;",
+    "    int count = seen.getOrDefault(sig, 0);",
+    "    if (count == 1) {",
+    "        result.add(node);",
+    "    }",
+    "    seen.put(sig, count + 1);",
+    "    return sig;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //            1
+  //          /   \
+  //         2L    3
+  //        /     / \
+  //       4a    2M  4b
+  //            /
+  //           4c
+  const nodes = {
+    n1:  { x: 320, y:  55, r: 22, val: '1' },
+    n2L: { x: 170, y: 135, r: 22, val: '2' },
+    n3:  { x: 470, y: 135, r: 22, val: '3' },
+    n4a: { x: 105, y: 220, r: 22, val: '4' },
+    n2M: { x: 395, y: 220, r: 22, val: '2' },
+    n4b: { x: 545, y: 220, r: 22, val: '4' },
+    n4c: { x: 330, y: 300, r: 22, val: '4' }
+  };
+  const edges = [
+    { id: 'e_1_2L',  from: 'n1',  to: 'n2L' },
+    { id: 'e_1_3',   from: 'n1',  to: 'n3' },
+    { id: 'e_2L_4a', from: 'n2L', to: 'n4a' },
+    { id: 'e_3_2M',  from: 'n3',  to: 'n2M' },
+    { id: 'e_3_4b',  from: 'n3',  to: 'n4b' },
+    { id: 'e_2M_4c', from: 'n2M', to: 'n4c' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y + a.r);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y - b.r);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEPS ============
+  // Shared state tracked per step:
+  //   line: active code lines
+  //   active: current frame's node
+  //   pathNodes: nodes on the call stack
+  //   seenOnce: nodes whose sig has been computed (visual "done" marker)
+  //   dupRoots: node keys added to result (first duplicate instance)
+  //   dupCopies: node keys that were further duplicates (not added, but visually shown)
+  //   stack: call-stack frames
+  //   nodeV, sigV, countV, dupV: pills
+  //   map: ordered list of [sig, count] visible rows (truncated for readability)
+  //   newMapIdx: index in map considered "just inserted" for the animation
+  //   result: ordered list of { nodeKey, sig } for result panel
+  //   newResult: 0 or 1
+  //   kind, action: card contents
+  const sig4 = "4,#,#";
+  const sig2 = "2,4,#,#,#";
+  const sig3 = "3,2,4,#,#,#,4,#,#";
+  const sig1 = "1,2,4,#,#,#,3,2,4,#,#,#,4,#,#";
+
+  const steps = [
+    { line: [2, 3, 4], active: null, pathNodes: [], seenOnce: [], dupRoots: [], dupCopies: [],
+      stack: [{ label: "findDuplicateSubtrees(root=1)", sub: "init result=[], seen={}" }],
+      nodeV: "—", sigV: "—", countV: "—", dupV: 0,
+      map: [], newMapIdx: -1, result: [], newResult: 0,
+      action: "Init: seen = {}, result = []. Call solve(root=1).", kind: "call" },
+
+    { line: [11, 14], active: "n1", pathNodes: ["n1"], seenOnce: [], dupRoots: [], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "node != null → recurse LEFT" }
+      ],
+      nodeV: "1", sigV: "—", countV: "—", dupV: 0,
+      map: [], newMapIdx: -1, result: [], newResult: 0,
+      action: "Enter solve(1). Not null. Recurse LEFT into node 2 (left child of root).", kind: "call" },
+
+    { line: [11, 14], active: "n2L", pathNodes: ["n1", "n2L"], seenOnce: [], dupRoots: [], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on LEFT" },
+        { label: "solve(2L)", sub: "recurse LEFT" }
+      ],
+      nodeV: "2", sigV: "—", countV: "—", dupV: 0,
+      map: [], newMapIdx: -1, result: [], newResult: 0,
+      action: "Enter solve(2L). Recurse LEFT into node 4.", kind: "call" },
+
+    { line: [11, 12, 14, 15], active: "n4a", pathNodes: ["n1", "n2L", "n4a"], seenOnce: [], dupRoots: [], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on LEFT" },
+        { label: "solve(2L)", sub: "waiting on LEFT" },
+        { label: "solve(4a)", sub: "left=null→\"#\", right=null→\"#\"" }
+      ],
+      nodeV: "4", sigV: "—", countV: "—", dupV: 0,
+      map: [], newMapIdx: -1, result: [], newResult: 0,
+      action: "Enter solve(4a). Both children null → leftStr = \"#\", rightStr = \"#\".", kind: "call" },
+
+    { line: [16, 17, 18, 21, 22], active: "n4a", pathNodes: ["n1", "n2L", "n4a"], seenOnce: ["n4a"], dupRoots: [], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on LEFT" },
+        { label: "solve(2L)", sub: "waiting on LEFT" },
+        { label: "solve(4a)", sub: "sig=\"4,#,#\", count=0 → no add, put 1" }
+      ],
+      nodeV: "4", sigV: sig4, countV: 0, dupV: 0,
+      map: [[sig4, 1]], newMapIdx: 0, result: [], newResult: 0,
+      action: "Build sig = \"4,#,#\". seen.getOrDefault = 0. count != 1 → don’t add. seen.put(\"4,#,#\", 1). Return \"4,#,#\".", kind: "build" },
+
+    { line: [14, 15], active: "n2L", pathNodes: ["n1", "n2L"], seenOnce: ["n4a"], dupRoots: [], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on LEFT" },
+        { label: "solve(2L)", sub: "leftStr=\"4,#,#\", recurse RIGHT (null)" }
+      ],
+      nodeV: "2", sigV: "—", countV: "—", dupV: 0,
+      map: [[sig4, 1]], newMapIdx: -1, result: [], newResult: 0,
+      action: "Back in solve(2L). leftStr = \"4,#,#\". Recurse RIGHT: null → rightStr = \"#\".", kind: "call" },
+
+    { line: [16, 17, 18, 21, 22], active: "n2L", pathNodes: ["n1", "n2L"], seenOnce: ["n4a", "n2L"], dupRoots: [], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on LEFT" },
+        { label: "solve(2L)", sub: "sig=\"2,4,#,#,#\", count=0, put 1" }
+      ],
+      nodeV: "2", sigV: sig2, countV: 0, dupV: 0,
+      map: [[sig4, 1], [sig2, 1]], newMapIdx: 1, result: [], newResult: 0,
+      action: "Build sig = \"2,4,#,#,#\". count=0, don’t add. seen.put(\"2,4,#,#,#\", 1). Return.", kind: "build" },
+
+    { line: [15], active: "n1", pathNodes: ["n1"], seenOnce: ["n4a", "n2L"], dupRoots: [], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "leftStr=\"2,4,#,#,#\", recurse RIGHT" }
+      ],
+      nodeV: "1", sigV: "—", countV: "—", dupV: 0,
+      map: [[sig4, 1], [sig2, 1]], newMapIdx: -1, result: [], newResult: 0,
+      action: "Back in solve(1). leftStr = \"2,4,#,#,#\". Recurse RIGHT into node 3.", kind: "call" },
+
+    { line: [11, 14], active: "n3", pathNodes: ["n1", "n3"], seenOnce: ["n4a", "n2L"], dupRoots: [], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "recurse LEFT" }
+      ],
+      nodeV: "3", sigV: "—", countV: "—", dupV: 0,
+      map: [[sig4, 1], [sig2, 1]], newMapIdx: -1, result: [], newResult: 0,
+      action: "Enter solve(3). Recurse LEFT into inner-2 (node 2M).", kind: "call" },
+
+    { line: [11, 14], active: "n2M", pathNodes: ["n1", "n3", "n2M"], seenOnce: ["n4a", "n2L"], dupRoots: [], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(2M)", sub: "recurse LEFT" }
+      ],
+      nodeV: "2", sigV: "—", countV: "—", dupV: 0,
+      map: [[sig4, 1], [sig2, 1]], newMapIdx: -1, result: [], newResult: 0,
+      action: "Enter solve(2M). Recurse LEFT into node 4 (bottom leaf, 4c).", kind: "call" },
+
+    { line: [11, 12, 14, 15], active: "n4c", pathNodes: ["n1", "n3", "n2M", "n4c"], seenOnce: ["n4a", "n2L"], dupRoots: [], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(2M)", sub: "waiting on LEFT" },
+        { label: "solve(4c)", sub: "both children null → leftStr=\"#\", rightStr=\"#\"" }
+      ],
+      nodeV: "4", sigV: "—", countV: "—", dupV: 0,
+      map: [[sig4, 1], [sig2, 1]], newMapIdx: -1, result: [], newResult: 0,
+      action: "Enter solve(4c). Both children null → leftStr = rightStr = \"#\".", kind: "call" },
+
+    { line: [16, 17, 18, 19, 21, 22], active: "n4c", pathNodes: ["n1", "n3", "n2M", "n4c"], seenOnce: ["n4a", "n2L"], dupRoots: ["n4c"], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(2M)", sub: "waiting on LEFT" },
+        { label: "solve(4c)", sub: "sig=\"4,#,#\", count=1 ★ ADD, put 2" }
+      ],
+      nodeV: "4", sigV: sig4, countV: 1, dupV: 1,
+      map: [[sig4, 2], [sig2, 1]], newMapIdx: 0, result: [{ node: "n4c", sig: sig4 }], newResult: 1,
+      action: "★ Build sig = \"4,#,#\". seen.getOrDefault = 1. count == 1 → FIRST DUPLICATE. result.add(node 4c). seen.put to 2. Return.", kind: "dup" },
+
+    { line: [14, 15], active: "n2M", pathNodes: ["n1", "n3", "n2M"], seenOnce: ["n4a", "n2L"], dupRoots: ["n4c"], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(2M)", sub: "leftStr=\"4,#,#\", recurse RIGHT (null)" }
+      ],
+      nodeV: "2", sigV: "—", countV: "—", dupV: 1,
+      map: [[sig4, 2], [sig2, 1]], newMapIdx: -1, result: [{ node: "n4c", sig: sig4 }], newResult: 0,
+      action: "Back in solve(2M). leftStr = \"4,#,#\". Recurse RIGHT: null → rightStr = \"#\".", kind: "call" },
+
+    { line: [16, 17, 18, 19, 21, 22], active: "n2M", pathNodes: ["n1", "n3", "n2M"], seenOnce: ["n4a", "n2L"], dupRoots: ["n4c", "n2M"], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "waiting on LEFT" },
+        { label: "solve(2M)", sub: "sig=\"2,4,#,#,#\", count=1 ★ ADD, put 2" }
+      ],
+      nodeV: "2", sigV: sig2, countV: 1, dupV: 2,
+      map: [[sig4, 2], [sig2, 2]], newMapIdx: 1, result: [{ node: "n4c", sig: sig4 }, { node: "n2M", sig: sig2 }], newResult: 1,
+      action: "★ Build sig = \"2,4,#,#,#\". count = 1 → SECOND DUPLICATE. result.add(node 2M). Return.", kind: "dup" },
+
+    { line: [15], active: "n3", pathNodes: ["n1", "n3"], seenOnce: ["n4a", "n2L"], dupRoots: ["n4c", "n2M"], dupCopies: [],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "leftStr=\"2,4,#,#,#\", recurse RIGHT" }
+      ],
+      nodeV: "3", sigV: "—", countV: "—", dupV: 2,
+      map: [[sig4, 2], [sig2, 2]], newMapIdx: -1, result: [{ node: "n4c", sig: sig4 }, { node: "n2M", sig: sig2 }], newResult: 0,
+      action: "Back in solve(3). leftStr = \"2,4,#,#,#\". Recurse RIGHT into node 4b.", kind: "call" },
+
+    { line: [11, 12, 14, 15, 16, 17, 18, 21, 22], active: "n4b", pathNodes: ["n1", "n3", "n4b"], seenOnce: ["n4a", "n2L"], dupRoots: ["n4c", "n2M"], dupCopies: ["n4b"],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "waiting on RIGHT" },
+        { label: "solve(4b)", sub: "sig=\"4,#,#\", count=2 → no add, put 3" }
+      ],
+      nodeV: "4", sigV: sig4, countV: 2, dupV: 2,
+      map: [[sig4, 3], [sig2, 2]], newMapIdx: 0, result: [{ node: "n4c", sig: sig4 }, { node: "n2M", sig: sig2 }], newResult: 0,
+      action: "solve(4b): sig = \"4,#,#\". count = 2 (third time seeing it) → count != 1 → don’t add again. put 3. ★ Already-represented duplicate.", kind: "return" },
+
+    { line: [16, 17, 18, 21, 22], active: "n3", pathNodes: ["n1", "n3"], seenOnce: ["n4a", "n2L", "n3"], dupRoots: ["n4c", "n2M"], dupCopies: ["n4b"],
+      stack: [
+        { label: "findDup", sub: "waiting" },
+        { label: "solve(1)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "sig=\"3,2,4,#,#,#,4,#,#\", count=0, put 1" }
+      ],
+      nodeV: "3", sigV: sig3, countV: 0, dupV: 2,
+      map: [[sig4, 3], [sig2, 2], [sig3, 1]], newMapIdx: 2, result: [{ node: "n4c", sig: sig4 }, { node: "n2M", sig: sig2 }], newResult: 0,
+      action: "Build sig for node 3 = \"3,2,4,#,#,#,4,#,#\". First time seen → put 1. Return.", kind: "build" },
+
+    { line: [16, 17, 18, 21, 22], active: "n1", pathNodes: ["n1"], seenOnce: ["n4a", "n2L", "n3", "n1"], dupRoots: ["n4c", "n2M"], dupCopies: ["n4b"],
+      stack: [
+        { label: "findDup", sub: "about to return" },
+        { label: "solve(1)", sub: "sig=\"1,2,4,#,#,#,3,2,4,#,#,#,4,#,#\", count=0, put 1" }
+      ],
+      nodeV: "1", sigV: sig1, countV: 0, dupV: 2,
+      map: [[sig4, 3], [sig2, 2], [sig3, 1], [sig1, 1]], newMapIdx: 3, result: [{ node: "n4c", sig: sig4 }, { node: "n2M", sig: sig2 }], newResult: 0,
+      action: "Back at root. Build sig for node 1 = \"1,2,4,#,#,#,3,2,4,#,#,#,4,#,#\". Unique → put 1. Return.", kind: "build" },
+
+    { line: [5], active: null, pathNodes: [], seenOnce: ["n4a", "n2L", "n3", "n1"], dupRoots: ["n4c", "n2M"], dupCopies: ["n4b"],
+      stack: [],
+      nodeV: "—", sigV: "—", countV: "—", dupV: 2,
+      map: [[sig4, 3], [sig2, 2], [sig3, 1], [sig1, 1]], newMapIdx: -1, result: [{ node: "n4c", sig: sig4 }, { node: "n2M", sig: sig2 }], newResult: 0,
+      action: "Done. Return result = [node 4c, node 2M]. ★ The leaf \"4\" appeared 3 times (one representative), the \"2 → 4\" subtree appeared 2 times (one representative). Dashed green node 4b was a further duplicate not added again.", kind: "dup" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const sigVEl = document.getElementById('sigV');
+  const countVEl = document.getElementById('countV');
+  const dupVEl = document.getElementById('dupV');
+  const stackEl = document.getElementById('stack');
+  const mapBodyEl = document.getElementById('mapBody');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.nodeV;
+    sigVEl.textContent = s.sigV;
+    sigVEl.title = s.sigV;
+    countVEl.textContent = s.countV;
+    dupVEl.textContent = s.dupV;
+    // Tree node classes
+    const pathSet = new Set(s.pathNodes);
+    const seenSet = new Set(s.seenOnce);
+    const dupSet = new Set(s.dupRoots);
+    const copySet = new Set(s.dupCopies);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('on-stack', 'active', 'seen-once', 'dup-root', 'dup-copy');
+      if (dupSet.has(key)) {
+        el.classList.add('dup-root');
+      } else if (copySet.has(key)) {
+        el.classList.add('dup-copy');
+      } else if (key === s.active) {
+        el.classList.add('active');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-stack');
+      } else if (seenSet.has(key)) {
+        el.classList.add('seen-once');
+      }
+    });
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[returned]';
+      stackEl.appendChild(li);
+    }
+    // Map table
+    mapBodyEl.innerHTML = '';
+    s.map.forEach(([sig, count], i) => {
+      const tr = document.createElement('tr');
+      if (i === s.newMapIdx) { tr.classList.add('new'); }
+      const td1 = document.createElement('td');
+      td1.className = 'sig-cell';
+      td1.textContent = sig;
+      tr.appendChild(td1);
+      const td2 = document.createElement('td');
+      td2.className = 'count-cell';
+      td2.textContent = count;
+      tr.appendChild(td2);
+      mapBodyEl.appendChild(tr);
+    });
+    // Result
+    resultEl.innerHTML = '';
+    s.result.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.textContent = 'node ' + nodes[r.node].val + ' — ' + r.sig;
+      if (i >= prevResultLen) { li.classList.add('new'); }
+      resultEl.appendChild(li);
+    });
+    prevResultLen = s.result.length;
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1200);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

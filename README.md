@@ -69,6 +69,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [110](https://kinny94.github.io/dsa-visualizations/lc110-balanced-binary-tree.html) | Balanced Binary Tree | Binary Tree · Post-order · sentinel |
 | [1110](https://kinny94.github.io/dsa-visualizations/lc1110-delete-nodes-and-return-forest.html) | Delete Nodes and Return Forest | Binary Tree · Recursion · mutation + isRoot |
 | [236](https://kinny94.github.io/dsa-visualizations/lc236-lowest-common-ancestor-binary-tree.html) | Lowest Common Ancestor of a Binary Tree | Binary Tree · Post-order · return propagation |
+| [652](https://kinny94.github.io/dsa-visualizations/lc652-find-duplicate-subtrees.html) | Find Duplicate Subtrees | Binary Tree · Post-order · signature hashing |
 
 ## Adding a new animation
 
