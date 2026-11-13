@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 1448 — Count Good Nodes in Binary Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 300px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.max .pill-v { color: #9ad4ff; }
+  .pill.good-y .pill-v { color: #4de88c; }
+  .pill.good-n .pill-v { color: #ff8ca0; }
+  .pill.count .pill-v { color: #ffd87a; font-size: 13px; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 320px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 15px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node text.max-label {
+    fill: #9ad4ff;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.good circle { stroke: #4de88c; stroke-width: 3; fill: #0f3a1f; filter: drop-shadow(0 0 4px rgba(77, 232, 140, 0.4)); }
+  .node.good text.val { fill: #4de88c; font-weight: bold; }
+  .node.bad circle { stroke: #ff8ca0; stroke-width: 2; fill: #3a1420; }
+  .node.bad text.val { fill: #ff8ca0; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.25s; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 70px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #c89aff; color: #1a1a2e; }
+  .kind-good { background: #4de88c; color: #1a1a2e; }
+  .kind-bad { background: #ff8ca0; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .kind-done { background: #ffd87a; color: #1a1a2e; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .good-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+    margin-top: 4px;
+  }
+  .good-list li {
+    padding: 5px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #4de88c;
+    color: #4de88c;
+    font-weight: bold;
+  }
+  .good-list li.new { animation: slideIn 0.4s ease-out; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f4a2a; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend { margin-top: 12px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-good { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-bad  { background: #3a1420; border: 2px solid #ff8ca0; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 1448 — Count Good Nodes in Binary Tree</h1>
+    <div class="subtitle">Pre-order DFS with carry-max-down. Node X is good iff node.val ≥ max value on the root→X path. tree = [3, 1, 4, 3, null, 1, 5] → 4 good nodes</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill max"><span class="pill-k">maxSoFar</span><span class="pill-v" id="maxV">—</span></span>
+      <span class="pill good-y"><span class="pill-k">good?</span><span class="pill-v" id="goodV">—</span></span>
+      <span class="pill count"><span class="pill-k">running count</span><span class="pill-v" id="countV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="panel-title" style="margin-top: 14px;">Good nodes</div>
+    <ul class="good-list" id="goodList"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-good"></div>good (val ≥ max on path)</div>
+      <div class="legend-item"><div class="chip chip-bad"></div>not good (something bigger above)</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.55;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">why max-only</div>
+      Only the MAX seen on the path matters — if the max so far is ≤ this node, everything else on the path is too. No need to remember the whole list.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public int goodNodes(TreeNode root) {",
+    "    return dfs(root, Integer.MIN_VALUE);",
+    "}",
+    "",
+    "private int dfs(TreeNode node, int maxSoFar) {",
+    "    if (node == null) {",
+    "        return 0;",
+    "    }",
+    "    int count = 0;",
+    "    if (node.val >= maxSoFar) {",
+    "        count = 1;",
+    "    }",
+    "    int newMax = Math.max(maxSoFar, node.val);",
+    "    count += dfs(node.left,  newMax);",
+    "    count += dfs(node.right, newMax);",
+    "    return count;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //       3
+  //      / \
+  //     1   4
+  //    /   / \
+  //   3   1   5
+  const nodes = {
+    nR:  { x: 320, y:  55, r: 24, val: '3' },
+    nL:  { x: 200, y: 145, r: 24, val: '1' },
+    nRR: { x: 440, y: 145, r: 24, val: '4' },
+    nLL: { x: 110, y: 235, r: 24, val: '3' },
+    nRL: { x: 370, y: 235, r: 24, val: '1' },
+    nRRR:{ x: 510, y: 235, r: 24, val: '5' }
+  };
+  const edges = [
+    { id: 'e_R_L',  from: 'nR',  to: 'nL' },
+    { id: 'e_R_RR', from: 'nR',  to: 'nRR' },
+    { id: 'e_L_LL', from: 'nL',  to: 'nLL' },
+    { id: 'e_RR_RL',from: 'nRR', to: 'nRL' },
+    { id: 'e_RR_RRR', from: 'nRR', to: 'nRRR' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = { line, from: e.from, to: e.to };
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEPS ============
+  // Each step:
+  //   line: active code lines
+  //   active: node key or null
+  //   pathNodes: nodes on call stack (path from root)
+  //   goods: Set of node keys marked good
+  //   bads: Set of node keys marked bad
+  //   pathEdges: edge ids along current path
+  //   stack: frames
+  //   nodeV, maxV, goodV, countV: pills
+  //   goodList: strings for good panel
+  //   newGoodIdx: index of just-added good (for anim)
+  //   action, kind
+  const steps = [
+    { line: [2], active: null, pathNodes: [], goods: [], bads: [], pathEdges: [],
+      stack: [{ label: "goodNodes(root=3)", sub: "call dfs(root, -∞)" }],
+      nodeV: "—", maxV: "-∞", goodV: "—", countV: 0,
+      goodList: [], newGoodIdx: -1,
+      action: "Init: call dfs(root=3, maxSoFar = Integer.MIN_VALUE).", kind: "call" },
+
+    { line: [5, 6, 9, 10], active: "nR", pathNodes: ["nR"], goods: [], bads: [],
+      pathEdges: [],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(root=3, max=-∞)", sub: "3 ≥ -∞ ? YES" }
+      ],
+      nodeV: "3", maxV: "-∞", goodV: "—", countV: 0,
+      goodList: [], newGoodIdx: -1,
+      action: "Enter dfs(root=3, max=-∞). Check 3 ≥ -∞ → TRUE.", kind: "check" },
+
+    { line: [10, 11], active: "nR", pathNodes: ["nR"], goods: ["nR"], bads: [],
+      pathEdges: [],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(root=3, max=-∞)", sub: "GOOD, count=1" }
+      ],
+      nodeV: "3", maxV: "-∞", goodV: "YES", countV: 1,
+      goodList: ["node 3 (root)"], newGoodIdx: 0,
+      action: "★ Node 3 (root) is GOOD. count = 1. (Root is always good.)", kind: "good" },
+
+    { line: [13, 14], active: "nR", pathNodes: ["nR"], goods: ["nR"], bads: [],
+      pathEdges: ["e_R_L"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(root=3, max=-∞)", sub: "newMax=3, recurse LEFT" }
+      ],
+      nodeV: "3", maxV: "-∞", goodV: "YES", countV: 1,
+      goodList: ["node 3 (root)"], newGoodIdx: -1,
+      action: "newMax = max(-∞, 3) = 3. Recurse LEFT: dfs(left=1, max=3).", kind: "call" },
+
+    { line: [5, 6, 9, 10], active: "nL", pathNodes: ["nR", "nL"], goods: ["nR"], bads: ["nL"],
+      pathEdges: ["e_R_L"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on LEFT" },
+        { label: "dfs(1, max=3)", sub: "1 ≥ 3 ? NO → not good" }
+      ],
+      nodeV: "1", maxV: 3, goodV: "NO", countV: 1,
+      goodList: ["node 3 (root)"], newGoodIdx: -1,
+      action: "Enter dfs(1, max=3). Check 1 ≥ 3 → FALSE. Node 1 is NOT good (3 is bigger above it).", kind: "bad" },
+
+    { line: [13, 14], active: "nL", pathNodes: ["nR", "nL"], goods: ["nR"], bads: ["nL"],
+      pathEdges: ["e_R_L", "e_L_LL"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on LEFT" },
+        { label: "dfs(1, max=3)", sub: "newMax=max(3,1)=3, recurse LEFT" }
+      ],
+      nodeV: "1", maxV: 3, goodV: "NO", countV: 1,
+      goodList: ["node 3 (root)"], newGoodIdx: -1,
+      action: "newMax = max(3, 1) = 3 (unchanged — current is smaller). Recurse LEFT: dfs(3-LL, max=3).", kind: "call" },
+
+    { line: [5, 6, 9, 10], active: "nLL", pathNodes: ["nR", "nL", "nLL"], goods: ["nR", "nLL"], bads: ["nL"],
+      pathEdges: ["e_R_L", "e_L_LL"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on LEFT" },
+        { label: "dfs(1, max=3)", sub: "waiting on LEFT" },
+        { label: "dfs(3-LL, max=3)", sub: "3 ≥ 3 ? YES → good" }
+      ],
+      nodeV: "3", maxV: 3, goodV: "YES", countV: 2,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)"], newGoodIdx: 1,
+      action: "★ Enter dfs(3-LL, max=3). Check 3 ≥ 3 → TRUE (equals is still good). count = 1 locally, running total = 2.", kind: "good" },
+
+    { line: [13, 14, 15, 16], active: "nLL", pathNodes: ["nR", "nL", "nLL"], goods: ["nR", "nLL"], bads: ["nL"],
+      pathEdges: ["e_R_L", "e_L_LL"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on LEFT" },
+        { label: "dfs(1, max=3)", sub: "waiting on LEFT" },
+        { label: "dfs(3-LL, max=3)", sub: "both children null → return 1" }
+      ],
+      nodeV: "3", maxV: 3, goodV: "YES", countV: 2,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)"], newGoodIdx: -1,
+      action: "Both children null → each returns 0. count = 1 + 0 + 0 = 1. Return 1 from dfs(3-LL).", kind: "return" },
+
+    { line: [15], active: "nL", pathNodes: ["nR", "nL"], goods: ["nR", "nLL"], bads: ["nL"],
+      pathEdges: ["e_R_L"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on LEFT" },
+        { label: "dfs(1, max=3)", sub: "left returned 1, recurse RIGHT (null)" }
+      ],
+      nodeV: "1", maxV: 3, goodV: "NO", countV: 2,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)"], newGoodIdx: -1,
+      action: "Back in dfs(1, max=3). Left returned 1. Recurse RIGHT: node is null → returns 0.", kind: "return" },
+
+    { line: [16], active: "nL", pathNodes: ["nR", "nL"], goods: ["nR", "nLL"], bads: ["nL"],
+      pathEdges: ["e_R_L"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "left-side returned 1" },
+        { label: "dfs(1, max=3)", sub: "count = 0 + 1 + 0 = 1, return" }
+      ],
+      nodeV: "1", maxV: 3, goodV: "NO", countV: 2,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)"], newGoodIdx: -1,
+      action: "count = 0 (self not good) + 1 (left) + 0 (right) = 1. Return 1 from dfs(1).", kind: "return" },
+
+    { line: [14], active: "nR", pathNodes: ["nR"], goods: ["nR", "nLL"], bads: ["nL"],
+      pathEdges: ["e_R_RR"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "left-side returned 1, recurse RIGHT" }
+      ],
+      nodeV: "3", maxV: "-∞", goodV: "YES", countV: 2,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)"], newGoodIdx: -1,
+      action: "Back in dfs(root). Left side contributed 1. Now recurse RIGHT: dfs(4, max=3).", kind: "call" },
+
+    { line: [5, 6, 9, 10], active: "nRR", pathNodes: ["nR", "nRR"], goods: ["nR", "nLL", "nRR"], bads: ["nL"],
+      pathEdges: ["e_R_RR"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on RIGHT" },
+        { label: "dfs(4, max=3)", sub: "4 ≥ 3 ? YES → good" }
+      ],
+      nodeV: "4", maxV: 3, goodV: "YES", countV: 3,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)", "node 4"], newGoodIdx: 2,
+      action: "★ Enter dfs(4, max=3). Check 4 ≥ 3 → TRUE. Node 4 is GOOD. Running total = 3.", kind: "good" },
+
+    { line: [13, 14], active: "nRR", pathNodes: ["nR", "nRR"], goods: ["nR", "nLL", "nRR"], bads: ["nL"],
+      pathEdges: ["e_R_RR", "e_RR_RL"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on RIGHT" },
+        { label: "dfs(4, max=3)", sub: "newMax=4, recurse LEFT" }
+      ],
+      nodeV: "4", maxV: 3, goodV: "YES", countV: 3,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)", "node 4"], newGoodIdx: -1,
+      action: "newMax = max(3, 4) = 4. Recurse LEFT: dfs(1-RL, max=4).", kind: "call" },
+
+    { line: [5, 6, 9, 10, 13, 14, 15, 16], active: "nRL", pathNodes: ["nR", "nRR", "nRL"], goods: ["nR", "nLL", "nRR"], bads: ["nL", "nRL"],
+      pathEdges: ["e_R_RR", "e_RR_RL"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on RIGHT" },
+        { label: "dfs(4, max=4)", sub: "waiting on LEFT" },
+        { label: "dfs(1-RL, max=4)", sub: "1 ≥ 4 ? NO → not good. Leaf → return 0" }
+      ],
+      nodeV: "1", maxV: 4, goodV: "NO", countV: 3,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)", "node 4"], newGoodIdx: -1,
+      action: "dfs(1-RL, max=4): 1 ≥ 4 → FALSE. Not good. Both children null → return 0.", kind: "bad" },
+
+    { line: [15], active: "nRR", pathNodes: ["nR", "nRR"], goods: ["nR", "nLL", "nRR"], bads: ["nL", "nRL"],
+      pathEdges: ["e_R_RR", "e_RR_RRR"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on RIGHT" },
+        { label: "dfs(4, max=3)", sub: "left returned 0, recurse RIGHT" }
+      ],
+      nodeV: "4", maxV: 3, goodV: "YES", countV: 3,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)", "node 4"], newGoodIdx: -1,
+      action: "Back in dfs(4). Left returned 0. Recurse RIGHT: dfs(5-RRR, max=4).", kind: "call" },
+
+    { line: [5, 6, 9, 10, 13, 14, 15, 16], active: "nRRR", pathNodes: ["nR", "nRR", "nRRR"], goods: ["nR", "nLL", "nRR", "nRRR"], bads: ["nL", "nRL"],
+      pathEdges: ["e_R_RR", "e_RR_RRR"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on RIGHT" },
+        { label: "dfs(4, max=4)", sub: "waiting on RIGHT" },
+        { label: "dfs(5-RRR, max=4)", sub: "5 ≥ 4 ? YES → good, return 1" }
+      ],
+      nodeV: "5", maxV: 4, goodV: "YES", countV: 4,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)", "node 4", "node 5"], newGoodIdx: 3,
+      action: "★ dfs(5-RRR, max=4): 5 ≥ 4 → TRUE. Node 5 is GOOD. Leaf → count = 1, return 1. Running total = 4.", kind: "good" },
+
+    { line: [16], active: "nRR", pathNodes: ["nR", "nRR"], goods: ["nR", "nLL", "nRR", "nRRR"], bads: ["nL", "nRL"],
+      pathEdges: ["e_R_RR"],
+      stack: [
+        { label: "goodNodes", sub: "waiting" },
+        { label: "dfs(3, max=-∞)", sub: "waiting on RIGHT" },
+        { label: "dfs(4, max=3)", sub: "count = 1 + 0 + 1 = 2, return" }
+      ],
+      nodeV: "4", maxV: 3, goodV: "YES", countV: 4,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)", "node 4", "node 5"], newGoodIdx: -1,
+      action: "Back in dfs(4). count = 1 (self) + 0 (left) + 1 (right) = 2. Return 2.", kind: "return" },
+
+    { line: [16], active: "nR", pathNodes: ["nR"], goods: ["nR", "nLL", "nRR", "nRRR"], bads: ["nL", "nRL"],
+      pathEdges: [],
+      stack: [
+        { label: "goodNodes", sub: "will receive 4" },
+        { label: "dfs(3, max=-∞)", sub: "count = 1 + 1 + 2 = 4, return" }
+      ],
+      nodeV: "3", maxV: "-∞", goodV: "YES", countV: 4,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)", "node 4", "node 5"], newGoodIdx: -1,
+      action: "Back in dfs(root). count = 1 (self) + 1 (left side) + 2 (right side) = 4. Return 4.", kind: "return" },
+
+    { line: [2], active: null, pathNodes: [], goods: ["nR", "nLL", "nRR", "nRRR"], bads: ["nL", "nRL"],
+      pathEdges: [],
+      stack: [],
+      nodeV: "—", maxV: "—", goodV: "—", countV: 4,
+      goodList: ["node 3 (root)", "node 3 (leaf LL)", "node 4", "node 5"], newGoodIdx: -1,
+      action: "Done. goodNodes returns 4. ★ Good nodes: root 3, leaf 3 (LL), node 4, node 5. The two 1’s fail because they both have a bigger ancestor.", kind: "done" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevGoodLen = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const maxVEl = document.getElementById('maxV');
+  const goodVEl = document.getElementById('goodV');
+  const countVEl = document.getElementById('countV');
+  const stackEl = document.getElementById('stack');
+  const goodListEl = document.getElementById('goodList');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.nodeV;
+    maxVEl.textContent = s.maxV;
+    goodVEl.textContent = s.goodV;
+    // Good pill color
+    const goodPill = document.querySelector('.pill.good-y');
+    if (goodPill) {
+      goodPill.classList.remove('good-y', 'good-n');
+      if (s.goodV === 'NO') { goodPill.classList.add('good-n'); }
+      else { goodPill.classList.add('good-y'); }
+    }
+    countVEl.textContent = s.countV;
+    // Nodes
+    const pathSet = new Set(s.pathNodes);
+    const goodSet = new Set(s.goods);
+    const badSet = new Set(s.bads);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('on-stack', 'active', 'good', 'bad');
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (goodSet.has(key)) {
+        el.classList.add('good');
+      } else if (badSet.has(key)) {
+        el.classList.add('bad');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-stack');
+      }
+    });
+    // Edges
+    const pathEdgeSet = new Set(s.pathEdges);
+    Object.entries(edgeEls).forEach(([id, ee]) => {
+      ee.line.classList.toggle('on-path', pathEdgeSet.has(id));
+    });
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[returned]';
+      stackEl.appendChild(li);
+    }
+    // Good list
+    goodListEl.innerHTML = '';
+    s.goodList.forEach((entry, i) => {
+      const li = document.createElement('li');
+      li.textContent = entry;
+      if (i >= prevGoodLen) { li.classList.add('new'); }
+      goodListEl.appendChild(li);
+    });
+    prevGoodLen = s.goodList.length;
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevGoodLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevGoodLen = stepIdx > 0 ? steps[stepIdx - 1].goodList.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1200);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
