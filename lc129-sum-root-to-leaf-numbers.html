@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 129 — Sum Root to Leaf Numbers</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 300px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.cur .pill-v { color: #9ad4ff; }
+  .pill.leaf .pill-v { color: #4de88c; }
+  .pill.total .pill-v { color: #ffd87a; font-size: 13px; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 320px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 15px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node text.ann {
+    fill: #9ad4ff;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.leaf-done circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; filter: drop-shadow(0 0 6px rgba(77, 232, 140, 0.55)); }
+  .node.leaf-done text.val { fill: #4de88c; font-weight: bold; }
+  .node.visited circle { stroke: #666; fill: #2a2a3a; }
+  .node.visited text.val { fill: #aaa; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.25s; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 70px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-update { background: #9ad4ff; color: #1a1a2e; }
+  .kind-leaf { background: #4de88c; color: #1a1a2e; }
+  .kind-return { background: #666; color: white; }
+  .kind-done { background: #ffd87a; color: #1a1a2e; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .leaf-log {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+    margin-top: 4px;
+  }
+  .leaf-log li {
+    padding: 5px 10px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #4de88c;
+    color: #4de88c;
+  }
+  .leaf-log li.new { animation: slideIn 0.4s ease-out; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f4a2a; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend { margin-top: 12px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-leaf { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 129 — Sum Root to Leaf Numbers</h1>
+    <div class="subtitle">Pre-order DFS carry-number-down. currentNum = currentNum*10 + node.val; return the full number at each leaf. tree = [4, 9, 0, 5, 1] → 495 + 491 + 40 = 1026</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill cur"><span class="pill-k">currentNum</span><span class="pill-v" id="curV">0</span></span>
+      <span class="pill leaf"><span class="pill-k">leaf?</span><span class="pill-v" id="leafV">—</span></span>
+      <span class="pill total"><span class="pill-k">running total</span><span class="pill-v" id="totalV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="panel-title" style="margin-top: 14px;">Leaf numbers collected</div>
+    <ul class="leaf-log" id="leafLog"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip chip-leaf"></div>leaf (contributed its number)</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.55;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">why *10 + val</div>
+      Multiplying by 10 shifts the number left one digit, then adding node.val fills in the ones place. By the time we hit a leaf, currentNum is the full root-to-leaf number as an int — no string conversion needed.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public int sumNumbers(TreeNode root) {",
+    "    return solve(root, 0);",
+    "}",
+    "",
+    "private int solve(TreeNode node, int currentNum) {",
+    "    if (node == null) {",
+    "        return 0;",
+    "    }",
+    "    currentNum = currentNum * 10 + node.val;",
+    "    if (node.left == null && node.right == null) {",
+    "        return currentNum;",
+    "    }",
+    "    int left  = solve(node.left,  currentNum);",
+    "    int right = solve(node.right, currentNum);",
+    "    return left + right;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //       4
+  //      / \
+  //     9   0
+  //    / \
+  //   5   1
+  const nodes = {
+    n4: { x: 320, y:  55, r: 24, val: '4' },
+    n9: { x: 200, y: 145, r: 24, val: '9' },
+    n0: { x: 440, y: 145, r: 24, val: '0' },
+    n5: { x: 110, y: 235, r: 24, val: '5' },
+    n1: { x: 290, y: 235, r: 24, val: '1' }
+  };
+  const edges = [
+    { id: 'e_4_9', from: 'n4', to: 'n9' },
+    { id: 'e_4_0', from: 'n4', to: 'n0' },
+    { id: 'e_9_5', from: 'n9', to: 'n5' },
+    { id: 'e_9_1', from: 'n9', to: 'n1' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = { line, from: e.from, to: e.to };
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEPS ============
+  const steps = [
+    { line: [2], active: null, pathNodes: [], leaves: [], visited: [], pathEdges: [],
+      stack: [{ label: "sumNumbers(root=4)", sub: "call solve(root, 0)" }],
+      nodeV: "—", curV: 0, leafV: "—", totalV: 0,
+      leafLog: [], newLeafIdx: -1,
+      action: "Init: call solve(root=4, currentNum=0).", kind: "call" },
+
+    { line: [5, 6, 9], active: "n4", pathNodes: ["n4"], leaves: [], visited: [], pathEdges: [],
+      stack: [
+        { label: "sumNumbers", sub: "waiting" },
+        { label: "solve(4, 0)", sub: "currentNum = 0*10 + 4 = 4" }
+      ],
+      nodeV: "4", curV: 4, leafV: "—", totalV: 0,
+      leafLog: [], newLeafIdx: -1,
+      action: "Enter solve(4, 0). currentNum = 0 * 10 + 4 = 4.", kind: "update" },
+
+    { line: [10, 13], active: "n4", pathNodes: ["n4"], leaves: [], visited: [], pathEdges: ["e_4_9"],
+      stack: [
+        { label: "sumNumbers", sub: "waiting" },
+        { label: "solve(4, 0)", sub: "not leaf, recurse LEFT" }
+      ],
+      nodeV: "4", curV: 4, leafV: "NO", totalV: 0,
+      leafLog: [], newLeafIdx: -1,
+      action: "Not a leaf (has children). Recurse LEFT: solve(9, 4).", kind: "call" },
+
+    { line: [5, 6, 9], active: "n9", pathNodes: ["n4", "n9"], leaves: [], visited: [], pathEdges: ["e_4_9"],
+      stack: [
+        { label: "sumNumbers", sub: "waiting" },
+        { label: "solve(4, 0)", sub: "waiting on LEFT" },
+        { label: "solve(9, 4)", sub: "currentNum = 4*10 + 9 = 49" }
+      ],
+      nodeV: "9", curV: 49, leafV: "—", totalV: 0,
+      leafLog: [], newLeafIdx: -1,
+      action: "Enter solve(9, 4). currentNum = 4 * 10 + 9 = 49.", kind: "update" },
+
+    { line: [10, 13], active: "n9", pathNodes: ["n4", "n9"], leaves: [], visited: [], pathEdges: ["e_4_9", "e_9_5"],
+      stack: [
+        { label: "sumNumbers", sub: "waiting" },
+        { label: "solve(4, 0)", sub: "waiting on LEFT" },
+        { label: "solve(9, 4)", sub: "not leaf, recurse LEFT" }
+      ],
+      nodeV: "9", curV: 49, leafV: "NO", totalV: 0,
+      leafLog: [], newLeafIdx: -1,
+      action: "Not a leaf. Recurse LEFT: solve(5, 49).", kind: "call" },
+
+    { line: [5, 6, 9, 10, 11], active: "n5", pathNodes: ["n4", "n9", "n5"], leaves: ["n5"], visited: [], pathEdges: ["e_4_9", "e_9_5"],
+      stack: [
+        { label: "sumNumbers", sub: "waiting" },
+        { label: "solve(4, 0)", sub: "waiting on LEFT" },
+        { label: "solve(9, 4)", sub: "waiting on LEFT" },
+        { label: "solve(5, 49)", sub: "currentNum=495, LEAF → return 495" }
+      ],
+      nodeV: "5", curV: 495, leafV: "YES", totalV: 495,
+      leafLog: ["495  (4→9→5)"], newLeafIdx: 0,
+      action: "★ Enter solve(5, 49). currentNum = 49*10 + 5 = 495. Both children null → LEAF. Return 495.", kind: "leaf" },
+
+    { line: [14], active: "n9", pathNodes: ["n4", "n9"], leaves: ["n5"], visited: ["n5"], pathEdges: ["e_4_9", "e_9_1"],
+      stack: [
+        { label: "sumNumbers", sub: "waiting" },
+        { label: "solve(4, 0)", sub: "waiting on LEFT" },
+        { label: "solve(9, 4)", sub: "left=495, recurse RIGHT" }
+      ],
+      nodeV: "9", curV: 49, leafV: "NO", totalV: 495,
+      leafLog: ["495  (4→9→5)"], newLeafIdx: -1,
+      action: "Back in solve(9). left = 495. Recurse RIGHT: solve(1, 49).", kind: "call" },
+
+    { line: [5, 6, 9, 10, 11], active: "n1", pathNodes: ["n4", "n9", "n1"], leaves: ["n5", "n1"], visited: ["n5"], pathEdges: ["e_4_9", "e_9_1"],
+      stack: [
+        { label: "sumNumbers", sub: "waiting" },
+        { label: "solve(4, 0)", sub: "waiting on LEFT" },
+        { label: "solve(9, 4)", sub: "waiting on RIGHT" },
+        { label: "solve(1, 49)", sub: "currentNum=491, LEAF → return 491" }
+      ],
+      nodeV: "1", curV: 491, leafV: "YES", totalV: 986,
+      leafLog: ["495  (4→9→5)", "491  (4→9→1)"], newLeafIdx: 1,
+      action: "★ Enter solve(1, 49). currentNum = 49*10 + 1 = 491. LEAF. Return 491. Running total = 495 + 491 = 986.", kind: "leaf" },
+
+    { line: [15], active: "n9", pathNodes: ["n4", "n9"], leaves: ["n5", "n1"], visited: ["n5", "n1"], pathEdges: ["e_4_9"],
+      stack: [
+        { label: "sumNumbers", sub: "waiting" },
+        { label: "solve(4, 0)", sub: "waiting on LEFT" },
+        { label: "solve(9, 4)", sub: "return 495 + 491 = 986" }
+      ],
+      nodeV: "9", curV: 49, leafV: "NO", totalV: 986,
+      leafLog: ["495  (4→9→5)", "491  (4→9→1)"], newLeafIdx: -1,
+      action: "solve(9) returns left + right = 495 + 491 = 986.", kind: "return" },
+
+    { line: [14], active: "n4", pathNodes: ["n4"], leaves: ["n5", "n1"], visited: ["n5", "n1", "n9"], pathEdges: ["e_4_0"],
+      stack: [
+        { label: "sumNumbers", sub: "waiting" },
+        { label: "solve(4, 0)", sub: "left=986, recurse RIGHT" }
+      ],
+      nodeV: "4", curV: 4, leafV: "NO", totalV: 986,
+      leafLog: ["495  (4→9→5)", "491  (4→9→1)"], newLeafIdx: -1,
+      action: "Back in solve(4). left = 986. Recurse RIGHT: solve(0, 4).", kind: "call" },
+
+    { line: [5, 6, 9, 10, 11], active: "n0", pathNodes: ["n4", "n0"], leaves: ["n5", "n1", "n0"], visited: ["n5", "n1", "n9"], pathEdges: ["e_4_0"],
+      stack: [
+        { label: "sumNumbers", sub: "waiting" },
+        { label: "solve(4, 0)", sub: "waiting on RIGHT" },
+        { label: "solve(0, 4)", sub: "currentNum=40, LEAF → return 40" }
+      ],
+      nodeV: "0", curV: 40, leafV: "YES", totalV: 1026,
+      leafLog: ["495  (4→9→5)", "491  (4→9→1)", "40  (4→0)"], newLeafIdx: 2,
+      action: "★ Enter solve(0, 4). currentNum = 4*10 + 0 = 40. LEAF. Return 40. Running total = 986 + 40 = 1026.", kind: "leaf" },
+
+    { line: [15], active: "n4", pathNodes: ["n4"], leaves: ["n5", "n1", "n0"], visited: ["n5", "n1", "n9", "n0"], pathEdges: [],
+      stack: [
+        { label: "sumNumbers", sub: "will receive 1026" },
+        { label: "solve(4, 0)", sub: "return 986 + 40 = 1026" }
+      ],
+      nodeV: "4", curV: 4, leafV: "NO", totalV: 1026,
+      leafLog: ["495  (4→9→5)", "491  (4→9→1)", "40  (4→0)"], newLeafIdx: -1,
+      action: "solve(4) returns left + right = 986 + 40 = 1026.", kind: "return" },
+
+    { line: [2], active: null, pathNodes: [], leaves: ["n5", "n1", "n0"], visited: ["n5", "n1", "n9", "n0", "n4"], pathEdges: [],
+      stack: [],
+      nodeV: "—", curV: "—", leafV: "—", totalV: 1026,
+      leafLog: ["495  (4→9→5)", "491  (4→9→1)", "40  (4→0)"], newLeafIdx: -1,
+      action: "Done. sumNumbers returns 1026 = 495 + 491 + 40.", kind: "done" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevLeafLen = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const curVEl = document.getElementById('curV');
+  const leafVEl = document.getElementById('leafV');
+  const totalVEl = document.getElementById('totalV');
+  const stackEl = document.getElementById('stack');
+  const leafLogEl = document.getElementById('leafLog');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.nodeV;
+    curVEl.textContent = s.curV;
+    leafVEl.textContent = s.leafV;
+    totalVEl.textContent = s.totalV;
+    const pathSet = new Set(s.pathNodes);
+    const leafSet = new Set(s.leaves);
+    const visitedSet = new Set(s.visited);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('on-stack', 'active', 'leaf-done', 'visited');
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (leafSet.has(key)) {
+        el.classList.add('leaf-done');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-stack');
+      } else if (visitedSet.has(key)) {
+        el.classList.add('visited');
+      }
+    });
+    const pathEdgeSet = new Set(s.pathEdges);
+    Object.entries(edgeEls).forEach(([id, ee]) => {
+      ee.line.classList.toggle('on-path', pathEdgeSet.has(id));
+    });
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[returned]';
+      stackEl.appendChild(li);
+    }
+    leafLogEl.innerHTML = '';
+    s.leafLog.forEach((entry, i) => {
+      const li = document.createElement('li');
+      li.textContent = entry;
+      if (i >= prevLeafLen) { li.classList.add('new'); }
+      leafLogEl.appendChild(li);
+    });
+    prevLeafLen = s.leafLog.length;
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevLeafLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevLeafLen = stepIdx > 0 ? steps[stepIdx - 1].leafLog.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1200);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
