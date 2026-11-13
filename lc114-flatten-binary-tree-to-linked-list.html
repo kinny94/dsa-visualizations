@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 114 — Flatten Binary Tree to Linked List</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 300px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.cur .pill-v { color: #ff8ca0; }
+  .pill.rm .pill-v { color: #ffd87a; }
+  .pill.iter .pill-v { color: #9ad4ff; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 340px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.visited circle { stroke: #666; fill: #2a2a3a; }
+  .node.visited text.val { fill: #aaa; }
+  .node.current circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.current text.val { fill: #fff; }
+  .node.rightmost circle { stroke: #ffd87a; stroke-width: 4; fill: #4a3010; }
+  .node.rightmost text.val { fill: #ffd87a; }
+  .edge-left { stroke: #9ad4ff; stroke-width: 2.5; fill: none; marker-end: url(#arrowL); transition: all 0.3s; }
+  .edge-right { stroke: #4de88c; stroke-width: 2.5; fill: none; marker-end: url(#arrowR); transition: all 0.3s; }
+  .edge-new { stroke-width: 4; filter: drop-shadow(0 0 4px currentColor); }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 70px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #c89aff; color: #1a1a2e; }
+  .kind-find { background: #ffd87a; color: #1a1a2e; }
+  .kind-splice { background: #4de88c; color: #1a1a2e; }
+  .kind-swap { background: #9ad4ff; color: #1a1a2e; }
+  .kind-clear { background: #ff8ca0; color: #1a1a2e; }
+  .kind-advance { background: #ffa500; color: #1a1a2e; }
+  .kind-skip { background: #666; color: white; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .chain-list {
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    list-style: none;
+    margin-top: 4px;
+  }
+  .chain-list li {
+    padding: 4px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #4de88c;
+    color: #4de88c;
+  }
+  .chain-list li.current {
+    border-left-color: #ff8ca0;
+    background: #2a1a25;
+    color: #ff8ca0;
+  }
+  .ptrs-table {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 6px;
+  }
+  .ptrs-table th, .ptrs-table td {
+    text-align: left;
+    padding: 3px 6px;
+    border-bottom: 1px solid #0f3460;
+  }
+  .ptrs-table th {
+    color: #888;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+  .ptrs-table td.node-col { color: #e94560; font-weight: bold; width: 24px; }
+  .ptrs-table td.left-col  { color: #9ad4ff; }
+  .ptrs-table td.right-col { color: #4de88c; }
+  .ptrs-table tr.changed td { background: rgba(255, 216, 122, 0.1); }
+  .ptrs-table .nullv { color: #555; }
+  .legend { margin-top: 12px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip { width: 14px; height: 2px; border-radius: 1px; }
+  .chip-l { background: #9ad4ff; }
+  .chip-r { background: #4de88c; }
+  .cdot { width: 12px; height: 12px; border-radius: 50%; }
+  .cdot-cur { background: #e94560; }
+  .cdot-rm { background: #4a3010; border: 2px solid #ffd87a; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 114 — Flatten Binary Tree to Linked List</h1>
+    <div class="subtitle">Morris-style in-place flattening. At each node, splice the right subtree onto the rightmost of the left subtree, then move left → right. tree = [1, 2, 5, 3, 4, null, 6] → right-skewed chain</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill cur"><span class="pill-k">current</span><span class="pill-v" id="curV">1</span></span>
+      <span class="pill rm"><span class="pill-k">rightmost</span><span class="pill-v" id="rmV">—</span></span>
+      <span class="pill iter"><span class="pill-k">outer iter</span><span class="pill-v" id="iterV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrowL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ad4ff"/>
+          </marker>
+          <marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#4de88c"/>
+          </marker>
+        </defs>
+        <g id="edgeLayer"></g>
+        <g id="nodeLayer"></g>
+      </svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Pointers</div>
+    <table class="ptrs-table" id="ptrsTable">
+      <thead><tr><th>Node</th><th>left</th><th>right</th></tr></thead>
+      <tbody id="ptrsBody"></tbody>
+    </table>
+    <div class="panel-title" style="margin-top: 14px;">Right-chain (pre-order so far)</div>
+    <ul class="chain-list" id="chain"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip chip-l"></div>left pointer (blue arrow)</div>
+      <div class="legend-item"><div class="chip chip-r"></div>right pointer (green arrow)</div>
+      <div class="legend-item"><div class="cdot cdot-cur"></div>current</div>
+      <div class="legend-item"><div class="cdot cdot-rm"></div>rightmost</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.55;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">invariant</div>
+      After processing <code>current</code>, the right-chain from root through <code>current</code> correctly lines up the pre-order of everything visited so far. The subtree rooted at <code>current.right</code> is untouched until we reach it.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ============ CODE ============
+  const codeText = [
+    "public void flatten(TreeNode root) {",
+    "    TreeNode current = root;",
+    "    while (current != null) {",
+    "        if (current.left != null) {",
+    "            TreeNode rightmost = current.left;",
+    "            while (rightmost.right != null) {",
+    "                rightmost = rightmost.right;",
+    "            }",
+    "            rightmost.right = current.right;",
+    "            current.right = current.left;",
+    "            current.left = null;",
+    "        }",
+    "        current = current.right;",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ NODE LAYOUT ============
+  const nodePos = {
+    n1: { x: 320, y:  55, r: 22, val: '1' },
+    n2: { x: 200, y: 150, r: 22, val: '2' },
+    n5: { x: 440, y: 150, r: 22, val: '5' },
+    n3: { x: 105, y: 240, r: 22, val: '3' },
+    n4: { x: 290, y: 240, r: 22, val: '4' },
+    n6: { x: 505, y: 240, r: 22, val: '6' }
+  };
+  const nodeLayer = document.getElementById('nodeLayer');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const nodeEls = {};
+  Object.entries(nodePos).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    nodeLayer.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ EDGE DRAWING ============
+  const edgeLayer = document.getElementById('edgeLayer');
+  function drawEdges(tree, newEdges) {
+    while (edgeLayer.firstChild) { edgeLayer.removeChild(edgeLayer.firstChild); }
+    Object.entries(tree).forEach(([from, kids]) => {
+      ['left', 'right'].forEach(dir => {
+        const to = kids[dir];
+        if (!to) return;
+        const a = nodePos[from], b = nodePos[to];
+        if (!a || !b) return;
+        // Offset the endpoints along the line direction by node radius
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const len = Math.hypot(dx, dy);
+        const ux = dx / len, uy = dy / len;
+        const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+        const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+        const line = document.createElementNS(SVGNS, 'line');
+        line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+        line.setAttribute('class', dir === 'left' ? 'edge-left' : 'edge-right');
+        const key = from + '-' + dir + '-' + to;
+        if (newEdges && newEdges.includes(key)) {
+          line.classList.add('edge-new');
+        }
+        edgeLayer.appendChild(line);
+      });
+    });
+  }
+
+  // ============ STEPS ============
+  // Each step:
+  //   line: active code lines
+  //   current: node key
+  //   rightmost: node key or null
+  //   iter: outer iteration count
+  //   visited: nodes already finalized (current has moved past them)
+  //   tree: { nodeKey: { left, right } }
+  //   newEdges: [edgeKey strings]  -- highlight just-added edges
+  //   changedPtrs: [nodeKey]       -- highlight rows in pointer table
+  //   chain: [nodeKeys]            -- current right-chain from root
+  //   action, kind: card
+  const E_INIT = {
+    n1: { left: 'n2', right: 'n5' },
+    n2: { left: 'n3', right: 'n4' },
+    n3: { left: null, right: null },
+    n4: { left: null, right: null },
+    n5: { left: null, right: 'n6' },
+    n6: { left: null, right: null }
+  };
+  function clone(t) {
+    const out = {};
+    Object.keys(t).forEach(k => { out[k] = { left: t[k].left, right: t[k].right }; });
+    return out;
+  }
+
+  const steps = [];
+
+  // s1: init
+  steps.push({
+    line: [2, 3], current: 'n1', rightmost: null, iter: 0, visited: [],
+    tree: clone(E_INIT), newEdges: [], changedPtrs: [],
+    chain: ['n1', 'n5', 'n6'],
+    action: "Init current = root = 1. Enter outer loop.",
+    kind: "init"
+  });
+
+  // Iteration 1 (current = 1)
+  // s2: check left
+  steps.push({
+    line: [3, 4], current: 'n1', rightmost: null, iter: 1, visited: [],
+    tree: clone(E_INIT), newEdges: [], changedPtrs: [],
+    chain: ['n1', 'n5', 'n6'],
+    action: "Iter 1: current = 1. current.left = node 2 (non-null) → enter if.",
+    kind: "check"
+  });
+  // s3: rightmost = current.left
+  steps.push({
+    line: [5], current: 'n1', rightmost: 'n2', iter: 1, visited: [],
+    tree: clone(E_INIT), newEdges: [], changedPtrs: [],
+    chain: ['n1', 'n5', 'n6'],
+    action: "rightmost = current.left = node 2. Begin inner loop (walk right until .right is null).",
+    kind: "find"
+  });
+  // s4: inner step: 2.right != null, advance
+  steps.push({
+    line: [6, 7], current: 'n1', rightmost: 'n4', iter: 1, visited: [],
+    tree: clone(E_INIT), newEdges: [], changedPtrs: [],
+    chain: ['n1', 'n5', 'n6'],
+    action: "Inner: rightmost.right = node 4 (non-null) → rightmost = node 4.",
+    kind: "find"
+  });
+  // s5: inner exit
+  steps.push({
+    line: [6], current: 'n1', rightmost: 'n4', iter: 1, visited: [],
+    tree: clone(E_INIT), newEdges: [], changedPtrs: [],
+    chain: ['n1', 'n5', 'n6'],
+    action: "Inner: rightmost.right = null → exit. Rightmost of left subtree = node 4.",
+    kind: "find"
+  });
+  // s6: splice: 4.right = 5
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    steps.push({
+      line: [9], current: 'n1', rightmost: 'n4', iter: 1, visited: [],
+      tree: t, newEdges: ['n4-right-n5'], changedPtrs: ['n4'],
+      chain: ['n1', 'n5', 'n6'],
+      action: "★ Splice: rightmost.right = current.right. 4.right = 5. Original right subtree now attached to the tail of the left subtree. (Node 5 briefly has two parents in the drawing, that’s fine mid-sequence.)",
+      kind: "splice"
+    });
+  }
+  // s7: current.right = current.left
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    steps.push({
+      line: [10], current: 'n1', rightmost: 'n4', iter: 1, visited: [],
+      tree: t, newEdges: ['n1-right-n2'], changedPtrs: ['n1'],
+      chain: ['n1', 'n2'],
+      action: "Swap left → right: current.right = current.left. 1.right = 2. (1’s old right pointer to 5 is overwritten — but 5 is still reachable through 4.)",
+      kind: "swap"
+    });
+  }
+  // s8: current.left = null
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    steps.push({
+      line: [11], current: 'n1', rightmost: 'n4', iter: 1, visited: [],
+      tree: t, newEdges: [], changedPtrs: ['n1'],
+      chain: ['n1', 'n2', 'n4', 'n5', 'n6'],
+      action: "Clear left: current.left = null. Node 1 is now fully processed; right-chain from root passes through 2 and continues into what was the right subtree.",
+      kind: "clear"
+    });
+  }
+  // s9: advance
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    steps.push({
+      line: [13], current: 'n2', rightmost: null, iter: 1, visited: ['n1'],
+      tree: t, newEdges: [], changedPtrs: [],
+      chain: ['n1', 'n2', 'n4', 'n5', 'n6'],
+      action: "Advance: current = current.right = node 2.",
+      kind: "advance"
+    });
+  }
+
+  // Iteration 2 (current = 2)
+  // s10: check left
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    steps.push({
+      line: [3, 4], current: 'n2', rightmost: null, iter: 2, visited: ['n1'],
+      tree: t, newEdges: [], changedPtrs: [],
+      chain: ['n1', 'n2', 'n4', 'n5', 'n6'],
+      action: "Iter 2: current = 2. current.left = node 3 (non-null) → enter if.",
+      kind: "check"
+    });
+  }
+  // s11: rightmost = 3
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    steps.push({
+      line: [5], current: 'n2', rightmost: 'n3', iter: 2, visited: ['n1'],
+      tree: t, newEdges: [], changedPtrs: [],
+      chain: ['n1', 'n2', 'n4', 'n5', 'n6'],
+      action: "rightmost = current.left = node 3. Begin inner loop.",
+      kind: "find"
+    });
+  }
+  // s12: inner exit
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    steps.push({
+      line: [6], current: 'n2', rightmost: 'n3', iter: 2, visited: ['n1'],
+      tree: t, newEdges: [], changedPtrs: [],
+      chain: ['n1', 'n2', 'n4', 'n5', 'n6'],
+      action: "Inner: rightmost.right = null → exit. Rightmost = node 3 (it’s already the rightmost since it has no right child).",
+      kind: "find"
+    });
+  }
+  // s13: splice 3.right = 4
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    t.n3.right = 'n4';
+    steps.push({
+      line: [9], current: 'n2', rightmost: 'n3', iter: 2, visited: ['n1'],
+      tree: t, newEdges: ['n3-right-n4'], changedPtrs: ['n3'],
+      chain: ['n1', 'n2', 'n4', 'n5', 'n6'],
+      action: "★ Splice: 3.right = current.right = 4. (Node 4 briefly has two parents: 2 and 3.)",
+      kind: "splice"
+    });
+  }
+  // s14: 2.right = 3
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    t.n3.right = 'n4';
+    t.n2.right = 'n3';
+    steps.push({
+      line: [10], current: 'n2', rightmost: 'n3', iter: 2, visited: ['n1'],
+      tree: t, newEdges: ['n2-right-n3'], changedPtrs: ['n2'],
+      chain: ['n1', 'n2', 'n3'],
+      action: "Swap left → right: 2.right = 2.left = 3.",
+      kind: "swap"
+    });
+  }
+  // s15: 2.left = null
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    t.n3.right = 'n4';
+    t.n2.right = 'n3';
+    t.n2.left = null;
+    steps.push({
+      line: [11], current: 'n2', rightmost: 'n3', iter: 2, visited: ['n1'],
+      tree: t, newEdges: [], changedPtrs: ['n2'],
+      chain: ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'],
+      action: "Clear left: 2.left = null. Chain is now 1 → 2 → 3 → 4 → 5 → 6. The structure is already flattened!",
+      kind: "clear"
+    });
+  }
+  // s16: advance
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    t.n3.right = 'n4';
+    t.n2.right = 'n3';
+    t.n2.left = null;
+    steps.push({
+      line: [13], current: 'n3', rightmost: null, iter: 2, visited: ['n1', 'n2'],
+      tree: t, newEdges: [], changedPtrs: [],
+      chain: ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'],
+      action: "Advance: current = current.right = node 3.",
+      kind: "advance"
+    });
+  }
+
+  // Iteration 3 (current = 3) — no left
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    t.n3.right = 'n4';
+    t.n2.right = 'n3';
+    t.n2.left = null;
+    steps.push({
+      line: [3, 4, 13], current: 'n3', rightmost: null, iter: 3, visited: ['n1', 'n2'],
+      tree: t, newEdges: [], changedPtrs: [],
+      chain: ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'],
+      action: "Iter 3: current = 3. current.left = null → skip if. Advance: current = 3.right = node 4.",
+      kind: "skip"
+    });
+  }
+
+  // Iteration 4 (current = 4) — no left
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    t.n3.right = 'n4';
+    t.n2.right = 'n3';
+    t.n2.left = null;
+    steps.push({
+      line: [3, 4, 13], current: 'n4', rightmost: null, iter: 4, visited: ['n1', 'n2', 'n3'],
+      tree: t, newEdges: [], changedPtrs: [],
+      chain: ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'],
+      action: "Iter 4: current = 4. current.left = null → skip if. Advance: current = 4.right = node 5.",
+      kind: "skip"
+    });
+  }
+
+  // Iteration 5 (current = 5) — no left
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    t.n3.right = 'n4';
+    t.n2.right = 'n3';
+    t.n2.left = null;
+    steps.push({
+      line: [3, 4, 13], current: 'n5', rightmost: null, iter: 5, visited: ['n1', 'n2', 'n3', 'n4'],
+      tree: t, newEdges: [], changedPtrs: [],
+      chain: ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'],
+      action: "Iter 5: current = 5. current.left = null → skip if. Advance: current = 5.right = node 6.",
+      kind: "skip"
+    });
+  }
+
+  // Iteration 6 (current = 6) — no left
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    t.n3.right = 'n4';
+    t.n2.right = 'n3';
+    t.n2.left = null;
+    steps.push({
+      line: [3, 4, 13], current: 'n6', rightmost: null, iter: 6, visited: ['n1', 'n2', 'n3', 'n4', 'n5'],
+      tree: t, newEdges: [], changedPtrs: [],
+      chain: ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'],
+      action: "Iter 6: current = 6. current.left = null → skip if. Advance: current = 6.right = null. Outer loop condition will fail next.",
+      kind: "skip"
+    });
+  }
+
+  // Done
+  {
+    const t = clone(E_INIT);
+    t.n4.right = 'n5';
+    t.n1.right = 'n2';
+    t.n1.left = null;
+    t.n3.right = 'n4';
+    t.n2.right = 'n3';
+    t.n2.left = null;
+    steps.push({
+      line: [3, 15], current: null, rightmost: null, iter: 6, visited: ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'],
+      tree: t, newEdges: [], changedPtrs: [],
+      chain: ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'],
+      action: "Done. current = null → outer loop exits. Tree is now a right-skewed pre-order list: 1 → 2 → 3 → 4 → 5 → 6 with all left pointers null. ★ O(n) time, O(1) extra space.",
+      kind: "done"
+    });
+  }
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const curVEl = document.getElementById('curV');
+  const rmVEl = document.getElementById('rmV');
+  const iterVEl = document.getElementById('iterV');
+  const ptrsBodyEl = document.getElementById('ptrsBody');
+  const chainEl = document.getElementById('chain');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const nodeOrder = ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'];
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    curVEl.textContent = s.current ? nodePos[s.current].val : '—';
+    rmVEl.textContent = s.rightmost ? nodePos[s.rightmost].val : '—';
+    iterVEl.textContent = s.iter;
+    // Node classes
+    const visitedSet = new Set(s.visited);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('visited', 'current', 'rightmost');
+      if (key === s.current) {
+        el.classList.add('current');
+      } else if (key === s.rightmost) {
+        el.classList.add('rightmost');
+      } else if (visitedSet.has(key)) {
+        el.classList.add('visited');
+      }
+    });
+    // Edges
+    drawEdges(s.tree, s.newEdges);
+    // Pointer table
+    ptrsBodyEl.innerHTML = '';
+    const changedSet = new Set(s.changedPtrs);
+    nodeOrder.forEach(key => {
+      const tr = document.createElement('tr');
+      if (changedSet.has(key)) { tr.classList.add('changed'); }
+      const tdN = document.createElement('td'); tdN.className = 'node-col';
+      tdN.textContent = nodePos[key].val;
+      const tdL = document.createElement('td'); tdL.className = 'left-col';
+      const l = s.tree[key].left;
+      if (l) { tdL.textContent = nodePos[l].val; }
+      else { tdL.innerHTML = '<span class="nullv">null</span>'; }
+      const tdR = document.createElement('td'); tdR.className = 'right-col';
+      const r = s.tree[key].right;
+      if (r) { tdR.textContent = nodePos[r].val; }
+      else { tdR.innerHTML = '<span class="nullv">null</span>'; }
+      tr.appendChild(tdN); tr.appendChild(tdL); tr.appendChild(tdR);
+      ptrsBodyEl.appendChild(tr);
+    });
+    // Chain
+    chainEl.innerHTML = '';
+    s.chain.forEach(k => {
+      const li = document.createElement('li');
+      li.textContent = nodePos[k].val;
+      if (k === s.current) { li.classList.add('current'); }
+      chainEl.appendChild(li);
+    });
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1200);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
