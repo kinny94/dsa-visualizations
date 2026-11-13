@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 979 — Distribute Coins in Binary Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 300px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #e94560; }
+  .pill.le .pill-v { color: #9ad4ff; }
+  .pill.re .pill-v { color: #c89aff; }
+  .pill.ex .pill-v { color: #ffd87a; }
+  .pill.moves .pill-v { color: #4de88c; font-size: 13px; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 320px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 16px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node text.excess {
+    fill: #ffd87a;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+  }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.on-stack text.val { fill: #ffd87a; }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #4de88c; stroke-width: 3; fill: #0f3a1f; }
+  .node.done text.val { fill: #4de88c; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.3s; }
+  .edge.flow-up   { stroke: #ff8ca0; stroke-width: 3; marker-end: url(#arrowUp); }
+  .edge.flow-down { stroke: #9ad4ff; stroke-width: 3; marker-start: url(#arrowDown); }
+  .edge-label {
+    fill: #ffd87a;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 70px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-call { background: #ffa500; color: #1a1a2e; }
+  .kind-compute { background: #9ad4ff; color: #1a1a2e; }
+  .kind-flow { background: #ff8ca0; color: #1a1a2e; }
+  .kind-return { background: #4de88c; color: #1a1a2e; }
+  .kind-done { background: #ffd87a; color: #1a1a2e; }
+  .stack-list {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+  }
+  .stack-list li {
+    padding: 5px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #ffa500;
+  }
+  .stack-list li.top {
+    border-left-color: #e94560;
+    background: #1f2a4a;
+  }
+  .stack-list li .frame-sub {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .edge-log {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    list-style: none;
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .edge-log li {
+    padding: 4px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    border-left: 3px solid #4de88c;
+    color: #4de88c;
+  }
+  .edge-log li.new { animation: slideIn 0.4s ease-out; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); background: #0f4a2a; }
+    to { opacity: 1; transform: translateX(0); background: #0f3460; }
+  }
+  .legend { margin-top: 12px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip-line-up { width: 16px; height: 3px; background: #ff8ca0; border-radius: 2px; }
+  .chip-line-dn { width: 16px; height: 3px; background: #9ad4ff; border-radius: 2px; }
+  .chip-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-active { background: #e94560; }
+  .chip-done { background: #0f3a1f; border: 2px solid #4de88c; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 979 — Distribute Coins in Binary Tree</h1>
+    <div class="subtitle">Post-order with signed excess: each subtree returns coins-minus-nodes to its parent; |excess| coins cross each edge = moves. tree = [1, 0, 0, null, 3] → 4 moves</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill le"><span class="pill-k">leftEx</span><span class="pill-v" id="leV">—</span></span>
+      <span class="pill re"><span class="pill-k">rightEx</span><span class="pill-v" id="reV">—</span></span>
+      <span class="pill ex"><span class="pill-k">excess</span><span class="pill-v" id="exV">—</span></span>
+      <span class="pill moves"><span class="pill-k">moves</span><span class="pill-v" id="movesV">0</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrowUp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff8ca0"/>
+          </marker>
+          <marker id="arrowDown" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 10 0 L 0 5 L 10 10 z" fill="#9ad4ff"/>
+          </marker>
+        </defs>
+        <g id="edgeLayer"></g>
+        <g id="nodeLayer"></g>
+        <g id="labelLayer"></g>
+      </svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-call" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call stack</div>
+    <ul class="stack-list" id="stack"></ul>
+    <div class="panel-title" style="margin-top: 14px;">Edge flows (moves)</div>
+    <ul class="edge-log" id="edgeLog"></ul>
+    <div class="legend">
+      <div class="legend-item"><div class="chip-line-up"></div>flow UP (excess > 0)</div>
+      <div class="legend-item"><div class="chip-line-dn"></div>flow DOWN (excess < 0)</div>
+      <div class="legend-item"><div class="chip-dot chip-active"></div>active frame</div>
+      <div class="legend-item"><div class="chip-dot chip-done"></div>subtree processed</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.55;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">excess = c − n</div>
+      For a subtree: coins c and nodes n. Positive excess → surplus flows UP through the edge to parent. Negative → deficit flows DOWN from parent. Either way |excess| coins cross, each a move.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "private int moves = 0;",
+    "",
+    "public int distributeCoins(TreeNode root) {",
+    "    if (root == null) return 0;",
+    "    solve(root);",
+    "    return moves;",
+    "}",
+    "",
+    "private int solve(TreeNode node) {",
+    "    if (node == null) return 0;",
+    "    int leftExcess  = solve(node.left);",
+    "    int rightExcess = solve(node.right);",
+    "    moves += Math.abs(leftExcess) + Math.abs(rightExcess);",
+    "    int excess = node.val + leftExcess + rightExcess - 1;",
+    "    return excess;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //       1 (root)
+  //      / \
+  //     0   0
+  //      \
+  //       3
+  const nodes = {
+    nR:  { x: 320, y:  55, r: 26, val: '1', label: 'root' },
+    nL0: { x: 200, y: 145, r: 26, val: '0', label: 'L0' },
+    nRR: { x: 440, y: 145, r: 26, val: '0', label: 'R0' },
+    n3:  { x: 290, y: 235, r: 26, val: '3', label: '3' }
+  };
+  const edges = [
+    { id: 'e_R_L0', from: 'nR', to: 'nL0' },
+    { id: 'e_R_RR', from: 'nR', to: 'nRR' },
+    { id: 'e_L0_3', from: 'nL0', to: 'n3' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const nodeLayer = document.getElementById('nodeLayer');
+  const edgeLayer = document.getElementById('edgeLayer');
+  const labelLayer = document.getElementById('labelLayer');
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    edgeLayer.appendChild(line);
+    edgeEls[e.id] = { line, mid: { x: (x1+x2)/2, y: (y1+y2)/2 }, from: e.from, to: e.to };
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y - 2);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    nodeLayer.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEPS ============
+  // Each step:
+  //   line: active code lines
+  //   active: node key
+  //   pathNodes: nodes on call stack
+  //   done: subtree-completed nodes (returned)
+  //   excessByNode: { key: integer }  -- annotations on tree
+  //   edgeFlows: { edgeId: {magnitude, direction: 'up'|'down'} }
+  //   stack: frame cards
+  //   nodeV, leV, reV, exV, movesV: pills
+  //   edgeLog: [strings]  -- edge-flow log entries
+  //   newEdgeLog: 0 or 1
+  //   action, kind
+  const steps = [
+    { line: [3, 4, 5], active: null, pathNodes: [], done: [],
+      excessByNode: {}, edgeFlows: {},
+      stack: [{ label: "distributeCoins(root)", sub: "init moves=0, call solve(root)" }],
+      nodeV: "—", leV: "—", reV: "—", exV: "—", movesV: 0,
+      edgeLog: [], newEdgeLog: 0,
+      action: "Init moves = 0. Call solve(root).", kind: "call" },
+
+    { line: [9, 10, 11], active: "nR", pathNodes: ["nR"], done: [],
+      excessByNode: {}, edgeFlows: {},
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root=1)", sub: "recurse LEFT" }
+      ],
+      nodeV: "1", leV: "—", reV: "—", exV: "—", movesV: 0,
+      edgeLog: [], newEdgeLog: 0,
+      action: "Enter solve(root=1). Recurse LEFT into node L0.", kind: "call" },
+
+    { line: [9, 10, 11], active: "nL0", pathNodes: ["nR", "nL0"], done: [],
+      excessByNode: {}, edgeFlows: {},
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "waiting on LEFT" },
+        { label: "solve(L0=0)", sub: "recurse LEFT (null)" }
+      ],
+      nodeV: "0", leV: "—", reV: "—", exV: "—", movesV: 0,
+      edgeLog: [], newEdgeLog: 0,
+      action: "Enter solve(L0=0). Recurse LEFT: null → returns 0. leftExcess = 0.", kind: "call" },
+
+    { line: [12], active: "nL0", pathNodes: ["nR", "nL0"], done: [],
+      excessByNode: {}, edgeFlows: {},
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "waiting on LEFT" },
+        { label: "solve(L0)", sub: "leftExcess=0, recurse RIGHT" }
+      ],
+      nodeV: "0", leV: 0, reV: "—", exV: "—", movesV: 0,
+      edgeLog: [], newEdgeLog: 0,
+      action: "In solve(L0): leftExcess = 0. Now recurse RIGHT into node 3.", kind: "call" },
+
+    { line: [9, 10, 11], active: "n3", pathNodes: ["nR", "nL0", "n3"], done: [],
+      excessByNode: {}, edgeFlows: {},
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "waiting on LEFT" },
+        { label: "solve(L0)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "both children null → leftExcess=0, rightExcess=0" }
+      ],
+      nodeV: "3", leV: 0, reV: 0, exV: "—", movesV: 0,
+      edgeLog: [], newEdgeLog: 0,
+      action: "Enter solve(3). Both children null → leftExcess = rightExcess = 0.", kind: "call" },
+
+    { line: [13], active: "n3", pathNodes: ["nR", "nL0", "n3"], done: [],
+      excessByNode: {}, edgeFlows: {},
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "waiting on LEFT" },
+        { label: "solve(L0)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "moves += |0|+|0| = 0" }
+      ],
+      nodeV: "3", leV: 0, reV: 0, exV: "—", movesV: 0,
+      edgeLog: [], newEdgeLog: 0,
+      action: "moves += |0| + |0| = 0. No coins cross either child edge (3 has no children).", kind: "compute" },
+
+    { line: [14, 15], active: "n3", pathNodes: ["nR", "nL0", "n3"], done: ["n3"],
+      excessByNode: { n3: 2 }, edgeFlows: {},
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "waiting on LEFT" },
+        { label: "solve(L0)", sub: "waiting on RIGHT" },
+        { label: "solve(3)", sub: "excess = 3+0+0-1 = 2, return 2" }
+      ],
+      nodeV: "3", leV: 0, reV: 0, exV: 2, movesV: 0,
+      edgeLog: [], newEdgeLog: 0,
+      action: "excess = node.val(3) + 0 + 0 - 1 = 2. ★ Node 3's subtree has 2 extra coins (3 coins, 1 node, surplus = 2). Return 2.", kind: "return" },
+
+    { line: [11, 12], active: "nL0", pathNodes: ["nR", "nL0"], done: ["n3"],
+      excessByNode: { n3: 2 }, edgeFlows: {},
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "waiting on LEFT" },
+        { label: "solve(L0)", sub: "rightExcess=2, now compute moves" }
+      ],
+      nodeV: "0", leV: 0, reV: 2, exV: "—", movesV: 0,
+      edgeLog: [], newEdgeLog: 0,
+      action: "Back in solve(L0). rightExcess = 2 (from node 3's subtree).", kind: "compute" },
+
+    { line: [13], active: "nL0", pathNodes: ["nR", "nL0"], done: ["n3"],
+      excessByNode: { n3: 2 }, edgeFlows: { e_L0_3: { mag: 2, dir: 'up' } },
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "waiting on LEFT" },
+        { label: "solve(L0)", sub: "moves += |0| + |2| = 2" }
+      ],
+      nodeV: "0", leV: 0, reV: 2, exV: "—", movesV: 2,
+      edgeLog: ["edge L0↔3: 2 coins UP (+2 moves)"],
+      newEdgeLog: 1,
+      action: "★ moves += |0| + |2| = 2. 2 coins flow UP from node 3 to node L0 across the edge between them. Total moves = 2.", kind: "flow" },
+
+    { line: [14, 15], active: "nL0", pathNodes: ["nR", "nL0"], done: ["n3", "nL0"],
+      excessByNode: { n3: 2, nL0: 1 }, edgeFlows: { e_L0_3: { mag: 2, dir: 'up' } },
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "waiting on LEFT" },
+        { label: "solve(L0)", sub: "excess = 0+0+2-1 = 1, return 1" }
+      ],
+      nodeV: "0", leV: 0, reV: 2, exV: 1, movesV: 2,
+      edgeLog: ["edge L0↔3: 2 coins UP (+2 moves)"],
+      newEdgeLog: 0,
+      action: "excess = 0 + 0 + 2 - 1 = 1. Subtree rooted at L0: coins 0+3=3, nodes 2 → surplus 1. Return 1.", kind: "return" },
+
+    { line: [11, 12], active: "nR", pathNodes: ["nR"], done: ["n3", "nL0"],
+      excessByNode: { n3: 2, nL0: 1 }, edgeFlows: { e_L0_3: { mag: 2, dir: 'up' } },
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "leftExcess=1, recurse RIGHT" }
+      ],
+      nodeV: "1", leV: 1, reV: "—", exV: "—", movesV: 2,
+      edgeLog: ["edge L0↔3: 2 coins UP (+2 moves)"],
+      newEdgeLog: 0,
+      action: "Back in solve(root). leftExcess = 1. Now recurse RIGHT into node R0.", kind: "call" },
+
+    { line: [9, 10, 11, 12, 13, 14, 15], active: "nRR", pathNodes: ["nR", "nRR"], done: ["n3", "nL0", "nRR"],
+      excessByNode: { n3: 2, nL0: 1, nRR: -1 }, edgeFlows: { e_L0_3: { mag: 2, dir: 'up' } },
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "waiting on RIGHT" },
+        { label: "solve(R0=0)", sub: "excess = 0+0+0-1 = -1, return -1" }
+      ],
+      nodeV: "0", leV: 0, reV: 0, exV: -1, movesV: 2,
+      edgeLog: ["edge L0↔3: 2 coins UP (+2 moves)"],
+      newEdgeLog: 0,
+      action: "solve(R0=0). Both children null → leftExcess=rightExcess=0. moves += 0. excess = 0+0+0-1 = -1. ★ Node R0 has 0 coins but needs 1 → deficit 1. Return -1.", kind: "return" },
+
+    { line: [13], active: "nR", pathNodes: ["nR"], done: ["n3", "nL0", "nRR"],
+      excessByNode: { n3: 2, nL0: 1, nRR: -1 },
+      edgeFlows: { e_L0_3: { mag: 2, dir: 'up' }, e_R_L0: { mag: 1, dir: 'up' }, e_R_RR: { mag: 1, dir: 'down' } },
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "moves += |1| + |-1| = 2" }
+      ],
+      nodeV: "1", leV: 1, reV: -1, exV: "—", movesV: 4,
+      edgeLog: ["edge L0↔3: 2 coins UP (+2 moves)", "edge root↔L0: 1 coin UP (+1 move)", "edge root↔R0: 1 coin DOWN (+1 move)"],
+      newEdgeLog: 2,
+      action: "★ moves += |1| + |-1| = 2. Edge root↔L0: 1 coin UP (leftExcess=+1). Edge root↔R0: 1 coin DOWN (rightExcess=-1). Total moves = 4.", kind: "flow" },
+
+    { line: [14, 15], active: "nR", pathNodes: ["nR"], done: ["n3", "nL0", "nRR", "nR"],
+      excessByNode: { n3: 2, nL0: 1, nRR: -1, nR: 0 },
+      edgeFlows: { e_L0_3: { mag: 2, dir: 'up' }, e_R_L0: { mag: 1, dir: 'up' }, e_R_RR: { mag: 1, dir: 'down' } },
+      stack: [
+        { label: "distributeCoins", sub: "waiting" },
+        { label: "solve(root)", sub: "excess = 1+1+(-1)-1 = 0, return 0" }
+      ],
+      nodeV: "1", leV: 1, reV: -1, exV: 0, movesV: 4,
+      edgeLog: ["edge L0↔3: 2 coins UP (+2 moves)", "edge root↔L0: 1 coin UP (+1 move)", "edge root↔R0: 1 coin DOWN (+1 move)"],
+      newEdgeLog: 0,
+      action: "excess = 1 + 1 + (-1) - 1 = 0. Whole tree: 4 coins, 4 nodes → balanced. Return 0 (no flow above the root, as expected).", kind: "return" },
+
+    { line: [6], active: null, pathNodes: [], done: ["n3", "nL0", "nRR", "nR"],
+      excessByNode: { n3: 2, nL0: 1, nRR: -1, nR: 0 },
+      edgeFlows: { e_L0_3: { mag: 2, dir: 'up' }, e_R_L0: { mag: 1, dir: 'up' }, e_R_RR: { mag: 1, dir: 'down' } },
+      stack: [],
+      nodeV: "—", leV: "—", reV: "—", exV: 0, movesV: 4,
+      edgeLog: ["edge L0↔3: 2 coins UP (+2 moves)", "edge root↔L0: 1 coin UP (+1 move)", "edge root↔R0: 1 coin DOWN (+1 move)"],
+      newEdgeLog: 0,
+      action: "Done. distributeCoins returns moves = 4. ★ Each edge's contribution: 2 + 1 + 1 = 4.", kind: "done" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevEdgeLogLen = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const leVEl = document.getElementById('leV');
+  const reVEl = document.getElementById('reV');
+  const exVEl = document.getElementById('exV');
+  const movesVEl = document.getElementById('movesV');
+  const stackEl = document.getElementById('stack');
+  const edgeLogEl = document.getElementById('edgeLog');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.nodeV;
+    leVEl.textContent = s.leV;
+    reVEl.textContent = s.reV;
+    exVEl.textContent = s.exV;
+    movesVEl.textContent = s.movesV;
+    // Nodes
+    const pathSet = new Set(s.pathNodes);
+    const doneSet = new Set(s.done);
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('on-stack', 'active', 'done');
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (pathSet.has(key)) {
+        el.classList.add('on-stack');
+      } else if (doneSet.has(key)) {
+        el.classList.add('done');
+      }
+    });
+    // Excess annotations (clear and redraw)
+    while (labelLayer.firstChild) { labelLayer.removeChild(labelLayer.firstChild); }
+    Object.entries(s.excessByNode).forEach(([key, val]) => {
+      const n = nodes[key];
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', n.x + n.r + 4);
+      t.setAttribute('y', n.y - n.r + 2);
+      t.setAttribute('class', 'excess');
+      t.setAttribute('text-anchor', 'start');
+      t.textContent = 'ex=' + val;
+      labelLayer.appendChild(t);
+    });
+    // Edges: reset classes then apply flows
+    Object.entries(edgeEls).forEach(([id, ee]) => {
+      ee.line.setAttribute('class', 'edge');
+    });
+    Object.entries(s.edgeFlows).forEach(([id, flow]) => {
+      const ee = edgeEls[id];
+      if (!ee) return;
+      const cls = flow.dir === 'up' ? 'edge flow-up' : 'edge flow-down';
+      ee.line.setAttribute('class', cls);
+      // Label
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', ee.mid.x + 18);
+      t.setAttribute('y', ee.mid.y + 4);
+      t.setAttribute('class', 'edge-label');
+      t.textContent = '×' + flow.mag;
+      labelLayer.appendChild(t);
+    });
+    // Stack
+    stackEl.innerHTML = '';
+    s.stack.forEach((frame, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('div');
+      label.textContent = frame.label;
+      li.appendChild(label);
+      if (frame.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'frame-sub';
+        sub.textContent = frame.sub;
+        li.appendChild(sub);
+      }
+      if (i === s.stack.length - 1) { li.classList.add('top'); }
+      stackEl.appendChild(li);
+    });
+    if (s.stack.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#6a7a9a'; li.style.fontStyle = 'italic';
+      li.textContent = '[returned]';
+      stackEl.appendChild(li);
+    }
+    // Edge log
+    edgeLogEl.innerHTML = '';
+    s.edgeLog.forEach((entry, i) => {
+      const li = document.createElement('li');
+      li.textContent = entry;
+      if (i >= prevEdgeLogLen) { li.classList.add('new'); }
+      edgeLogEl.appendChild(li);
+    });
+    prevEdgeLogLen = s.edgeLog.length;
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevEdgeLogLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevEdgeLogLen = stepIdx > 0 ? steps[stepIdx - 1].edgeLog.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1200);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
