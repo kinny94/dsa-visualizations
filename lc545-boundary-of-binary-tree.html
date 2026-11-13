@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 545 — Boundary of Binary Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.phase .pill-v { color: #e94560; }
+  .pill.node .pill-v { color: #ff8ca0; }
+  .pill.action .pill-v { color: #9ad4ff; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 340px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  /* Section coloring */
+  .node.sec-root circle { stroke: #ffa500; stroke-width: 3; fill: #2a2010; }
+  .node.sec-root text.val { fill: #ffd87a; font-weight: bold; }
+  .node.sec-left circle { stroke: #9ad4ff; stroke-width: 3; fill: #0f2a4a; }
+  .node.sec-left text.val { fill: #9ad4ff; font-weight: bold; }
+  .node.sec-leaf circle { stroke: #4de88c; stroke-width: 3; fill: #0f3a1f; }
+  .node.sec-leaf text.val { fill: #4de88c; font-weight: bold; }
+  .node.sec-right circle { stroke: #c89aff; stroke-width: 3; fill: #2a1a4a; }
+  .node.sec-right text.val { fill: #c89aff; font-weight: bold; }
+  .node.visited circle { stroke: #666; fill: #2a2a3a; }
+  .node.visited text.val { fill: #aaa; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.25s; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 60px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-root { background: #ffd87a; color: #1a1a2e; }
+  .kind-left { background: #9ad4ff; color: #1a1a2e; }
+  .kind-leaf { background: #4de88c; color: #1a1a2e; }
+  .kind-right { background: #c89aff; color: #1a1a2e; }
+  .kind-reverse { background: #ff8ca0; color: #1a1a2e; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .result-line {
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    padding: 8px 10px;
+    background: #0f3460;
+    border-radius: 4px;
+    border: 1px solid #1a4a7a;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .chip-result {
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    color: #ccc;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+  .chip-result.root { background: #2a2010; border-color: #ffa500; color: #ffd87a; }
+  .chip-result.left { background: #0f2a4a; border-color: #9ad4ff; color: #9ad4ff; }
+  .chip-result.leaf { background: #0f3a1f; border-color: #4de88c; color: #4de88c; }
+  .chip-result.right { background: #2a1a4a; border-color: #c89aff; color: #c89aff; }
+  .chip-result.new { animation: pop 0.4s ease-out; }
+  @keyframes pop {
+    0% { transform: scale(0.3); opacity: 0; }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .phase-strip {
+    display: flex;
+    gap: 2px;
+    font-size: 10px;
+  }
+  .phase-strip > div {
+    flex: 1;
+    padding: 4px 6px;
+    background: #0f3460;
+    text-align: center;
+    color: #666;
+    border-top: 2px solid transparent;
+  }
+  .phase-strip > div.active {
+    background: #1f2a4a;
+    color: #fff;
+  }
+  .phase-strip .p0.active { border-top-color: #ffa500; color: #ffd87a; }
+  .phase-strip .p1.active { border-top-color: #9ad4ff; color: #9ad4ff; }
+  .phase-strip .p2.active { border-top-color: #4de88c; color: #4de88c; }
+  .phase-strip .p3.active { border-top-color: #c89aff; color: #c89aff; }
+  .legend { margin-top: 12px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-root { background: #2a2010; border: 2px solid #ffa500; }
+  .chip-left { background: #0f2a4a; border: 2px solid #9ad4ff; }
+  .chip-leaf { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-right { background: #2a1a4a; border: 2px solid #c89aff; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 545 — Boundary of Binary Tree</h1>
+    <div class="subtitle">Decompose into primitives: root → left boundary (walk left-preferring, skip leaves) → leaves (DFS left-to-right) → right boundary (walk right-preferring, skip leaves, bottom-up)</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill phase"><span class="pill-k">phase</span><span class="pill-v" id="phaseV">init</span></span>
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill action"><span class="pill-k">step</span><span class="pill-v" id="actionV">—</span></span>
+    </div>
+    <div class="phase-strip">
+      <div class="p0" id="p0">0. root</div>
+      <div class="p1" id="p1">1. left boundary</div>
+      <div class="p2" id="p2">2. leaves</div>
+      <div class="p3" id="p3">3. right boundary</div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="result-line" id="result"><span style="color:#888;">result = </span></div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Phases</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6; font-family: 'Monaco', monospace;">
+      <div><span style="color:#ffa500;">(0)</span> result.add(root); if root is leaf, stop.</div>
+      <div><span style="color:#9ad4ff;">(1)</span> addLeftBoundary(root.left):</div>
+      <div style="margin-left: 18px; color: #aaa;">while !null && !leaf: add; prefer left else right</div>
+      <div><span style="color:#4de88c;">(2)</span> addLeaves(root):</div>
+      <div style="margin-left: 18px; color: #aaa;">DFS; if leaf, add. recurse left then right.</div>
+      <div><span style="color:#c89aff;">(3)</span> addRightBoundary(root.right):</div>
+      <div style="margin-left: 18px; color: #aaa;">walk prefer right else left, skip leaves, then reverse the appended segment.</div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="chip-dot chip-root"></div>phase 0 — root</div>
+      <div class="legend-item"><div class="chip-dot chip-left"></div>phase 1 — left boundary</div>
+      <div class="legend-item"><div class="chip-dot chip-leaf"></div>phase 2 — leaves</div>
+      <div class="legend-item"><div class="chip-dot chip-right"></div>phase 3 — right boundary</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.55;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">why skip leaves in 1 & 3</div>
+      Phase 2 catches every leaf. If phase 1 or 3 also included them we’d get duplicates. So the two boundary walks stop AT (not through) the first leaf.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public List<Integer> boundaryOfBinaryTree(TreeNode root) {",
+    "    List<Integer> result = new ArrayList<>();",
+    "    if (root == null) return result;",
+    "    result.add(root.val);",
+    "    if (isLeaf(root)) return result;",
+    "    addLeftBoundary(root.left, result);",
+    "    addLeaves(root, result);",
+    "    addRightBoundary(root.right, result);",
+    "    return result;",
+    "}",
+    "",
+    "private void addLeftBoundary(TreeNode node, List<Integer> r) {",
+    "    while (node != null && !isLeaf(node)) {",
+    "        r.add(node.val);",
+    "        node = node.left != null ? node.left : node.right;",
+    "    }",
+    "}",
+    "",
+    "private void addLeaves(TreeNode node, List<Integer> r) {",
+    "    if (node == null) return;",
+    "    if (isLeaf(node)) { r.add(node.val); return; }",
+    "    addLeaves(node.left, r);",
+    "    addLeaves(node.right, r);",
+    "}",
+    "",
+    "private void addRightBoundary(TreeNode node, List<Integer> r) {",
+    "    int startIdx = r.size();",
+    "    while (node != null && !isLeaf(node)) {",
+    "        r.add(node.val);",
+    "        node = node.right != null ? node.right : node.left;",
+    "    }",
+    "    // reverse r[startIdx..end]",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //             1
+  //           /   \
+  //          2     3
+  //         / \     \
+  //        4   5     6
+  //           / \   /
+  //          7   8 9
+  const nodes = {
+    n1: { x: 320, y:  45, r: 22, val: '1' },
+    n2: { x: 180, y: 125, r: 22, val: '2' },
+    n3: { x: 470, y: 125, r: 22, val: '3' },
+    n4: {  x: 90, y: 205, r: 22, val: '4' },
+    n5: { x: 260, y: 205, r: 22, val: '5' },
+    n6: { x: 530, y: 205, r: 22, val: '6' },
+    n7: { x: 200, y: 285, r: 22, val: '7' },
+    n8: { x: 300, y: 285, r: 22, val: '8' },
+    n9: { x: 490, y: 285, r: 22, val: '9' }
+  };
+  const edges = [
+    { id: 'e_1_2', from: 'n1', to: 'n2' },
+    { id: 'e_1_3', from: 'n1', to: 'n3' },
+    { id: 'e_2_4', from: 'n2', to: 'n4' },
+    { id: 'e_2_5', from: 'n2', to: 'n5' },
+    { id: 'e_3_6', from: 'n3', to: 'n6' },
+    { id: 'e_5_7', from: 'n5', to: 'n7' },
+    { id: 'e_5_8', from: 'n5', to: 'n8' },
+    { id: 'e_6_9', from: 'n6', to: 'n9' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEPS ============
+  // Each step:
+  //   line: active code lines
+  //   phase: 0, 1, 2, or 3
+  //   active: node key
+  //   phaseV, nodeV, actionV: pills text
+  //   sections: { nodeKey: 'root'|'left'|'leaf'|'right' } for persistent coloring
+  //   result: ordered array of { key, sec }  -- result list with section classification
+  //   newResultIdx: index just added (or -1)
+  //   action, kind
+  const steps = [
+    { line: [2, 3, 4], phase: 0, active: null, phaseV: "phase 0", nodeV: "—", actionV: "init",
+      sections: {}, result: [], newResultIdx: -1,
+      action: "Init result = []. root != null.", kind: "init" },
+
+    { line: [4, 5], phase: 0, active: "n1", phaseV: "phase 0 — root", nodeV: "1", actionV: "add root",
+      sections: { n1: 'root' },
+      result: [{ key: 'n1', sec: 'root' }], newResultIdx: 0,
+      action: "★ result.add(1). isLeaf(root)? No (has children) → continue to phase 1.", kind: "root" },
+
+    { line: [6, 12], phase: 1, active: "n2", phaseV: "phase 1 — left boundary", nodeV: "2", actionV: "enter LB",
+      sections: { n1: 'root' },
+      result: [{ key: 'n1', sec: 'root' }], newResultIdx: -1,
+      action: "addLeftBoundary(root.left = 2). 2 != null and not a leaf → enter loop.", kind: "left" },
+
+    { line: [13, 14], phase: 1, active: "n2", phaseV: "phase 1 — left boundary", nodeV: "2", actionV: "add 2",
+      sections: { n1: 'root', n2: 'left' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }], newResultIdx: 1,
+      action: "★ Add 2 to result. Next: 2.left = 4 (non-null) → node = 4.", kind: "left" },
+
+    { line: [13], phase: 1, active: "n4", phaseV: "phase 1 — left boundary", nodeV: "4", actionV: "isLeaf?",
+      sections: { n1: 'root', n2: 'left' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }], newResultIdx: -1,
+      action: "Check: 4 is a LEAF (no children) → exit loop. (Leaves get collected in phase 2 — no duplicate.)", kind: "left" },
+
+    { line: [7, 19], phase: 2, active: "n1", phaseV: "phase 2 — leaves DFS", nodeV: "1", actionV: "enter DFS",
+      sections: { n1: 'root', n2: 'left' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }], newResultIdx: -1,
+      action: "addLeaves(root = 1). Not null, not leaf → recurse LEFT into 2.", kind: "leaf" },
+
+    { line: [19, 22], phase: 2, active: "n2", phaseV: "phase 2 — leaves DFS", nodeV: "2", actionV: "recurse L",
+      sections: { n1: 'root', n2: 'left' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }], newResultIdx: -1,
+      action: "addLeaves(2). Not leaf → recurse LEFT into 4.", kind: "leaf" },
+
+    { line: [20], phase: 2, active: "n4", phaseV: "phase 2 — leaves DFS", nodeV: "4", actionV: "leaf → add",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }], newResultIdx: 2,
+      action: "★ addLeaves(4). LEAF → add 4. Return.", kind: "leaf" },
+
+    { line: [23], phase: 2, active: "n5", phaseV: "phase 2 — leaves DFS", nodeV: "5", actionV: "recurse into 5",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }], newResultIdx: -1,
+      action: "Back in addLeaves(2). Recurse RIGHT into 5. addLeaves(5): not leaf → recurse LEFT into 7.", kind: "leaf" },
+
+    { line: [20], phase: 2, active: "n7", phaseV: "phase 2 — leaves DFS", nodeV: "7", actionV: "leaf → add",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf', n7: 'leaf' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }, { key: 'n7', sec: 'leaf' }], newResultIdx: 3,
+      action: "★ addLeaves(7). LEAF → add 7. Return.", kind: "leaf" },
+
+    { line: [20], phase: 2, active: "n8", phaseV: "phase 2 — leaves DFS", nodeV: "8", actionV: "leaf → add",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf', n7: 'leaf', n8: 'leaf' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }, { key: 'n7', sec: 'leaf' }, { key: 'n8', sec: 'leaf' }], newResultIdx: 4,
+      action: "★ Back in addLeaves(5). Recurse RIGHT into 8. addLeaves(8): LEAF → add 8. Return.", kind: "leaf" },
+
+    { line: [23], phase: 2, active: "n3", phaseV: "phase 2 — leaves DFS", nodeV: "3", actionV: "recurse into 3",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf', n7: 'leaf', n8: 'leaf' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }, { key: 'n7', sec: 'leaf' }, { key: 'n8', sec: 'leaf' }], newResultIdx: -1,
+      action: "Back up through addLeaves(5), (2). In addLeaves(1): now recurse RIGHT into 3. addLeaves(3): not leaf → recurse LEFT (null, returns), then RIGHT into 6.", kind: "leaf" },
+
+    { line: [19, 22, 20], phase: 2, active: "n9", phaseV: "phase 2 — leaves DFS", nodeV: "9", actionV: "leaf → add",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf', n7: 'leaf', n8: 'leaf', n9: 'leaf' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }, { key: 'n7', sec: 'leaf' }, { key: 'n8', sec: 'leaf' }, { key: 'n9', sec: 'leaf' }], newResultIdx: 5,
+      action: "★ addLeaves(6): not leaf → recurse LEFT into 9. addLeaves(9): LEAF → add 9. Return.", kind: "leaf" },
+
+    { line: [8, 26, 27, 28], phase: 3, active: "n3", phaseV: "phase 3 — right boundary", nodeV: "3", actionV: "enter RB",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf', n7: 'leaf', n8: 'leaf', n9: 'leaf' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }, { key: 'n7', sec: 'leaf' }, { key: 'n8', sec: 'leaf' }, { key: 'n9', sec: 'leaf' }], newResultIdx: -1,
+      action: "Phases 0–2 done. addRightBoundary(root.right = 3). startIdx = 6 (current result size). 3 is not a leaf → enter loop.", kind: "right" },
+
+    { line: [28, 29], phase: 3, active: "n3", phaseV: "phase 3 — right boundary", nodeV: "3", actionV: "add 3",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf', n7: 'leaf', n8: 'leaf', n9: 'leaf', n3: 'right' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }, { key: 'n7', sec: 'leaf' }, { key: 'n8', sec: 'leaf' }, { key: 'n9', sec: 'leaf' }, { key: 'n3', sec: 'right' }], newResultIdx: 6,
+      action: "★ Add 3 (top-down, we'll reverse later). 3.right = 6 (non-null) → node = 6.", kind: "right" },
+
+    { line: [28, 29], phase: 3, active: "n6", phaseV: "phase 3 — right boundary", nodeV: "6", actionV: "add 6",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf', n7: 'leaf', n8: 'leaf', n9: 'leaf', n3: 'right', n6: 'right' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }, { key: 'n7', sec: 'leaf' }, { key: 'n8', sec: 'leaf' }, { key: 'n9', sec: 'leaf' }, { key: 'n3', sec: 'right' }, { key: 'n6', sec: 'right' }], newResultIdx: 7,
+      action: "★ Add 6. 6.right = null → FALL BACK to 6.left = 9. node = 9.", kind: "right" },
+
+    { line: [28], phase: 3, active: "n9", phaseV: "phase 3 — right boundary", nodeV: "9", actionV: "isLeaf → stop",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf', n7: 'leaf', n8: 'leaf', n9: 'leaf', n3: 'right', n6: 'right' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }, { key: 'n7', sec: 'leaf' }, { key: 'n8', sec: 'leaf' }, { key: 'n9', sec: 'leaf' }, { key: 'n3', sec: 'right' }, { key: 'n6', sec: 'right' }], newResultIdx: -1,
+      action: "Check: 9 is a LEAF → exit loop. (Already added in phase 2.)", kind: "right" },
+
+    { line: [31], phase: 3, active: null, phaseV: "phase 3 — reverse segment", nodeV: "—", actionV: "reverse RB",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf', n7: 'leaf', n8: 'leaf', n9: 'leaf', n3: 'right', n6: 'right' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }, { key: 'n7', sec: 'leaf' }, { key: 'n8', sec: 'leaf' }, { key: 'n9', sec: 'leaf' }, { key: 'n6', sec: 'right' }, { key: 'n3', sec: 'right' }], newResultIdx: -1,
+      action: "★ Reverse result[6..7] in place: swap 3 and 6 → segment becomes [6, 3]. Anticlockwise order is complete.", kind: "reverse" },
+
+    { line: [9], phase: 3, active: null, phaseV: "done", nodeV: "—", actionV: "return",
+      sections: { n1: 'root', n2: 'left', n4: 'leaf', n7: 'leaf', n8: 'leaf', n9: 'leaf', n3: 'right', n6: 'right' },
+      result: [{ key: 'n1', sec: 'root' }, { key: 'n2', sec: 'left' }, { key: 'n4', sec: 'leaf' }, { key: 'n7', sec: 'leaf' }, { key: 'n8', sec: 'leaf' }, { key: 'n9', sec: 'leaf' }, { key: 'n6', sec: 'right' }, { key: 'n3', sec: 'right' }], newResultIdx: -1,
+      action: "Done. Return [1, 2, 4, 7, 8, 9, 6, 3].", kind: "done" }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  let prevResultLen = 0;
+  const phaseVEl = document.getElementById('phaseV');
+  const nodeVEl = document.getElementById('nodeV');
+  const actionVEl = document.getElementById('actionV');
+  const resultEl = document.getElementById('result');
+  const actionBodyEl = document.getElementById('actionBody');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const phaseEls = [document.getElementById('p0'), document.getElementById('p1'), document.getElementById('p2'), document.getElementById('p3')];
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    phaseVEl.textContent = s.phaseV;
+    nodeVEl.textContent = s.nodeV;
+    actionVEl.textContent = s.actionV;
+    phaseEls.forEach((el, i) => el.classList.toggle('active', i === s.phase));
+    // Nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'sec-root', 'sec-left', 'sec-leaf', 'sec-right', 'visited');
+      const sec = s.sections[key];
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (sec === 'root') {
+        el.classList.add('sec-root');
+      } else if (sec === 'left') {
+        el.classList.add('sec-left');
+      } else if (sec === 'leaf') {
+        el.classList.add('sec-leaf');
+      } else if (sec === 'right') {
+        el.classList.add('sec-right');
+      }
+    });
+    // Result
+    resultEl.innerHTML = '<span style="color:#888;">result = </span>';
+    s.result.forEach((r, i) => {
+      const span = document.createElement('span');
+      span.className = 'chip-result ' + r.sec;
+      span.textContent = nodes[r.key].val;
+      if (i >= prevResultLen) { span.classList.add('new'); }
+      resultEl.appendChild(span);
+    });
+    prevResultLen = s.result.length;
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    if (idx === 0) { prevResultLen = 0; }
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => {
+    stopPlay();
+    prevResultLen = stepIdx > 0 ? steps[stepIdx - 1].result.length : 0;
+    goTo(stepIdx - 1);
+  });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1200);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

@@ -74,6 +74,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [979](https://kinny94.github.io/dsa-visualizations/lc979-distribute-coins-in-binary-tree.html) | Distribute Coins in Binary Tree | Binary Tree · Post-order · signed excess |
 | [1448](https://kinny94.github.io/dsa-visualizations/lc1448-count-good-nodes-in-binary-tree.html) | Count Good Nodes in Binary Tree | Binary Tree · Pre-order · carry max down |
 | [129](https://kinny94.github.io/dsa-visualizations/lc129-sum-root-to-leaf-numbers.html) | Sum Root to Leaf Numbers | Binary Tree · Pre-order · carry number down |
+| [545](https://kinny94.github.io/dsa-visualizations/lc545-boundary-of-binary-tree.html) | Boundary of Binary Tree | Binary Tree · Composite traversal |
 
 ## Adding a new animation
 
