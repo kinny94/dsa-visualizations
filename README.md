@@ -75,6 +75,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [1448](https://kinny94.github.io/dsa-visualizations/lc1448-count-good-nodes-in-binary-tree.html) | Count Good Nodes in Binary Tree | Binary Tree · Pre-order · carry max down |
 | [129](https://kinny94.github.io/dsa-visualizations/lc129-sum-root-to-leaf-numbers.html) | Sum Root to Leaf Numbers | Binary Tree · Pre-order · carry number down |
 | [545](https://kinny94.github.io/dsa-visualizations/lc545-boundary-of-binary-tree.html) | Boundary of Binary Tree | Binary Tree · Composite traversal |
+| [2096](https://kinny94.github.io/dsa-visualizations/lc2096-step-by-step-directions-binary-tree.html) | Step By Step Directions From a Binary Tree Node to Another | Binary Tree · Path finding · LCA via prefix |
 
 ## Adding a new animation
 
