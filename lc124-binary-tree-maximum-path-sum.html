@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 124 — Binary Tree Maximum Path Sum</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #ff8ca0; }
+  .pill.gmax .pill-v { color: #4de88c; }
+  .pill.ret .pill-v { color: #c89aff; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 320px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node text.ret {
+    fill: #c89aff;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+  }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.done circle { stroke: #666; fill: #2a2a3a; }
+  .node.done text.val { fill: #aaa; }
+  .node.on-bend circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; }
+  .node.on-bend text.val { fill: #4de88c; }
+  .node.on-return circle { stroke: #c89aff; stroke-width: 3; fill: #2a1a4a; }
+  .node.on-return text.val { fill: #c89aff; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.25s; }
+  .edge.on-bend { stroke: #4de88c; stroke-width: 3.5; }
+  .edge.on-return { stroke: #c89aff; stroke-width: 3; }
+  .edge.clamped { stroke: #ff6b6b; stroke-dasharray: 4 3; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 60px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-descend { background: #9ad4ff; color: #1a1a2e; }
+  .kind-leaf { background: #ffd87a; color: #1a1a2e; }
+  .kind-bend { background: #4de88c; color: #1a1a2e; }
+  .kind-return { background: #c89aff; color: #1a1a2e; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .stack-wrap { overflow: auto; }
+  .stack-item {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    padding: 4px 8px;
+    background: #0f3460;
+    border-radius: 3px;
+    margin-bottom: 3px;
+    border-left: 3px solid #e94560;
+  }
+  .stack-item.returning { border-left-color: #c89aff; color: #c89aff; }
+  .stack-item .label { color: #888; font-size: 10px; }
+  .max-display {
+    padding: 8px 10px;
+    background: #0f3a1f;
+    border: 1px solid #4de88c;
+    border-radius: 4px;
+    font-family: 'Monaco', monospace;
+    font-size: 14px;
+    color: #4de88c;
+    font-weight: bold;
+    text-align: center;
+  }
+  .max-display .lbl { color: #888; font-size: 10px; font-weight: normal; }
+  .max-display.updated { animation: pulse 0.5s ease-out; }
+  @keyframes pulse {
+    0% { transform: scale(1); background: #0f3a1f; }
+    50% { transform: scale(1.04); background: #1f5a2f; }
+    100% { transform: scale(1); background: #0f3a1f; }
+  }
+  .legend { margin-top: 12px; font-size: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: #aaa; }
+  .chip-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .chip-bend { background: #0f3a1f; border: 2px solid #4de88c; }
+  .chip-return { background: #2a1a4a; border: 2px solid #c89aff; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 124 — Binary Tree Maximum Path Sum</h1>
+    <div class="subtitle">Post-order with the two-quantity dichotomy: RETURN = extendable one-side gain (parent can continue it) · GLOBAL = bend-path that terminates at this node. Tree = [-10, 9, 20, null, null, 15, 7] → 42</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill ret"><span class="pill-k">return</span><span class="pill-v" id="retV">—</span></span>
+      <span class="pill gmax"><span class="pill-k">global max</span><span class="pill-v" id="gmaxV">−∞</span></span>
+    </div>
+    <div class="max-display" id="maxDisplay">
+      <span class="lbl">max = </span><span id="maxVal">−∞</span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Call Stack</div>
+    <div class="stack-wrap" id="stack"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="chip-dot chip-bend"></div>bend path at this node</div>
+      <div class="legend-item"><div class="chip-dot chip-return"></div>extendable (return) gain</div>
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.55;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">return vs global</div>
+      Return value = one-sided gain the PARENT can extend (a path can't fork through a node).
+      Global max = path that bends AT this node (uses BOTH sides). We never return the bend, only record it.
+    </div>
+    <div style="margin-top: 14px; font-size: 10px; color: #aaa; line-height: 1.55;">
+      <div style="color:#e94560; text-transform:uppercase; letter-spacing:1px; font-size:10px; margin-bottom:5px;">why clamp to 0</div>
+      If a subtree's return gain is negative, don't take it. Starting fresh (gain = 0) is always at least as good. That's the <code>Math.max(0, childReturn)</code> clamp.
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "private int max;",
+    "public int maxPathSum(TreeNode root) {",
+    "    max = Integer.MIN_VALUE;",
+    "    solve(root);",
+    "    return max;",
+    "}",
+    "",
+    "private int solve(TreeNode node) {",
+    "    if (node == null) return 0;",
+    "    int leftMax  = solve(node.left);",
+    "    int rightMax = solve(node.right);",
+    "    int leftGain  = Math.max(0, leftMax);",
+    "    int rightGain = Math.max(0, rightMax);",
+    "    int bendHere = node.val + leftGain + rightGain;",
+    "    max = Math.max(max, bendHere);",
+    "    return node.val + Math.max(leftGain, rightGain);",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //         -10
+  //         / \
+  //        9  20
+  //           / \
+  //          15  7
+  const nodes = {
+    nR:  { x: 320, y:  50, r: 26, val: '-10' },
+    n9:  { x: 180, y: 140, r: 22, val: '9'   },
+    n20: { x: 460, y: 140, r: 22, val: '20'  },
+    n15: { x: 380, y: 230, r: 22, val: '15'  },
+    n7:  { x: 540, y: 230, r: 22, val: '7'   }
+  };
+  const edges = [
+    { id: 'e_R_9',  from: 'nR',  to: 'n9'  },
+    { id: 'e_R_20', from: 'nR',  to: 'n20' },
+    { id: 'e_20_15',from: 'n20', to: 'n15' },
+    { id: 'e_20_7', from: 'n20', to: 'n7'  }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  const nodeRetTexts = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    const ret = document.createElementNS(SVGNS, 'text');
+    ret.setAttribute('x', n.x);
+    ret.setAttribute('y', n.y + n.r + 14);
+    ret.setAttribute('class', 'ret');
+    ret.textContent = '';
+    g.appendChild(ret);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    nodeRetTexts[key] = ret;
+  });
+
+  // ============ STEPS ============
+  const steps = [
+    {
+      line: [3, 4], active: null, retV: "—", gmaxV: "−∞", maxVal: "−∞",
+      nodeState: {}, edgeState: {}, retLabels: {}, stack: [],
+      action: "Initialize max = Integer.MIN_VALUE. Call solve(-10).",
+      kind: "init"
+    },
+    {
+      line: [8, 10], active: "nR", retV: "—", gmaxV: "−∞", maxVal: "−∞",
+      nodeState: {}, edgeState: {}, retLabels: {},
+      stack: [{ node: "-10", state: "descend L" }],
+      action: "solve(-10). Not null → recurse LEFT into 9 first (post-order: children before parent).",
+      kind: "descend"
+    },
+    {
+      line: [8, 10], active: "n9", retV: "—", gmaxV: "−∞", maxVal: "−∞",
+      nodeState: {}, edgeState: {}, retLabels: {},
+      stack: [
+        { node: "-10", state: "awaiting L" },
+        { node: "9",   state: "descend L" }
+      ],
+      action: "solve(9). Not null → recurse LEFT. 9.left = null, so solve(null) returns 0 immediately. leftMax = 0.",
+      kind: "descend"
+    },
+    {
+      line: [11, 12, 13, 14, 15], active: "n9", retV: "9", gmaxV: "9", maxVal: "9",
+      nodeState: { n9: 'on-bend' }, edgeState: {}, retLabels: { n9: '→ 9' },
+      stack: [
+        { node: "-10", state: "awaiting L" },
+        { node: "9",   state: "bend" }
+      ],
+      action: "★ 9 is a leaf. leftMax = rightMax = 0 → leftGain = rightGain = 0. bendHere = 9 + 0 + 0 = 9. max: −∞ → 9. Return 9 + max(0,0) = 9.",
+      kind: "bend",
+      maxUpdated: true
+    },
+    {
+      line: [11], active: "nR", retV: "leftMax = 9", gmaxV: "9", maxVal: "9",
+      nodeState: { n9: 'done' }, edgeState: { e_R_9: 'on-return' }, retLabels: { n9: '→ 9' },
+      stack: [
+        { node: "-10", state: "L done, descend R" }
+      ],
+      action: "Back at solve(-10). leftMax = 9. Now recurse RIGHT into 20.",
+      kind: "return"
+    },
+    {
+      line: [8, 10], active: "n20", retV: "—", gmaxV: "9", maxVal: "9",
+      nodeState: { n9: 'done' }, edgeState: { e_R_9: 'on-return' }, retLabels: { n9: '→ 9' },
+      stack: [
+        { node: "-10", state: "awaiting R" },
+        { node: "20",  state: "descend L" }
+      ],
+      action: "solve(20). Not null → recurse LEFT into 15 first.",
+      kind: "descend"
+    },
+    {
+      line: [11, 12, 13, 14, 15], active: "n15", retV: "15", gmaxV: "15", maxVal: "15",
+      nodeState: { n9: 'done', n15: 'on-bend' },
+      edgeState: { e_R_9: 'on-return' },
+      retLabels: { n9: '→ 9', n15: '→ 15' },
+      stack: [
+        { node: "-10", state: "awaiting R" },
+        { node: "20",  state: "awaiting L" },
+        { node: "15",  state: "bend" }
+      ],
+      action: "★ solve(15), leaf. leftGain = rightGain = 0. bendHere = 15. max: 9 → 15. Return 15.",
+      kind: "bend",
+      maxUpdated: true
+    },
+    {
+      line: [11], active: "n20", retV: "leftMax = 15", gmaxV: "15", maxVal: "15",
+      nodeState: { n9: 'done', n15: 'done' },
+      edgeState: { e_R_9: 'on-return', e_20_15: 'on-return' },
+      retLabels: { n9: '→ 9', n15: '→ 15' },
+      stack: [
+        { node: "-10", state: "awaiting R" },
+        { node: "20",  state: "L done, descend R" }
+      ],
+      action: "Back at solve(20). leftMax = 15. Now recurse RIGHT into 7.",
+      kind: "return"
+    },
+    {
+      line: [11, 12, 13, 14, 15], active: "n7", retV: "7", gmaxV: "15", maxVal: "15",
+      nodeState: { n9: 'done', n15: 'done', n7: 'on-bend' },
+      edgeState: { e_R_9: 'on-return', e_20_15: 'on-return' },
+      retLabels: { n9: '→ 9', n15: '→ 15', n7: '→ 7' },
+      stack: [
+        { node: "-10", state: "awaiting R" },
+        { node: "20",  state: "awaiting R" },
+        { node: "7",   state: "bend" }
+      ],
+      action: "solve(7), leaf. bendHere = 7. max stays 15 (7 < 15). Return 7.",
+      kind: "bend"
+    },
+    {
+      line: [12, 13], active: "n20", retV: "—", gmaxV: "15", maxVal: "15",
+      nodeState: { n9: 'done', n15: 'done', n7: 'done' },
+      edgeState: { e_R_9: 'on-return', e_20_15: 'on-return', e_20_7: 'on-return' },
+      retLabels: { n9: '→ 9', n15: '→ 15', n7: '→ 7' },
+      stack: [
+        { node: "-10", state: "awaiting R" },
+        { node: "20",  state: "both done, combining" }
+      ],
+      action: "Back at solve(20). leftMax = 15, rightMax = 7. Clamp: leftGain = max(0,15) = 15. rightGain = max(0,7) = 7. (Both positive — nothing clipped.)",
+      kind: "return"
+    },
+    {
+      line: [14, 15], active: "n20", retV: "—", gmaxV: "42", maxVal: "42",
+      nodeState: { n9: 'done', n15: 'done', n7: 'done', n20: 'on-bend' },
+      edgeState: { e_R_9: 'on-return', e_20_15: 'on-bend', e_20_7: 'on-bend' },
+      retLabels: { n9: '→ 9', n15: '→ 15', n7: '→ 7' },
+      stack: [
+        { node: "-10", state: "awaiting R" },
+        { node: "20",  state: "bend" }
+      ],
+      action: "★ bendHere = 20 + 15 + 7 = 42 (path 15 → 20 → 7). max: 15 → 42. The BEND USES BOTH sides but can't be returned to parent — a path can't fork.",
+      kind: "bend",
+      maxUpdated: true
+    },
+    {
+      line: [16], active: "n20", retV: "35", gmaxV: "42", maxVal: "42",
+      nodeState: { n9: 'done', n15: 'done', n7: 'done', n20: 'on-return' },
+      edgeState: { e_R_9: 'on-return', e_20_15: 'on-return' },
+      retLabels: { n9: '→ 9', n15: '→ 15', n7: '→ 7', n20: '→ 35' },
+      stack: [
+        { node: "-10", state: "awaiting R" },
+        { node: "20",  state: "returning 35" }
+      ],
+      action: "Return 20 + max(15, 7) = 35. This is the one-sided gain the PARENT can extend. (The 7 branch is dropped — parent extends only one side.)",
+      kind: "return"
+    },
+    {
+      line: [11, 12, 13], active: "nR", retV: "—", gmaxV: "42", maxVal: "42",
+      nodeState: { n9: 'done', n15: 'done', n7: 'done', n20: 'done' },
+      edgeState: { e_R_9: 'on-return', e_R_20: 'on-return', e_20_15: 'on-return' },
+      retLabels: { n9: '→ 9', n15: '→ 15', n7: '→ 7', n20: '→ 35' },
+      stack: [
+        { node: "-10", state: "both done, combining" }
+      ],
+      action: "Back at solve(-10). leftMax = 9, rightMax = 35. Clamp (both positive): leftGain = 9, rightGain = 35.",
+      kind: "return"
+    },
+    {
+      line: [14, 15], active: "nR", retV: "—", gmaxV: "42", maxVal: "42",
+      nodeState: { n9: 'done', n15: 'done', n7: 'done', n20: 'done' },
+      edgeState: { e_R_9: 'on-bend', e_R_20: 'on-bend', e_20_15: 'on-return' },
+      retLabels: { n9: '→ 9', n15: '→ 15', n7: '→ 7', n20: '→ 35' },
+      stack: [
+        { node: "-10", state: "bend check" }
+      ],
+      action: "bendHere = -10 + 9 + 35 = 34. max stays 42 (34 < 42). The root's -10 drags down the bend — it would be better NOT to include the root at all. Which is fine: the recorded max=42 already represents a path that bypasses the root.",
+      kind: "bend"
+    },
+    {
+      line: [16], active: "nR", retV: "25", gmaxV: "42", maxVal: "42",
+      nodeState: { n9: 'done', n15: 'done', n7: 'done', n20: 'done', nR: 'on-return' },
+      edgeState: { e_R_20: 'on-return', e_20_15: 'on-return' },
+      retLabels: { n9: '→ 9', n15: '→ 15', n7: '→ 7', n20: '→ 35', nR: '→ 25' },
+      stack: [
+        { node: "-10", state: "returning 25" }
+      ],
+      action: "Return -10 + max(9, 35) = 25. (Nothing above the root, so this return value is discarded — but the pattern is uniform.)",
+      kind: "return"
+    },
+    {
+      line: [5], active: null, retV: "—", gmaxV: "42", maxVal: "42",
+      nodeState: { n9: 'done', n15: 'done', n7: 'done', n20: 'done', nR: 'done' },
+      edgeState: { e_R_20: 'on-bend', e_20_15: 'on-bend', e_20_7: 'on-bend' },
+      retLabels: { n9: '→ 9', n15: '→ 15', n7: '→ 7', n20: '→ 35', nR: '→ 25' },
+      stack: [],
+      action: "Done. Return max = 42. Winning path: 15 → 20 → 7 (bends at node 20). The root-including path (9 → -10 → 20 → 15 = 34) loses because of the negative root.",
+      kind: "done"
+    }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const retVEl = document.getElementById('retV');
+  const gmaxVEl = document.getElementById('gmaxV');
+  const maxValEl = document.getElementById('maxVal');
+  const maxDisplayEl = document.getElementById('maxDisplay');
+  const actionBodyEl = document.getElementById('action').querySelector('div:last-child');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const stackEl = document.getElementById('stack');
+
+  function render(idx, prevIdx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    const nv = s.active ? nodes[s.active].val : "—";
+    nodeVEl.textContent = nv;
+    retVEl.textContent = s.retV;
+    gmaxVEl.textContent = s.gmaxV;
+    maxValEl.textContent = s.maxVal;
+    // Flash max if updated and we moved forward
+    if (s.maxUpdated && prevIdx !== undefined && idx > prevIdx) {
+      maxDisplayEl.classList.remove('updated');
+      void maxDisplayEl.offsetWidth;
+      maxDisplayEl.classList.add('updated');
+    } else {
+      maxDisplayEl.classList.remove('updated');
+    }
+    // Nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'done', 'on-bend', 'on-return');
+      const st = s.nodeState[key];
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (st) {
+        el.classList.add(st);
+      }
+      nodeRetTexts[key].textContent = s.retLabels[key] || '';
+    });
+    // Edges
+    Object.keys(edgeEls).forEach(eId => {
+      const el = edgeEls[eId];
+      el.classList.remove('on-bend', 'on-return', 'clamped');
+      if (s.edgeState[eId]) {
+        el.classList.add(s.edgeState[eId]);
+      }
+    });
+    // Stack
+    stackEl.innerHTML = '';
+    if (s.stack.length === 0) {
+      const d = document.createElement('div');
+      d.style.color = '#666';
+      d.style.fontStyle = 'italic';
+      d.style.fontSize = '11px';
+      d.textContent = '(empty)';
+      stackEl.appendChild(d);
+    } else {
+      [...s.stack].reverse().forEach(f => {
+        const d = document.createElement('div');
+        d.className = 'stack-item' + (f.state.startsWith('returning') ? ' returning' : '');
+        d.innerHTML = `solve(${f.node}) <span class="label">— ${f.state}</span>`;
+        stackEl.appendChild(d);
+      });
+    }
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    const prev = stepIdx;
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1400);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
