@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 270 — Closest Binary Search Tree Value</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #ff8ca0; }
+  .pill.close .pill-v { color: #4de88c; }
+  .pill.diff .pill-v { color: #9ad4ff; }
+  .state-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .state-box {
+    flex: 1;
+    padding: 8px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+  }
+  .state-box .lbl { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 3px; }
+  .state-box .val { font-weight: bold; font-size: 14px; }
+  .state-box.target .val { color: #ffa500; }
+  .state-box.closest .val { color: #4de88c; }
+  .state-box.closest.updated { animation: pulse 0.5s ease-out; }
+  @keyframes pulse {
+    0% { transform: scale(1); background: #0f3460; }
+    50% { transform: scale(1.05); background: #1f5a2f; border-color: #4de88c; }
+    100% { transform: scale(1); background: #0f3460; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 300px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node text.diff {
+    fill: #9ad4ff;
+    font-size: 9px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+  }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.closest circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; }
+  .node.closest text.val { fill: #4de88c; }
+  .node.visited circle { stroke: #666; fill: #2a2a3a; }
+  .node.visited text.val { fill: #aaa; }
+  .node.pruned circle { stroke: #ff6b6b; fill: #2a1010; opacity: 0.35; }
+  .node.pruned text.val { fill: #ff6b6b; opacity: 0.6; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.25s; }
+  .edge.on-path { stroke: #e94560; stroke-width: 3; }
+  .edge.pruned { stroke: #4a1a1a; stroke-dasharray: 4 3; opacity: 0.4; }
+  .target-line {
+    stroke: #ffa500;
+    stroke-width: 1.5;
+    stroke-dasharray: 5 3;
+    opacity: 0.6;
+  }
+  .target-label {
+    fill: #ffa500;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 60px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-visit { background: #9ad4ff; color: #1a1a2e; }
+  .kind-update { background: #4de88c; color: #1a1a2e; }
+  .kind-skip { background: #666; color: #eee; }
+  .kind-tie { background: #c89aff; color: #1a1a2e; }
+  .kind-descend { background: #ff8ca0; color: #1a1a2e; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  .nl-row { font-family: 'Monaco', monospace; font-size: 11px; color: #aaa; display: flex; gap: 10px; }
+  .nl-row span.hi { color: #4de88c; font-weight: bold; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 270 — Closest Binary Search Tree Value</h1>
+    <div class="subtitle">BST descent + running "closest" tracker. Tie-break: on equal distance, keep the SMALLER value. Tree = [4,2,5,1,3], target = 3.5 → answer 3</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill diff"><span class="pill-k">|node − target|</span><span class="pill-v" id="diffV">—</span></span>
+      <span class="pill close"><span class="pill-k">best diff</span><span class="pill-v" id="bestV">—</span></span>
+    </div>
+    <div class="state-row">
+      <div class="state-box target"><span class="lbl">target</span><span class="val">3.5</span></div>
+      <div class="state-box closest" id="closestBox"><span class="lbl">closest</span><span class="val" id="closestV">—</span></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 300" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">The BST pruning move</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+      If <code>target &lt; node.val</code>, every value in the RIGHT subtree is strictly greater than <code>node.val</code> and thus farther from target than <code>node.val</code> itself. So the right subtree can't contain anything closer — <strong>prune it</strong>, descend left. Mirror for the other direction. One comparison per step, half the tree gone.
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Tie-break</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        When <code>|node.val − target| == |closest − target|</code>, keep the <strong>smaller</strong> value. Can't rely on first-visited or last-visited alone — the smaller tied value can be either, depending on tree shape.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Family placement</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>BST descent with running aggregate</strong>. Same skeleton as LC 700 (search), LC 701 (insert), LC 450 (delete), LC 235 (LCA). All of them: compare target to <code>node.val</code>, pick one child, maybe do bookkeeping, repeat.
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public int closestValue(TreeNode root, double target) {",
+    "    int closest = root.val;",
+    "    TreeNode node = root;",
+    "    while (node != null) {",
+    "        double diff = Math.abs(node.val - target);",
+    "        double best = Math.abs(closest - target);",
+    "        if (diff < best",
+    "            || (diff == best && node.val < closest)) {",
+    "            closest = node.val;",
+    "        }",
+    "        node = target < node.val ? node.left : node.right;",
+    "    }",
+    "    return closest;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //         4
+  //        / \
+  //       2   5
+  //      / \
+  //     1   3
+  const nodes = {
+    n4: { x: 320, y:  50, r: 22, val: '4' },
+    n2: { x: 200, y: 140, r: 22, val: '2' },
+    n5: { x: 460, y: 140, r: 22, val: '5' },
+    n1: { x: 130, y: 230, r: 22, val: '1' },
+    n3: { x: 280, y: 230, r: 22, val: '3' }
+  };
+  const edges = [
+    { id: 'e_4_2', from: 'n4', to: 'n2' },
+    { id: 'e_4_5', from: 'n4', to: 'n5' },
+    { id: 'e_2_1', from: 'n2', to: 'n1' },
+    { id: 'e_2_3', from: 'n2', to: 'n3' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  // Target line for reference at y matching between 3 and 4 positions (y coordinate not meaningful, just a visual marker)
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  const nodeDiffTexts = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    const d = document.createElementNS(SVGNS, 'text');
+    d.setAttribute('x', n.x);
+    d.setAttribute('y', n.y + n.r + 14);
+    d.setAttribute('class', 'diff');
+    d.textContent = '';
+    g.appendChild(d);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    nodeDiffTexts[key] = d;
+  });
+
+  // ============ STEPS ============
+  // Each step:
+  //   line: active code lines
+  //   active: node key or null
+  //   closest: value for state box
+  //   closestKey: node key marked as "closest" circle (green ring)
+  //   nodeV, diffV, bestV: pill values
+  //   diffs: per-node diff label to show
+  //   nodeState: { key: 'visited'|'pruned'|'closest' }
+  //   edgeState: { edgeId: 'on-path'|'pruned' }
+  //   action, kind, maxUpdated
+  const steps = [
+    {
+      line: [2, 3], active: null, closest: 4, closestKey: 'n4',
+      nodeV: "—", diffV: "—", bestV: "—",
+      diffs: {},
+      nodeState: {}, edgeState: {},
+      action: "Initialize: closest = root.val = 4. node = root. Target = 3.5.",
+      kind: "init"
+    },
+    {
+      line: [4, 5, 6], active: "n4", closest: 4, closestKey: 'n4',
+      nodeV: "4", diffV: "0.5", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5' },
+      nodeState: {}, edgeState: {},
+      action: "Visit 4. diff = |4 − 3.5| = 0.5. best = |4 − 3.5| = 0.5. (Closest is currently the root itself.)",
+      kind: "visit"
+    },
+    {
+      line: [7, 8], active: "n4", closest: 4, closestKey: 'n4',
+      nodeV: "4", diffV: "0.5", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5' },
+      nodeState: {}, edgeState: {},
+      action: "Compare: diff < best? 0.5 < 0.5 → NO. Tie check: diff == best (yes) AND node.val < closest? 4 < 4 → NO. Skip update.",
+      kind: "skip"
+    },
+    {
+      line: [11], active: "n4", closest: 4, closestKey: 'n4',
+      nodeV: "4", diffV: "0.5", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5' },
+      nodeState: { n4: 'visited', n5: 'pruned' },
+      edgeState: { e_4_2: 'on-path', e_4_5: 'pruned' },
+      action: "Descend: target 3.5 < node.val 4 → go LEFT. (Everything in the RIGHT subtree is ≥ 5, so strictly farther from 3.5 than 4 is — PRUNED.)",
+      kind: "descend"
+    },
+    {
+      line: [4, 5, 6], active: "n2", closest: 4, closestKey: 'n4',
+      nodeV: "2", diffV: "1.5", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5', n2: '|2−3.5|=1.5' },
+      nodeState: { n4: 'visited', n5: 'pruned' },
+      edgeState: { e_4_2: 'on-path', e_4_5: 'pruned' },
+      action: "Visit 2. diff = |2 − 3.5| = 1.5. best stays 0.5.",
+      kind: "visit"
+    },
+    {
+      line: [7, 8], active: "n2", closest: 4, closestKey: 'n4',
+      nodeV: "2", diffV: "1.5", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5', n2: '|2−3.5|=1.5' },
+      nodeState: { n4: 'visited', n5: 'pruned' },
+      edgeState: { e_4_2: 'on-path', e_4_5: 'pruned' },
+      action: "Compare: 1.5 < 0.5? NO. Tie? 1.5 == 0.5 → NO. Skip.",
+      kind: "skip"
+    },
+    {
+      line: [11], active: "n2", closest: 4, closestKey: 'n4',
+      nodeV: "2", diffV: "1.5", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5', n2: '|2−3.5|=1.5' },
+      nodeState: { n4: 'visited', n2: 'visited', n5: 'pruned', n1: 'pruned' },
+      edgeState: { e_4_2: 'on-path', e_4_5: 'pruned', e_2_3: 'on-path', e_2_1: 'pruned' },
+      action: "Descend: 3.5 < 2? NO → go RIGHT. (Left subtree is ≤ 1, strictly farther — PRUNED.)",
+      kind: "descend"
+    },
+    {
+      line: [4, 5, 6], active: "n3", closest: 4, closestKey: 'n4',
+      nodeV: "3", diffV: "0.5", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5', n2: '|2−3.5|=1.5', n3: '|3−3.5|=0.5' },
+      nodeState: { n4: 'visited', n2: 'visited', n5: 'pruned', n1: 'pruned' },
+      edgeState: { e_4_2: 'on-path', e_4_5: 'pruned', e_2_3: 'on-path', e_2_1: 'pruned' },
+      action: "Visit 3. diff = |3 − 3.5| = 0.5. best is still 0.5 — EXACT TIE with 4.",
+      kind: "tie"
+    },
+    {
+      line: [7, 8, 9], active: "n3", closest: 3, closestKey: 'n3',
+      nodeV: "3", diffV: "0.5", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5', n2: '|2−3.5|=1.5', n3: '|3−3.5|=0.5' },
+      nodeState: { n4: 'visited', n2: 'visited', n5: 'pruned', n1: 'pruned' },
+      edgeState: { e_4_2: 'on-path', e_4_5: 'pruned', e_2_3: 'on-path', e_2_1: 'pruned' },
+      action: "★ Tie-break: diff == best (0.5 == 0.5) AND node.val < closest (3 < 4) → UPDATE closest = 3. This is the whole reason for the compound condition.",
+      kind: "update",
+      closestUpdated: true
+    },
+    {
+      line: [11], active: "n3", closest: 3, closestKey: 'n3',
+      nodeV: "3", diffV: "0.5", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5', n2: '|2−3.5|=1.5', n3: '|3−3.5|=0.5' },
+      nodeState: { n4: 'visited', n2: 'visited', n5: 'pruned', n1: 'pruned' },
+      edgeState: { e_4_2: 'on-path', e_4_5: 'pruned', e_2_3: 'on-path', e_2_1: 'pruned' },
+      action: "Descend: 3.5 < 3? NO → go RIGHT. 3.right is null.",
+      kind: "descend"
+    },
+    {
+      line: [4], active: null, closest: 3, closestKey: 'n3',
+      nodeV: "null", diffV: "—", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5', n2: '|2−3.5|=1.5', n3: '|3−3.5|=0.5' },
+      nodeState: { n4: 'visited', n2: 'visited', n5: 'pruned', n1: 'pruned' },
+      edgeState: { e_4_2: 'on-path', e_4_5: 'pruned', e_2_3: 'on-path', e_2_1: 'pruned' },
+      action: "node == null → exit while loop.",
+      kind: "visit"
+    },
+    {
+      line: [13], active: null, closest: 3, closestKey: 'n3',
+      nodeV: "—", diffV: "—", bestV: "0.5",
+      diffs: { n4: '|4−3.5|=0.5', n2: '|2−3.5|=1.5', n3: '|3−3.5|=0.5' },
+      nodeState: { n4: 'visited', n2: 'visited', n5: 'pruned', n1: 'pruned' },
+      edgeState: { e_4_2: 'on-path', e_4_5: 'pruned', e_2_3: 'on-path', e_2_1: 'pruned' },
+      action: "Return closest = 3. Visited only 3 nodes along the descent path (4 → 2 → 3); 5 and 1 were pruned by the BST property. O(h) time.",
+      kind: "done"
+    }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const diffVEl = document.getElementById('diffV');
+  const bestVEl = document.getElementById('bestV');
+  const closestVEl = document.getElementById('closestV');
+  const closestBoxEl = document.getElementById('closestBox');
+  const actionBodyEl = document.getElementById('action').querySelector('div:last-child');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx, prevIdx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.nodeV;
+    diffVEl.textContent = s.diffV;
+    bestVEl.textContent = s.bestV;
+    closestVEl.textContent = s.closest;
+    if (s.closestUpdated && prevIdx !== undefined && idx > prevIdx) {
+      closestBoxEl.classList.remove('updated');
+      void closestBoxEl.offsetWidth;
+      closestBoxEl.classList.add('updated');
+    } else {
+      closestBoxEl.classList.remove('updated');
+    }
+    // Nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'visited', 'pruned', 'closest');
+      const st = s.nodeState[key];
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (key === s.closestKey) {
+        el.classList.add('closest');
+      } else if (st) {
+        el.classList.add(st);
+      }
+      nodeDiffTexts[key].textContent = s.diffs[key] || '';
+    });
+    // Also mark closestKey as closest even if it's the active node (give extra ring)
+    if (s.closestKey && s.active !== s.closestKey) {
+      nodeEls[s.closestKey].classList.add('closest');
+    }
+    // Edges
+    Object.keys(edgeEls).forEach(eId => {
+      const el = edgeEls[eId];
+      el.classList.remove('on-path', 'pruned');
+      if (s.edgeState[eId]) {
+        el.classList.add(s.edgeState[eId]);
+      }
+    });
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    const prev = stepIdx;
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1400);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
