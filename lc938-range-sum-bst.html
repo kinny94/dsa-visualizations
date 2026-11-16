@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 938 — Range Sum of BST</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #ff8ca0; }
+  .pill.sum .pill-v { color: #4de88c; }
+  .pill.action .pill-v { color: #c89aff; }
+  .state-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .state-box {
+    flex: 1;
+    padding: 8px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+  }
+  .state-box .lbl { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 3px; }
+  .state-box .val { font-weight: bold; font-size: 14px; }
+  .state-box.low .val { color: #ff8ca0; }
+  .state-box.high .val { color: #c89aff; }
+  .state-box.sum .val { color: #4de88c; }
+  .state-box.sum.updated { animation: pulse 0.5s ease-out; }
+  @keyframes pulse {
+    0% { transform: scale(1); background: #0f3460; }
+    50% { transform: scale(1.05); background: #1f5a2f; border-color: #4de88c; }
+    100% { transform: scale(1); background: #0f3460; }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 280px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.active circle { stroke: #ff8ca0; stroke-width: 4; fill: #e94560; }
+  .node.active text.val { fill: #fff; }
+  .node.in-range circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; }
+  .node.in-range text.val { fill: #4de88c; }
+  .node.below circle { stroke: #ff8ca0; stroke-width: 3; fill: #2a1818; }
+  .node.below text.val { fill: #ff8ca0; }
+  .node.above circle { stroke: #c89aff; stroke-width: 3; fill: #2a1a4a; }
+  .node.above text.val { fill: #c89aff; }
+  .node.pruned circle { stroke: #ff6b6b; fill: #2a1010; opacity: 0.35; }
+  .node.pruned text.val { fill: #ff6b6b; opacity: 0.6; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.25s; }
+  .edge.on-path { stroke: #4de88c; stroke-width: 3; }
+  .edge.pruned { stroke: #4a1a1a; stroke-dasharray: 4 3; opacity: 0.4; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 60px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-visit { background: #9ad4ff; color: #1a1a2e; }
+  .kind-include { background: #4de88c; color: #1a1a2e; }
+  .kind-below { background: #ff8ca0; color: #1a1a2e; }
+  .kind-above { background: #c89aff; color: #1a1a2e; }
+  .kind-return { background: #ffd87a; color: #1a1a2e; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .sum-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #0f1529;
+    border-radius: 4px;
+    border: 1px solid #0f3460;
+    align-items: center;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+  }
+  .sum-chips .lbl { color: #888; font-size: 11px; }
+  .chip {
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #16213e;
+    border: 1px solid #4de88c;
+    color: #4de88c;
+    font-weight: bold;
+  }
+  .chip.new { animation: pop 0.4s ease-out; }
+  @keyframes pop {
+    0% { transform: scale(0.3); opacity: 0; }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 938 — Range Sum of BST</h1>
+    <div class="subtitle">BST descent with pruning: `val &lt; low` skips LEFT subtree; `val &gt; high` skips RIGHT. In-range nodes contribute AND recurse both sides. Tree = [10,5,15,3,7,null,18], [7, 15] → 32</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill action"><span class="pill-k">action</span><span class="pill-v" id="actionV">—</span></span>
+    </div>
+    <div class="state-row">
+      <div class="state-box low"><span class="lbl">low</span><span class="val">7</span></div>
+      <div class="state-box high"><span class="lbl">high</span><span class="val">15</span></div>
+      <div class="state-box sum" id="sumBox"><span class="lbl">sum</span><span class="val" id="sumV">0</span></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="sum-chips" id="sumChips"><span class="lbl">contributions:</span></div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Three cases</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6; font-family: 'Monaco', monospace;">
+      <div><span style="color:#ff8ca0;">node.val &lt; low</span></div>
+      <div style="margin-left: 12px; color:#aaa;">Left subtree is all &lt; val &lt; low → SKIP LEFT. Only right subtree could contribute.</div>
+      <div style="margin-top: 8px;"><span style="color:#c89aff;">node.val &gt; high</span></div>
+      <div style="margin-left: 12px; color:#aaa;">Right subtree is all &gt; val &gt; high → SKIP RIGHT. Only left subtree could contribute.</div>
+      <div style="margin-top: 8px;"><span style="color:#4de88c;">low ≤ node.val ≤ high</span></div>
+      <div style="margin-left: 12px; color:#aaa;">Include val. Recurse BOTH sides — both may have in-range nodes.</div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why pruning doesn't always help</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        We still need to visit every in-range node to add it. Pruning only skips OUT-of-range nodes. Worst case (range covers everything) is O(n); tight bound is <strong>O(H + k)</strong> where k = nodes in range.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Family placement</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>BST descent with pruning.</strong> Same shape as LC 270 (skip the "wrong" subtree), LC 450 (descend to the node then local fix), LC 701 (descend until null slot). Comparison at each node directs the recursion.
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public int rangeSumBST(TreeNode root, int low, int high) {",
+    "    if (root == null) return 0;",
+    "    if (root.val < low) {",
+    "        return rangeSumBST(root.right, low, high);",
+    "    }",
+    "    if (root.val > high) {",
+    "        return rangeSumBST(root.left, low, high);",
+    "    }",
+    "    return root.val",
+    "         + rangeSumBST(root.left,  low, high)",
+    "         + rangeSumBST(root.right, low, high);",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //         10
+  //        /  \
+  //       5    15
+  //      / \     \
+  //     3   7    18
+  const nodes = {
+    n10: { x: 320, y:  50, r: 24, val: '10' },
+    n5:  { x: 180, y: 140, r: 22, val: '5'  },
+    n15: { x: 460, y: 140, r: 22, val: '15' },
+    n3:  { x: 100, y: 230, r: 22, val: '3'  },
+    n7:  { x: 260, y: 230, r: 22, val: '7'  },
+    n18: { x: 540, y: 230, r: 22, val: '18' }
+  };
+  const edges = [
+    { id: 'e_10_5',  from: 'n10', to: 'n5'  },
+    { id: 'e_10_15', from: 'n10', to: 'n15' },
+    { id: 'e_5_3',   from: 'n5',  to: 'n3'  },
+    { id: 'e_5_7',   from: 'n5',  to: 'n7'  },
+    { id: 'e_15_18', from: 'n15', to: 'n18' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEPS ============
+  // nodeState: 'active'|'in-range'|'below'|'above'|'pruned'
+  // edgeState: 'on-path'|'pruned'
+  const steps = [
+    {
+      line: [1], active: null,
+      nodeState: {}, edgeState: {},
+      sumV: 0, chips: [], newChipIdx: -1,
+      nodeV: "—", actionV: "init",
+      action: "Call rangeSumBST(root=10, low=7, high=15). sum starts at 0.",
+      kind: "init"
+    },
+    {
+      line: [2], active: "n10",
+      nodeState: {}, edgeState: {},
+      sumV: 0, chips: [], newChipIdx: -1,
+      nodeV: "10", actionV: "visit",
+      action: "Enter rangeSumBST(10). Not null. Check range.",
+      kind: "visit"
+    },
+    {
+      line: [3, 5, 8], active: "n10",
+      nodeState: { n10: 'in-range' }, edgeState: {},
+      sumV: 10, chips: [{ val: '10', isNew: true }], newChipIdx: 0,
+      nodeV: "10", actionV: "in range",
+      action: "★ 7 ≤ 10 ≤ 15 → IN RANGE. Contribute 10. Recurse both children.",
+      kind: "include",
+      sumUpdated: true
+    },
+    {
+      line: [10], active: "n5",
+      nodeState: { n10: 'in-range' }, edgeState: {},
+      sumV: 10, chips: [{ val: '10' }], newChipIdx: -1,
+      nodeV: "5", actionV: "visit",
+      action: "Recurse LEFT: rangeSumBST(5). Enter.",
+      kind: "visit"
+    },
+    {
+      line: [3, 4], active: "n5",
+      nodeState: { n10: 'in-range', n5: 'below', n3: 'pruned' },
+      edgeState: { e_5_3: 'pruned' },
+      sumV: 10, chips: [{ val: '10' }], newChipIdx: -1,
+      nodeV: "5", actionV: "val < low",
+      action: "★ 5 < 7 (low) → LEFT SUBTREE PRUNED. Node 3 would be < 5 < 7 — outside range for sure. Only recurse RIGHT.",
+      kind: "below"
+    },
+    {
+      line: [4], active: "n7",
+      nodeState: { n10: 'in-range', n5: 'below', n3: 'pruned' },
+      edgeState: { e_5_3: 'pruned' },
+      sumV: 10, chips: [{ val: '10' }], newChipIdx: -1,
+      nodeV: "7", actionV: "visit",
+      action: "Recurse into 5.right = 7.",
+      kind: "visit"
+    },
+    {
+      line: [3, 5, 8], active: "n7",
+      nodeState: { n10: 'in-range', n5: 'below', n7: 'in-range', n3: 'pruned' },
+      edgeState: { e_5_3: 'pruned' },
+      sumV: 17, chips: [{ val: '10' }, { val: '7', isNew: true }], newChipIdx: 1,
+      nodeV: "7", actionV: "in range",
+      action: "★ 7 ≤ 7 ≤ 15 → IN RANGE. Contribute 7. sum = 10 + 7 = 17. Recurse both (both children null → return 0+0).",
+      kind: "include",
+      sumUpdated: true
+    },
+    {
+      line: [9], active: "n5",
+      nodeState: { n10: 'in-range', n5: 'below', n7: 'in-range', n3: 'pruned' },
+      edgeState: { e_5_3: 'pruned' },
+      sumV: 17, chips: [{ val: '10' }, { val: '7' }], newChipIdx: -1,
+      nodeV: "5", actionV: "return 7",
+      action: "rangeSumBST(7) returns 7. Back at 5: 5's result = 7 (only right branch recursed).",
+      kind: "return"
+    },
+    {
+      line: [11], active: "n15",
+      nodeState: { n10: 'in-range', n5: 'below', n7: 'in-range', n3: 'pruned' },
+      edgeState: { e_5_3: 'pruned' },
+      sumV: 17, chips: [{ val: '10' }, { val: '7' }], newChipIdx: -1,
+      nodeV: "15", actionV: "visit",
+      action: "Back at 10. Now recurse RIGHT: rangeSumBST(15). Enter.",
+      kind: "visit"
+    },
+    {
+      line: [3, 5, 8], active: "n15",
+      nodeState: { n10: 'in-range', n5: 'below', n7: 'in-range', n15: 'in-range', n3: 'pruned' },
+      edgeState: { e_5_3: 'pruned' },
+      sumV: 32, chips: [{ val: '10' }, { val: '7' }, { val: '15', isNew: true }], newChipIdx: 2,
+      nodeV: "15", actionV: "in range",
+      action: "★ 7 ≤ 15 ≤ 15 → IN RANGE. Contribute 15. sum = 17 + 15 = 32. Recurse both. 15.left = null → 0.",
+      kind: "include",
+      sumUpdated: true
+    },
+    {
+      line: [11], active: "n18",
+      nodeState: { n10: 'in-range', n5: 'below', n7: 'in-range', n15: 'in-range', n3: 'pruned' },
+      edgeState: { e_5_3: 'pruned' },
+      sumV: 32, chips: [{ val: '10' }, { val: '7' }, { val: '15' }], newChipIdx: -1,
+      nodeV: "18", actionV: "visit",
+      action: "Recurse into 15.right = 18.",
+      kind: "visit"
+    },
+    {
+      line: [6, 7], active: "n18",
+      nodeState: { n10: 'in-range', n5: 'below', n7: 'in-range', n15: 'in-range', n18: 'above', n3: 'pruned' },
+      edgeState: { e_5_3: 'pruned' },
+      sumV: 32, chips: [{ val: '10' }, { val: '7' }, { val: '15' }], newChipIdx: -1,
+      nodeV: "18", actionV: "val > high",
+      action: "★ 18 > 15 (high) → RIGHT SUBTREE PRUNED (null anyway). Only recurse LEFT (also null → 0). 18 returns 0.",
+      kind: "above"
+    },
+    {
+      line: [12], active: null,
+      nodeState: { n10: 'in-range', n5: 'below', n7: 'in-range', n15: 'in-range', n18: 'above', n3: 'pruned' },
+      edgeState: { e_5_3: 'pruned' },
+      sumV: 32, chips: [{ val: '10' }, { val: '7' }, { val: '15' }], newChipIdx: -1,
+      nodeV: "—", actionV: "return 32",
+      action: "Unwinding: 18→0, 15→15, 10 collects 7 (from left) + 15 (from right) + 10 (self) = **32**. Return. Node 3 never visited — pruned by the `val < low` rule.",
+      kind: "done"
+    }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const actionVEl = document.getElementById('actionV');
+  const sumVEl = document.getElementById('sumV');
+  const sumBoxEl = document.getElementById('sumBox');
+  const actionBodyEl = document.getElementById('action').querySelector('div:last-child');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const sumChipsEl = document.getElementById('sumChips');
+
+  function render(idx, prevIdx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.nodeV;
+    actionVEl.textContent = s.actionV;
+    sumVEl.textContent = s.sumV;
+    if (s.sumUpdated && prevIdx !== undefined && idx > prevIdx) {
+      sumBoxEl.classList.remove('updated');
+      void sumBoxEl.offsetWidth;
+      sumBoxEl.classList.add('updated');
+    } else {
+      sumBoxEl.classList.remove('updated');
+    }
+    // Nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'in-range', 'below', 'above', 'pruned');
+      const st = s.nodeState[key];
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (st) {
+        el.classList.add(st);
+      }
+    });
+    // Edges
+    Object.keys(edgeEls).forEach(eId => {
+      const el = edgeEls[eId];
+      el.classList.remove('on-path', 'pruned');
+      if (s.edgeState[eId]) {
+        el.classList.add(s.edgeState[eId]);
+      }
+    });
+    // Sum chips
+    sumChipsEl.innerHTML = '<span class="lbl">contributions:</span>';
+    s.chips.forEach((c, i) => {
+      const span = document.createElement('span');
+      span.className = 'chip' + (c.isNew ? ' new' : '');
+      span.textContent = c.val;
+      sumChipsEl.appendChild(span);
+    });
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    const prev = stepIdx;
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1400);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
