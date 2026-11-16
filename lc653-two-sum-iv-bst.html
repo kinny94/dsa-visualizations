@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 653 — Two Sum IV, Input is a BST</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 340px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.lv .pill-v { color: #ffa500; }
+  .pill.rv .pill-v { color: #9ad4ff; }
+  .pill.sum .pill-v { color: #4de88c; }
+  .state-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .state-box {
+    flex: 1;
+    padding: 8px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+  }
+  .state-box .lbl { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 3px; }
+  .state-box .val { font-weight: bold; font-size: 14px; }
+  .state-box.k .val { color: #e94560; }
+  .state-box.sum .val { color: #4de88c; }
+  .state-box.sum.updated { animation: pulse 0.5s ease-out; }
+  @keyframes pulse {
+    0% { transform: scale(1); background: #0f3460; }
+    50% { transform: scale(1.05); background: #1f5a2f; border-color: #4de88c; }
+    100% { transform: scale(1); background: #0f3460; }
+  }
+  .tree-wrap {
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+    min-height: 240px;
+  }
+  svg { display: block; width: 100%; height: 240px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.3s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.l-current circle { stroke: #ffa500; stroke-width: 4; fill: #2a2010; }
+  .node.l-current text.val { fill: #ffd87a; }
+  .node.r-current circle { stroke: #9ad4ff; stroke-width: 4; fill: #0f2a4a; }
+  .node.r-current text.val { fill: #9ad4ff; }
+  .node.in-lstack circle { stroke: #ff8c3f; stroke-width: 2.5; fill: #2a1808; }
+  .node.in-lstack text.val { fill: #ff8c3f; }
+  .node.in-rstack circle { stroke: #5fb3ff; stroke-width: 2.5; fill: #081a2a; }
+  .node.in-rstack text.val { fill: #5fb3ff; }
+  .node.visited circle { stroke: #666; fill: #2a2a3a; }
+  .node.visited text.val { fill: #aaa; }
+  .node.found circle { stroke: #4de88c; stroke-width: 5; fill: #0f3a1f; }
+  .node.found text.val { fill: #4de88c; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.25s; }
+  .stacks-row {
+    display: flex;
+    gap: 8px;
+  }
+  .stack-col {
+    flex: 1;
+    background: #0f1529;
+    border: 1px solid #0f3460;
+    border-radius: 4px;
+    padding: 8px;
+    min-height: 100px;
+  }
+  .stack-label {
+    font-size: 10px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 4px;
+    font-weight: bold;
+  }
+  .stack-label.l { color: #ffa500; }
+  .stack-label.r { color: #9ad4ff; }
+  .stack-items {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 3px;
+    align-items: center;
+  }
+  .stack-item {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    background: #16213e;
+    border-radius: 3px;
+    color: #ccc;
+    font-weight: bold;
+    min-width: 36px;
+    text-align: center;
+  }
+  .stack-item.l { border: 1px solid #ff8c3f; color: #ff8c3f; }
+  .stack-item.r { border: 1px solid #5fb3ff; color: #5fb3ff; }
+  .stack-item.top.l { background: #ffa500; color: #1a1a2e; border-color: #ffa500; }
+  .stack-item.top.r { background: #9ad4ff; color: #1a1a2e; border-color: #9ad4ff; }
+  .stack-item.new { animation: pop 0.4s ease-out; }
+  @keyframes pop {
+    0% { transform: scale(0.3); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .stack-empty {
+    font-size: 10px;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    padding: 20px 0;
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 60px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-push { background: #ff8c3f; color: #1a1a2e; }
+  .kind-pushr { background: #5fb3ff; color: #1a1a2e; }
+  .kind-pop { background: #ffd87a; color: #1a1a2e; }
+  .kind-check { background: #4de88c; color: #1a1a2e; }
+  .kind-advance { background: #c89aff; color: #1a1a2e; }
+  .kind-found { background: #4de88c; color: #1a1a2e; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 653 — Two Sum IV, Input is a BST</h1>
+    <div class="subtitle">Two iterators meeting in the middle: forward inorder (ascending) + reverse inorder (descending). O(n) time, O(h) space — beats the HashSet on memory. Tree = [5,3,6,2,4,null,7], k = 11 → true (4 + 7)</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill lv"><span class="pill-k">l</span><span class="pill-v" id="lV">—</span></span>
+      <span class="pill rv"><span class="pill-k">r</span><span class="pill-v" id="rV">—</span></span>
+      <span class="pill sum"><span class="pill-k">sum</span><span class="pill-v" id="sumV">—</span></span>
+    </div>
+    <div class="state-row">
+      <div class="state-box k"><span class="lbl">target k</span><span class="val">11</span></div>
+      <div class="state-box sum" id="sumBox"><span class="lbl">l + r</span><span class="val" id="sumVal">—</span></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 240" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="stacks-row">
+      <div class="stack-col">
+        <div class="stack-label l">L stack (forward inorder)</div>
+        <div class="stack-items" id="lStack"></div>
+      </div>
+      <div class="stack-col">
+        <div class="stack-label r">R stack (reverse inorder)</div>
+        <div class="stack-items" id="rStack"></div>
+      </div>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">The two-iterator idea</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+      Inorder on a BST yields sorted ascending values. Reverse inorder yields descending. Simulate <em>sorted array + two pointers</em> without building the array: two stacks, each lazily produces the next value from one end.
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Advance rule</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <code>sum == k</code> → found.<br>
+        <code>sum &lt; k</code> → need a bigger left value, advance L (next inorder).<br>
+        <code>sum &gt; k</code> → need a smaller right value, advance R (next reverse inorder).<br>
+        Stop when <code>l == r</code> (pointers crossed).
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Stack states</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        Each stack holds "nodes whose values haven't been yielded yet." Top of stack = next to yield. The <code>pushLeft</code> / <code>pushRight</code> helpers walk one chain; <code>nextLeft</code> / <code>nextRight</code> advance by pushing the appropriate subtree then popping.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why O(h) space</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        Each stack holds at most one chain — the current ancestry — never more than O(h) nodes. HashSet version is O(n) because it stores every visited value.
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public boolean findTarget(TreeNode root, int k) {",
+    "    Deque<TreeNode> L = new ArrayDeque<>();",
+    "    Deque<TreeNode> R = new ArrayDeque<>();",
+    "    pushLeft(root, L);",
+    "    pushRight(root, R);",
+    "    TreeNode l = L.pop();",
+    "    TreeNode r = R.pop();",
+    "    while (l != r) {",
+    "        int sum = l.val + r.val;",
+    "        if (sum == k) return true;",
+    "        if (sum < k) l = nextLeft(l, L);",
+    "        else         r = nextRight(r, R);",
+    "    }",
+    "    return false;",
+    "}",
+    "void pushLeft(TreeNode n, Deque<TreeNode> s) {",
+    "    while (n != null) { s.push(n); n = n.left; }",
+    "}",
+    "void pushRight(TreeNode n, Deque<TreeNode> s) {",
+    "    while (n != null) { s.push(n); n = n.right; }",
+    "}",
+    "TreeNode nextLeft(TreeNode cur, Deque<TreeNode> s) {",
+    "    pushLeft(cur.right, s);",
+    "    return s.isEmpty() ? null : s.pop();",
+    "}",
+    "TreeNode nextRight(TreeNode cur, Deque<TreeNode> s) {",
+    "    pushRight(cur.left, s);",
+    "    return s.isEmpty() ? null : s.pop();",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //         5
+  //        / \
+  //       3   6
+  //      / \   \
+  //     2   4   7
+  const nodes = {
+    n5: { x: 320, y:  40, r: 22, val: '5' },
+    n3: { x: 180, y: 120, r: 22, val: '3' },
+    n6: { x: 460, y: 120, r: 22, val: '6' },
+    n2: { x: 100, y: 200, r: 22, val: '2' },
+    n4: { x: 260, y: 200, r: 22, val: '4' },
+    n7: { x: 540, y: 200, r: 22, val: '7' }
+  };
+  const edges = [
+    { id: 'e_5_3', from: 'n5', to: 'n3' },
+    { id: 'e_5_6', from: 'n5', to: 'n6' },
+    { id: 'e_3_2', from: 'n3', to: 'n2' },
+    { id: 'e_3_4', from: 'n3', to: 'n4' },
+    { id: 'e_6_7', from: 'n6', to: 'n7' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // ============ STEPS ============
+  // Each step:
+  //   line: active code lines
+  //   lStack, rStack: array of node keys (bottom → top)
+  //   lTopNew, rTopNew: node key just pushed (for pop animation)
+  //   lCurrent, rCurrent: node key (null = uninitialized)
+  //   nodeState: { key: 'in-lstack'|'in-rstack'|'l-current'|'r-current'|'visited'|'found' }
+  //       (nodeState is for extras that should be marked as "visited" or "found";
+  //        l/r-current and in-stack states are computed from lStack/rStack and current keys)
+  //   lV, rV, sumV, sumVal: pill/box values
+  //   action, kind, sumUpdated
+  const steps = [
+    {
+      line: [2, 3], lStack: [], rStack: [], lCurrent: null, rCurrent: null,
+      nodeState: {}, lV: "—", rV: "—", sumV: "—", sumVal: "—",
+      action: "Initialize two empty stacks: L (for forward inorder) and R (for reverse inorder).",
+      kind: "init"
+    },
+    {
+      line: [4, 16, 17], lStack: ['n5'], rStack: [],
+      lCurrent: null, rCurrent: null, nodeState: {},
+      lV: "—", rV: "—", sumV: "—", sumVal: "—",
+      action: "pushLeft(5, L): push 5. Walk n.left → 3.",
+      kind: "push"
+    },
+    {
+      line: [17], lStack: ['n5', 'n3'], rStack: [],
+      lCurrent: null, rCurrent: null, nodeState: {},
+      lV: "—", rV: "—", sumV: "—", sumVal: "—",
+      action: "Push 3. Walk n.left → 2.",
+      kind: "push"
+    },
+    {
+      line: [17], lStack: ['n5', 'n3', 'n2'], rStack: [],
+      lCurrent: null, rCurrent: null, nodeState: {},
+      lV: "—", rV: "—", sumV: "—", sumVal: "—",
+      action: "Push 2. Walk n.left → null. pushLeft done. L top = 2 (the smallest value — first forward yield).",
+      kind: "push"
+    },
+    {
+      line: [5, 19, 20], lStack: ['n5', 'n3', 'n2'], rStack: ['n5'],
+      lCurrent: null, rCurrent: null, nodeState: {},
+      lV: "—", rV: "—", sumV: "—", sumVal: "—",
+      action: "pushRight(5, R): push 5. Walk n.right → 6.",
+      kind: "pushr"
+    },
+    {
+      line: [20], lStack: ['n5', 'n3', 'n2'], rStack: ['n5', 'n6'],
+      lCurrent: null, rCurrent: null, nodeState: {},
+      lV: "—", rV: "—", sumV: "—", sumVal: "—",
+      action: "Push 6. Walk n.right → 7.",
+      kind: "pushr"
+    },
+    {
+      line: [20], lStack: ['n5', 'n3', 'n2'], rStack: ['n5', 'n6', 'n7'],
+      lCurrent: null, rCurrent: null, nodeState: {},
+      lV: "—", rV: "—", sumV: "—", sumVal: "—",
+      action: "Push 7. Walk n.right → null. pushRight done. R top = 7 (the largest value — first reverse yield).",
+      kind: "pushr"
+    },
+    {
+      line: [6, 7], lStack: ['n5', 'n3'], rStack: ['n5', 'n6'],
+      lCurrent: 'n2', rCurrent: 'n7', nodeState: {},
+      lV: "2", rV: "7", sumV: "—", sumVal: "—",
+      action: "Pop initial pointers: l = L.pop() = 2, r = R.pop() = 7.",
+      kind: "pop"
+    },
+    {
+      line: [8, 9, 10], lStack: ['n5', 'n3'], rStack: ['n5', 'n6'],
+      lCurrent: 'n2', rCurrent: 'n7', nodeState: {},
+      lV: "2", rV: "7", sumV: "9", sumVal: "9",
+      action: "l != r. sum = 2 + 7 = 9. 9 == 11? No. 9 < 11? YES → advance L.",
+      kind: "check",
+      sumUpdated: true
+    },
+    {
+      line: [11, 22, 23, 24], lStack: ['n5'], rStack: ['n5', 'n6'],
+      lCurrent: 'n3', rCurrent: 'n7', nodeState: { n2: 'visited' },
+      lV: "3", rV: "7", sumV: "9", sumVal: "9",
+      action: "nextLeft(cur=2): pushLeft(2.right = null) → no-op. pop L → l = 3.",
+      kind: "advance"
+    },
+    {
+      line: [8, 9, 10], lStack: ['n5'], rStack: ['n5', 'n6'],
+      lCurrent: 'n3', rCurrent: 'n7', nodeState: { n2: 'visited' },
+      lV: "3", rV: "7", sumV: "10", sumVal: "10",
+      action: "l != r. sum = 3 + 7 = 10. 10 == 11? No. 10 < 11? YES → advance L.",
+      kind: "check",
+      sumUpdated: true
+    },
+    {
+      line: [11, 22, 23], lStack: ['n5', 'n4'], rStack: ['n5', 'n6'],
+      lCurrent: 'n3', rCurrent: 'n7', nodeState: { n2: 'visited' },
+      lV: "3", rV: "7", sumV: "10", sumVal: "10",
+      action: "nextLeft(cur=3): pushLeft(3.right = 4) → push 4 onto L. (Walk 4.left = null, done.)",
+      kind: "push"
+    },
+    {
+      line: [24], lStack: ['n5'], rStack: ['n5', 'n6'],
+      lCurrent: 'n4', rCurrent: 'n7', nodeState: { n2: 'visited', n3: 'visited' },
+      lV: "4", rV: "7", sumV: "10", sumVal: "10",
+      action: "Pop L → l = 4.",
+      kind: "pop"
+    },
+    {
+      line: [8, 9, 10], lStack: ['n5'], rStack: ['n5', 'n6'],
+      lCurrent: 'n4', rCurrent: 'n7', nodeState: { n2: 'visited', n3: 'visited', n4: 'found', n7: 'found' },
+      lV: "4", rV: "7", sumV: "11", sumVal: "11",
+      action: "★ l != r. sum = 4 + 7 = 11. 11 == k → return TRUE. Found pair (4, 7). Only 5 nodes examined; stacks held at most 3 items. O(h) space.",
+      kind: "found",
+      sumUpdated: true
+    }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const lVEl = document.getElementById('lV');
+  const rVEl = document.getElementById('rV');
+  const sumVEl = document.getElementById('sumV');
+  const sumValEl = document.getElementById('sumVal');
+  const sumBoxEl = document.getElementById('sumBox');
+  const actionBodyEl = document.getElementById('action').querySelector('div:last-child');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const lStackEl = document.getElementById('lStack');
+  const rStackEl = document.getElementById('rStack');
+
+  let prevLStack = [], prevRStack = [];
+
+  function renderStack(container, stack, side) {
+    container.innerHTML = '';
+    if (stack.length === 0) {
+      const d = document.createElement('div');
+      d.className = 'stack-empty';
+      d.textContent = '(empty)';
+      container.appendChild(d);
+      return;
+    }
+    const prev = side === 'l' ? prevLStack : prevRStack;
+    stack.forEach((key, i) => {
+      const span = document.createElement('div');
+      const isTop = i === stack.length - 1;
+      span.className = 'stack-item ' + side + (isTop ? ' top' : '');
+      if (i >= prev.length) {
+        span.classList.add('new');
+      }
+      span.textContent = nodes[key].val;
+      container.appendChild(span);
+    });
+  }
+
+  function render(idx, prevIdx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    lVEl.textContent = s.lV;
+    rVEl.textContent = s.rV;
+    sumVEl.textContent = s.sumV;
+    sumValEl.textContent = s.sumVal;
+    if (s.sumUpdated && prevIdx !== undefined && idx > prevIdx) {
+      sumBoxEl.classList.remove('updated');
+      void sumBoxEl.offsetWidth;
+      sumBoxEl.classList.add('updated');
+    } else {
+      sumBoxEl.classList.remove('updated');
+    }
+    // Compute node classifications from l/r stacks + current + nodeState overrides
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('l-current', 'r-current', 'in-lstack', 'in-rstack', 'visited', 'found');
+      const extra = s.nodeState[key];
+      if (extra === 'found') {
+        el.classList.add('found');
+        return;
+      }
+      if (key === s.lCurrent) {
+        el.classList.add('l-current');
+        return;
+      }
+      if (key === s.rCurrent) {
+        el.classList.add('r-current');
+        return;
+      }
+      if (s.lStack.includes(key)) {
+        el.classList.add('in-lstack');
+        return;
+      }
+      if (s.rStack.includes(key)) {
+        el.classList.add('in-rstack');
+        return;
+      }
+      if (extra === 'visited') {
+        el.classList.add('visited');
+      }
+    });
+    renderStack(lStackEl, s.lStack, 'l');
+    renderStack(rStackEl, s.rStack, 'r');
+    prevLStack = [...s.lStack];
+    prevRStack = [...s.rStack];
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    const prev = stepIdx;
+    if (idx === 0) {
+      prevLStack = [];
+      prevRStack = [];
+    } else if (idx > 0) {
+      prevLStack = steps[idx - 1].lStack ? [...steps[idx - 1].lStack] : [];
+      prevRStack = steps[idx - 1].rStack ? [...steps[idx - 1].rStack] : [];
+    }
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1400);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
