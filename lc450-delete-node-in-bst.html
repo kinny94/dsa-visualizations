@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 450 — Delete Node in a BST</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #ff8ca0; }
+  .pill.act .pill-v { color: #9ad4ff; }
+  .pill.succ .pill-v { color: #4de88c; }
+  .state-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .state-box {
+    flex: 1;
+    padding: 8px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+  }
+  .state-box .lbl { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 3px; }
+  .state-box .val { font-weight: bold; font-size: 14px; color: #4de88c; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 340px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.4s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.active circle { stroke: #ffa500; stroke-width: 4; fill: #2a2010; }
+  .node.active text.val { fill: #ffd87a; }
+  .node.visited circle { stroke: #9ad4ff; stroke-width: 2.5; fill: #1a2e4a; }
+  .node.visited text.val { fill: #9ad4ff; }
+  .node.target circle { stroke: #e94560; stroke-width: 4; fill: #4a1020; }
+  .node.target text.val { fill: #ff8ca0; }
+  .node.successor circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; }
+  .node.successor text.val { fill: #4de88c; }
+  .node.doomed circle { stroke: #ff8ca0; stroke-width: 2; fill: #2a1420; stroke-dasharray: 4 3; }
+  .node.doomed text.val { fill: #ff8ca0; text-decoration: line-through; opacity: 0.6; }
+  .node.replaced circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; animation: pulse 0.8s ease-out; }
+  .node.replaced text.val { fill: #4de88c; }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+  .node.fading { opacity: 0.25; transition: opacity 0.6s; }
+  .node.gone { opacity: 0; transition: opacity 0.6s; pointer-events: none; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.3s; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; }
+  .edge.cut { stroke: #ff8ca0; stroke-width: 2; stroke-dasharray: 4 3; opacity: 0.55; }
+  .edge.gone { opacity: 0; }
+  .value-arrow {
+    stroke: #4de88c;
+    stroke-width: 2.5;
+    fill: none;
+    marker-end: url(#arrowhead);
+    stroke-dasharray: 5 3;
+    animation: dash 1s linear infinite;
+  }
+  @keyframes dash { to { stroke-dashoffset: -16; } }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-descend { background: #9ad4ff; color: #1a1a2e; }
+  .kind-found { background: #e94560; color: #fff; }
+  .kind-case { background: #ffa500; color: #1a1a2e; }
+  .kind-successor { background: #4de88c; color: #1a1a2e; }
+  .kind-swap { background: #4de88c; color: #1a1a2e; }
+  .kind-delete { background: #ff8ca0; color: #1a1a2e; }
+  .kind-return { background: #9ad4ff; color: #1a1a2e; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .case-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+  .case-chip {
+    padding: 3px 7px;
+    border-radius: 3px;
+    font-family: 'Monaco', monospace;
+    font-size: 10.5px;
+    border: 1px solid #1a4a7a;
+    color: #888;
+    background: #0a1a30;
+    transition: all 0.25s;
+  }
+  .case-chip.on {
+    border-color: #4de88c;
+    color: #4de88c;
+    background: #0f3a1f;
+    font-weight: bold;
+  }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  code { color: #ffd87a; background: #0a1a30; padding: 1px 4px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 450 — Delete Node in a BST</h1>
+    <div class="subtitle">Descend to find the target; replace with inorder successor (min of right subtree), then recursively delete the successor. Tree = [5,3,6,2,4,null,7], key = 3</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill node"><span class="pill-k">at</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill act"><span class="pill-k">action</span><span class="pill-v" id="actionV">—</span></span>
+      <span class="pill succ"><span class="pill-k">successor</span><span class="pill-v" id="succV">—</span></span>
+    </div>
+    <div class="state-row">
+      <div class="state-box"><span class="lbl">key</span><span class="val">3</span></div>
+      <div class="state-box"><span class="lbl">case firing</span><span class="val" id="caseV" style="color:#ffa500">—</span></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0 0, 8 4, 0 8" fill="#4de88c"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+      <div class="case-row">
+        <span class="case-chip" id="chip1">leaf → null</span>
+        <span class="case-chip" id="chip2">1 child → hoist</span>
+        <span class="case-chip" id="chip3">2 children → successor</span>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Algorithm</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6; font-family: 'Monaco', monospace;">
+      <div>• <code>key &lt; val</code> → recurse LEFT</div>
+      <div>• <code>key &gt; val</code> → recurse RIGHT</div>
+      <div>• <code>key == val</code> → four sub-cases:</div>
+      <div style="padding-left:12px; margin-top:4px;">
+        <div>①&nbsp;&nbsp;<code>left == null</code> → return right</div>
+        <div>②&nbsp;&nbsp;<code>right == null</code> → return left</div>
+        <div>③&nbsp;&nbsp;2 children → find min of right subtree, copy its value in, recursively delete it from right</div>
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why inorder successor?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        We need a replacement <em>v</em> such that <code>left subtree &lt; v &lt; right subtree</code>. The smallest value in the right subtree is <em>v</em>: already <code>&gt;</code> everything in the left subtree, and <code>≤</code> everything else in the right. Equivalently, the largest value in the left subtree works (inorder predecessor).
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">The copy-and-delete trick</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        Instead of unhooking and re-stitching the successor node, <strong>copy its value</strong> into the target node, then recursively delete the successor from the right subtree. The successor has at most a right child (it's the leftmost of its subtree), so the recursive delete hits an easy case.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Family placement</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>BST descent with reconstruct-via-rewire.</strong> Siblings: LC 669 Trim, LC 701 Insert, LC 700 Search (no rewire).
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public TreeNode deleteNode(TreeNode root, int key) {",
+    "    if (root == null) return null;",
+    "    if (key < root.val) {",
+    "        root.left  = deleteNode(root.left,  key);",
+    "    } else if (key > root.val) {",
+    "        root.right = deleteNode(root.right, key);",
+    "    } else {",
+    "        if (root.left  == null) return root.right;",
+    "        if (root.right == null) return root.left;",
+    "        TreeNode succ = root.right;",
+    "        while (succ.left != null) succ = succ.left;",
+    "        root.val = succ.val;",
+    "        root.right = deleteNode(root.right, succ.val);",
+    "    }",
+    "    return root;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //         5
+  //        / \
+  //       3   6
+  //      / \   \
+  //     2   4   7
+  const nodes = {
+    n5: { x: 320, y:  55, r: 24, val: '5' },
+    n3: { x: 200, y: 140, r: 22, val: '3' },
+    n6: { x: 440, y: 140, r: 22, val: '6' },
+    n2: { x: 130, y: 230, r: 20, val: '2' },
+    n4: { x: 270, y: 230, r: 20, val: '4' },
+    n7: { x: 510, y: 230, r: 20, val: '7' }
+  };
+  const edges = [
+    { id: 'e_5_3', from: 'n5', to: 'n3' },
+    { id: 'e_5_6', from: 'n5', to: 'n6' },
+    { id: 'e_3_2', from: 'n3', to: 'n2' },
+    { id: 'e_3_4', from: 'n3', to: 'n4' },
+    { id: 'e_6_7', from: 'n6', to: 'n7' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    line.dataset.id = e.id;
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+
+  // Value-copy arrow (shown only on the swap step)
+  const copyArrow = document.createElementNS(SVGNS, 'path');
+  copyArrow.setAttribute('class', 'value-arrow');
+  // Curve from node 4 (270, 230) to node 3 (200, 140) — curve upward-left
+  copyArrow.setAttribute('d', `M 265 210 C 240 180, 215 170, 205 162`);
+  copyArrow.style.opacity = '0';
+  svg.appendChild(copyArrow);
+
+  const nodeEls = {};
+  const nodeTextEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    g.dataset.key = key;
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    nodeTextEls[key] = t;
+  });
+
+  // ============ STEPS ============
+  // We model the n3 node as the "target slot" — after the value copy it becomes "4".
+  // The original n4 node fades out at the delete step (the duplicate 4 in the right subtree).
+  const steps = [
+    {
+      line: [1], active: null,
+      nodeState: {}, edgeState: {}, edgeCut: {},
+      nodeLabel: { n3: '3', n4: '4' },
+      showArrow: false,
+      nodeV: "5", actionV: "init", succV: "—", caseV: "—",
+      chips: {},
+      action: "Call deleteNode(root=5, key=3). Tree = [5,3,6,2,4,null,7]. Goal: remove node with value 3.",
+      kind: "init"
+    },
+    {
+      line: [3, 4], active: "n5",
+      nodeState: {}, edgeState: { e_5_3: 'on-path' }, edgeCut: {},
+      nodeLabel: { n3: '3', n4: '4' },
+      showArrow: false,
+      nodeV: "5", actionV: "3 < 5 → left", succV: "—", caseV: "descend",
+      chips: {},
+      action: "At node 5. key=3 < 5 → recurse LEFT. root.left = deleteNode(root.left, 3).",
+      kind: "descend"
+    },
+    {
+      line: [1, 7], active: "n3",
+      nodeState: { n5: 'visited' }, edgeState: { e_5_3: 'on-path' }, edgeCut: {},
+      nodeLabel: { n3: '3', n4: '4' },
+      showArrow: false,
+      nodeV: "3", actionV: "match!", succV: "—", caseV: "found",
+      chips: {},
+      action: "At node 3. key == root.val → found the target. Now determine which deletion sub-case applies.",
+      kind: "found"
+    },
+    {
+      line: [8, 9], active: "n3",
+      nodeState: { n5: 'visited', n3: 'target' }, edgeState: { e_5_3: 'on-path' }, edgeCut: {},
+      nodeLabel: { n3: '3', n4: '4' },
+      showArrow: false,
+      nodeV: "3", actionV: "2 children", succV: "—", caseV: "③ 2 children",
+      chips: { chip3: true },
+      action: "root.left = 2 (not null), root.right = 4 (not null). Both present → ③ two-children case. We need a replacement value that preserves the BST property.",
+      kind: "case"
+    },
+    {
+      line: [10], active: "n4",
+      nodeState: { n5: 'visited', n3: 'target', n4: 'successor' }, edgeState: { e_5_3: 'on-path', e_3_4: 'on-path' }, edgeCut: {},
+      nodeLabel: { n3: '3', n4: '4' },
+      showArrow: false,
+      nodeV: "3", actionV: "succ = right", succV: "4", caseV: "③ 2 children",
+      chips: { chip3: true },
+      action: "Start the successor hunt: succ = root.right = 4. Successor = smallest value in the right subtree (the inorder successor).",
+      kind: "successor"
+    },
+    {
+      line: [11], active: "n4",
+      nodeState: { n5: 'visited', n3: 'target', n4: 'successor' }, edgeState: { e_5_3: 'on-path', e_3_4: 'on-path' }, edgeCut: {},
+      nodeLabel: { n3: '3', n4: '4' },
+      showArrow: false,
+      nodeV: "4", actionV: "succ.left == null", succV: "4", caseV: "③ 2 children",
+      chips: { chip3: true },
+      action: "Walk succ = succ.left while possible. succ.left is null, so we stop. succ = 4. It's both the min of the right subtree AND a leaf-ish node (no left child).",
+      kind: "successor"
+    },
+    {
+      line: [12], active: "n3",
+      nodeState: { n5: 'visited', n3: 'replaced', n4: 'successor' }, edgeState: { e_5_3: 'on-path', e_3_4: 'on-path' }, edgeCut: {},
+      nodeLabel: { n3: '4', n4: '4' },
+      showArrow: true,
+      nodeV: "3→4", actionV: "root.val = succ.val", succV: "4", caseV: "③ 2 children",
+      chips: { chip3: true },
+      action: "★ Copy succ.val (4) INTO the target node. The target slot's value flips 3 → 4. BST property survives: 2 < 4 (left), and the right subtree's remaining values are all > 4 (none here, since 4 was the only right-subtree node).",
+      kind: "swap"
+    },
+    {
+      line: [13], active: "n4",
+      nodeState: { n5: 'visited', n3: 'replaced', n4: 'target' }, edgeState: { e_5_3: 'on-path', e_3_4: 'on-path' }, edgeCut: {},
+      nodeLabel: { n3: '4', n4: '4' },
+      showArrow: false,
+      nodeV: "4", actionV: "delete succ from right", succV: "4", caseV: "③ 2 children",
+      chips: { chip3: true },
+      action: "Now there are TWO 4s. Recursively delete succ.val (4) from the right subtree: root.right = deleteNode(root.right, 4). This removes the duplicate.",
+      kind: "delete"
+    },
+    {
+      line: [1, 7, 8], active: "n4",
+      nodeState: { n5: 'visited', n3: 'replaced', n4: 'target' }, edgeState: { e_5_3: 'on-path', e_3_4: 'on-path' }, edgeCut: {},
+      nodeLabel: { n3: '4', n4: '4' },
+      showArrow: false,
+      nodeV: "4", actionV: "leaf case", succV: "—", caseV: "① leaf",
+      chips: { chip1: true },
+      action: "Recursive call at node 4 (the old one): match! root.left == null → return root.right (also null). That's the EASY leaf case — successor nodes always land in case ① or ②.",
+      kind: "case"
+    },
+    {
+      line: [13], active: null,
+      nodeState: { n5: 'visited', n3: 'replaced', n4: 'gone' }, edgeState: { e_5_3: 'on-path' }, edgeCut: { e_3_4: true },
+      nodeLabel: { n3: '4', n4: '4' },
+      showArrow: false,
+      nodeV: "null", actionV: "right subtree = null", succV: "—", caseV: "—",
+      chips: {},
+      action: "The recursive call returned null. root.right is now null — the duplicate 4 is unlinked. The replaced target node is now a parent with left=2, right=null.",
+      kind: "delete"
+    },
+    {
+      line: [15], active: "n3",
+      nodeState: { n5: 'visited', n3: 'replaced', n4: 'gone' }, edgeState: { e_5_3: 'on-path' }, edgeCut: { e_3_4: 'gone' },
+      nodeLabel: { n3: '4', n4: '4' },
+      showArrow: false,
+      nodeV: "4", actionV: "return node", succV: "—", caseV: "—",
+      chips: {},
+      action: "Return the (now-valued-4) node up the call stack. The ancestor (5) will capture it via root.left = ... from step 2.",
+      kind: "return"
+    },
+    {
+      line: [15], active: "n5",
+      nodeState: { n3: 'replaced', n4: 'gone' }, edgeState: {}, edgeCut: { e_3_4: 'gone' },
+      nodeLabel: { n3: '4', n4: '4' },
+      showArrow: false,
+      nodeV: "5", actionV: "5.left = (4)", succV: "—", caseV: "—",
+      chips: {},
+      action: "Back at node 5: root.left now points to the (relabeled) 4 node. Return 5 as the final root.",
+      kind: "return"
+    },
+    {
+      line: [15], active: null,
+      nodeState: { n3: 'replaced', n4: 'gone' }, edgeState: {}, edgeCut: { e_3_4: 'gone' },
+      nodeLabel: { n3: '4', n4: '4' },
+      showArrow: false,
+      nodeV: "root", actionV: "done", succV: "—", caseV: "—",
+      chips: {},
+      action: "Done. Final tree: [5, 4, 6, 2, null, null, 7]. Node 3 deleted by promoting its inorder successor's VALUE and letting recursion unlink the successor's node. Total: 1 descent + 1 successor walk + 1 trivial sub-delete.",
+      kind: "done"
+    }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const actionVEl = document.getElementById('actionV');
+  const succVEl = document.getElementById('succV');
+  const caseVEl = document.getElementById('caseV');
+  const actionBodyEl = document.getElementById('action').querySelector('div#actionBody') || document.getElementById('action').querySelector('div:nth-child(2)');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+  const chipEls = { chip1: document.getElementById('chip1'), chip2: document.getElementById('chip2'), chip3: document.getElementById('chip3') };
+
+  function render(idx, prevIdx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.nodeV;
+    actionVEl.textContent = s.actionV;
+    succVEl.textContent = s.succV;
+    caseVEl.textContent = s.caseV;
+
+    // Node classes + text labels
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'visited', 'target', 'successor', 'replaced', 'doomed', 'fading', 'gone');
+      const st = s.nodeState[key];
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (st) {
+        el.classList.add(st);
+      }
+      // Re-trigger pulse animation on 'replaced' when entering the swap step
+      if (st === 'replaced' && prevIdx !== undefined && idx > prevIdx && steps[prevIdx].nodeState[key] !== 'replaced') {
+        void el.offsetWidth; // reflow
+        el.classList.remove('replaced');
+        void el.offsetWidth;
+        el.classList.add('replaced');
+      }
+      // Update label (value text)
+      if (s.nodeLabel && s.nodeLabel[key]) {
+        nodeTextEls[key].textContent = s.nodeLabel[key];
+      }
+    });
+
+    // Edges
+    Object.keys(edgeEls).forEach(eId => {
+      const el = edgeEls[eId];
+      el.classList.remove('on-path', 'cut', 'gone');
+      if (s.edgeState[eId]) {
+        el.classList.add(s.edgeState[eId]);
+      }
+      if (s.edgeCut[eId] === true) {
+        el.classList.add('cut');
+      } else if (s.edgeCut[eId] === 'gone') {
+        el.classList.add('gone');
+      }
+    });
+
+    // Arrow visibility
+    copyArrow.style.opacity = s.showArrow ? '1' : '0';
+
+    // Chips
+    Object.keys(chipEls).forEach(c => {
+      chipEls[c].classList.toggle('on', !!s.chips[c]);
+    });
+
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  // Tag the action body div with an id for robust selection
+  (function tagActionBody() {
+    const children = document.getElementById('action').children;
+    // children: [kind, body div, case-row]
+    if (children[1]) children[1].id = 'actionBody';
+  })();
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    const prev = stepIdx;
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1500);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

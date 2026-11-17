@@ -82,6 +82,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [938](https://kinny94.github.io/dsa-visualizations/lc938-range-sum-bst.html) | Range Sum of BST | BST · Descent · subtree pruning |
 | [669](https://kinny94.github.io/dsa-visualizations/lc669-trim-binary-search-tree.html) | Trim a Binary Search Tree | BST · Reconstruct-via-rewire |
 | [701](https://kinny94.github.io/dsa-visualizations/lc701-insert-into-bst.html) | Insert into a Binary Search Tree | BST · Descent · plant at null slot |
+| [450](https://kinny94.github.io/dsa-visualizations/lc450-delete-node-in-bst.html) | Delete Node in a BST | BST · Descent · successor swap + rewire |
 
 ## Adding a new animation
 
