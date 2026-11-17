@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 510 — Inorder Successor in BST II</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .toggle-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+  }
+  .toggle-btn {
+    padding: 4px 12px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    color: #9ad4ff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .toggle-btn.active {
+    background: #e94560;
+    color: white;
+    border-color: #e94560;
+  }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.cur .pill-v { color: #ffd87a; }
+  .pill.case .pill-v { color: #9ad4ff; }
+  .pill.result .pill-v { color: #4de88c; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 320px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.4s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 15px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.active circle { stroke: #ffa500; stroke-width: 4; fill: #2a2010; }
+  .node.active text.val { fill: #ffd87a; }
+  .node.target circle { stroke: #e94560; stroke-width: 4; fill: #4a1020; }
+  .node.target text.val { fill: #ff8ca0; }
+  .node.visited circle { stroke: #9ad4ff; stroke-width: 2.5; fill: #1a2e4a; }
+  .node.visited text.val { fill: #9ad4ff; }
+  .node.climbed circle { stroke: #9ad4ff; stroke-width: 3; fill: #0a2a4a; }
+  .node.climbed text.val { fill: #9ad4ff; }
+  .node.candidate circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; animation: pulse 0.6s ease-out; }
+  .node.candidate text.val { fill: #4de88c; }
+  .node.final circle { stroke: #4de88c; stroke-width: 5; fill: #0f3a1f; animation: pulse 0.8s ease-out; }
+  .node.final text.val { fill: #4de88c; }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.22); }
+    100% { transform: scale(1); }
+  }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.3s; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; }
+  .edge.climb-up { stroke: #9ad4ff; stroke-width: 3; stroke-dasharray: 5 3; animation: dash 1s linear infinite; }
+  .edge.descend { stroke: #4de88c; stroke-width: 3; }
+  @keyframes dash { to { stroke-dashoffset: -16; } }
+  .parent-arrow {
+    stroke: #666;
+    stroke-width: 1.5;
+    fill: none;
+    marker-end: url(#parent-arrow-head);
+    opacity: 0.6;
+    transition: all 0.3s;
+  }
+  .parent-arrow.active {
+    stroke: #9ad4ff;
+    opacity: 1;
+    stroke-width: 2.5;
+  }
+  .target-badge {
+    fill: #e94560;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+  }
+  .side-label {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    font-style: italic;
+    text-anchor: middle;
+  }
+  .side-label.left { fill: #4de88c; }
+  .side-label.right { fill: #ff8ca0; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #9ad4ff; color: #1a1a2e; }
+  .kind-case { background: #ffa500; color: #1a1a2e; }
+  .kind-descend { background: #4de88c; color: #1a1a2e; }
+  .kind-climb { background: #9ad4ff; color: #1a1a2e; }
+  .kind-exit { background: #ffa500; color: #1a1a2e; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button.ctrl {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button.ctrl:hover { background: #ff5577; }
+  button.ctrl:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  code { color: #ffd87a; background: #0a1a30; padding: 1px 4px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 510 — Inorder Successor in BST II</h1>
+    <div class="subtitle">No root — just <code>p</code> with a <code>.parent</code> pointer. Two cases: (A) <code>p.right</code> exists → leftmost of <code>p.right</code>; (B) else → climb up via <code>.parent</code> while we came from a right child; the first "came-from-left" ancestor is the answer. Tree = [20,10,30,5,15,25,35].</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="toggle-row">
+      <button class="toggle-btn active" id="caseABtn">Case A: p = 20</button>
+      <button class="toggle-btn" id="caseBBtn">Case B: p = 15</button>
+      <button class="toggle-btn" id="caseCBtn">Case B·max: p = 35</button>
+    </div>
+    <div class="pills">
+      <span class="pill cur"><span class="pill-k">current</span><span class="pill-v" id="curV">—</span></span>
+      <span class="pill case"><span class="pill-k">case</span><span class="pill-v" id="caseV">—</span></span>
+      <span class="pill result"><span class="pill-k">successor</span><span class="pill-v" id="succV">?</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="parent-arrow-head" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <polygon points="0 0, 7 3.5, 0 7" fill="#666"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Pick a case and click Play / Next.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Algorithm</div>
+    <pre style="font-family: 'Monaco', monospace; font-size: 10.5px; line-height: 1.55; color: #ccc; white-space: pre-wrap;">if (p.right != null) {
+    // Case A: leftmost of p.right
+    cur = p.right;
+    while (cur.left != null) {
+        cur = cur.left;
+    }
+    return cur;
+}
+// Case B: climb while coming from right
+cur = p;
+while (cur.parent != null
+       && cur == cur.parent.right) {
+    cur = cur.parent;
+}
+return cur.parent;  // may be null</pre>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why "came from left" ancestor?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        Inorder visits an ancestor <em>after</em> its entire left subtree. If p lives in ancestor A's left subtree, A comes right after p (ignoring everything between). If p is in A's right subtree, A was already visited before p.
+      </div>
+    </div>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Climb past the root</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        If the loop climbs past the root (all ancestors came from right), <code>cur.parent</code> is null — return null. That's the "p is the maximum" case.
+      </div>
+    </div>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">vs LC 285</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        LC 285 has root, no parent pointer → descend. LC 510 has parent, no root → local analysis + climb. Both O(h) time, O(1) space.
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button class="ctrl" id="prev">◀ Prev</button>
+  <button class="ctrl" id="play">▶ Play</button>
+  <button class="ctrl" id="next">Next ▶</button>
+  <button class="ctrl" id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public Node inorderSuccessor(Node node) {",
+    "    if (node.right != null) {",
+    "        Node current = node.right;",
+    "        while (current.left != null) {",
+    "            current = current.left;",
+    "        }",
+    "        return current;",
+    "    }",
+    "    Node current = node;",
+    "    while (current.parent != null",
+    "           && current == current.parent.right) {",
+    "        current = current.parent;",
+    "    }",
+    "    return current.parent;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //         20
+  //        /  \
+  //       10   30
+  //      / \   / \
+  //     5  15 25 35
+  const nodes = {
+    n20: { x: 320, y:  60, r: 24, val: '20' },
+    n10: { x: 200, y: 140, r: 22, val: '10' },
+    n30: { x: 440, y: 140, r: 22, val: '30' },
+    n5:  { x: 130, y: 220, r: 20, val: '5'  },
+    n15: { x: 270, y: 220, r: 20, val: '15' },
+    n25: { x: 380, y: 220, r: 20, val: '25' },
+    n35: { x: 510, y: 220, r: 20, val: '35' }
+  };
+  const edges = [
+    { id: 'e_20_10', from: 'n20', to: 'n10', side: 'left'  },
+    { id: 'e_20_30', from: 'n20', to: 'n30', side: 'right' },
+    { id: 'e_10_5',  from: 'n10', to: 'n5',  side: 'left'  },
+    { id: 'e_10_15', from: 'n10', to: 'n15', side: 'right' },
+    { id: 'e_30_25', from: 'n30', to: 'n25', side: 'left'  },
+    { id: 'e_30_35', from: 'n30', to: 'n35', side: 'right' }
+  ];
+  const parentMap = { n10: 'n20', n30: 'n20', n5: 'n10', n15: 'n10', n25: 'n30', n35: 'n30' };
+  const sideOfChild = {}; // child key -> 'left' or 'right'
+  edges.forEach(e => { sideOfChild[e.to] = e.side; });
+
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  const parentArrowEls = {}; // child -> parent arrow element
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    line.dataset.id = e.id;
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+
+    // Side label along the edge (mid-point, offset)
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    // Tiny parent-arrow (child → parent), shown in muted color
+    const px1 = b.x - ux * (b.r + 6);
+    const py1 = b.y - uy * (b.r + 6);
+    const px2 = a.x + ux * (a.r + 4);
+    const py2 = a.y + uy * (a.r + 4);
+    // perpendicular offset
+    const perpX = -uy * 10, perpY = ux * 10;
+    const pa = document.createElementNS(SVGNS, 'line');
+    pa.setAttribute('x1', px1 + perpX); pa.setAttribute('y1', py1 + perpY);
+    pa.setAttribute('x2', px2 + perpX); pa.setAttribute('y2', py2 + perpY);
+    pa.setAttribute('class', 'parent-arrow');
+    svg.appendChild(pa);
+    parentArrowEls[e.to] = pa;
+
+    // Side label (L / R) near the parent's end
+    const sl = document.createElementNS(SVGNS, 'text');
+    sl.setAttribute('x', x1 + ux * 16 - uy * (e.side === 'left' ? 8 : -8));
+    sl.setAttribute('y', y1 + uy * 16 + ux * (e.side === 'left' ? 8 : -8));
+    sl.setAttribute('class', 'side-label ' + e.side);
+    sl.textContent = e.side === 'left' ? 'L' : 'R';
+    svg.appendChild(sl);
+  });
+
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    g.dataset.key = key;
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // Target "p" badge — placed per case
+  const pBadge = document.createElementNS(SVGNS, 'text');
+  pBadge.setAttribute('class', 'target-badge');
+  pBadge.textContent = 'p';
+  svg.appendChild(pBadge);
+
+  function placePBadge(targetKey) {
+    const n = nodes[targetKey];
+    pBadge.setAttribute('x', n.x);
+    pBadge.setAttribute('y', n.y + n.r + 14);
+  }
+
+  // ============ STEPS per case ============
+  // Case A: p = 20. node.right = 30 (not null). cur = 30; cur.left = 25; cur.left = null → return 25.
+  const stepsA = [
+    {
+      target: 'n20',
+      line: [1, 2], active: null,
+      nodeState: { n20: 'target' }, edgeState: {}, parentArrow: null,
+      curV: "—", caseV: "—", succV: "?",
+      action: "Init with p = 20. Check: is p.right != null?",
+      kind: "check"
+    },
+    {
+      target: 'n20',
+      line: [2, 3], active: 'n30',
+      nodeState: { n20: 'target' }, edgeState: { e_20_30: 'descend' }, parentArrow: null,
+      curV: "30", caseV: "A", succV: "?",
+      action: "p.right = 30 (not null) → Case A. current = p.right = 30. Now walk current.left as far as possible to find the leftmost node of p's right subtree.",
+      kind: "case"
+    },
+    {
+      target: 'n20',
+      line: [4, 5], active: 'n25',
+      nodeState: { n20: 'target', n30: 'visited' }, edgeState: { e_20_30: 'descend', e_30_25: 'descend' }, parentArrow: null,
+      curV: "25", caseV: "A", succV: "?",
+      action: "current.left = 25 → go left. current = 25.",
+      kind: "descend"
+    },
+    {
+      target: 'n20',
+      line: [4], active: 'n25',
+      nodeState: { n20: 'target', n30: 'visited', n25: 'candidate' }, edgeState: { e_20_30: 'descend', e_30_25: 'descend' }, parentArrow: null,
+      curV: "25", caseV: "A", succV: "25?",
+      action: "current.left = null → exit while loop. current = 25 is the leftmost of p's right subtree = smallest value > 20 in that subtree.",
+      kind: "exit"
+    },
+    {
+      target: 'n20',
+      line: [7], active: null,
+      nodeState: { n20: 'target', n30: 'visited', n25: 'final' }, edgeState: { e_20_30: 'descend', e_30_25: 'descend' }, parentArrow: null,
+      curV: "—", caseV: "A", succV: "25",
+      action: "★ Return current = 25. Two hops total.",
+      kind: "done"
+    }
+  ];
+
+  // Case B: p = 15. node.right = null. current = 15; parent=10, 15==10.right (YES), climb;
+  // current = 10; parent=20, 10==20.right? NO (10 is 20.left) → exit; return current.parent = 20.
+  const stepsB = [
+    {
+      target: 'n15',
+      line: [1, 2], active: null,
+      nodeState: { n15: 'target' }, edgeState: {}, parentArrow: null,
+      curV: "—", caseV: "—", succV: "?",
+      action: "Init with p = 15. Check: is p.right != null?",
+      kind: "check"
+    },
+    {
+      target: 'n15',
+      line: [2, 9], active: 'n15',
+      nodeState: { n15: 'target' }, edgeState: {}, parentArrow: null,
+      curV: "15", caseV: "B", succV: "?",
+      action: "p.right = null → skip Case A, enter Case B. current = p = 15. Climb while we came from a right child.",
+      kind: "case"
+    },
+    {
+      target: 'n15',
+      line: [10, 11], active: 'n15',
+      nodeState: { n15: 'target' }, edgeState: {}, parentArrow: 'n15',
+      curV: "15", caseV: "B", succV: "?",
+      action: "current.parent = 10 (exists). Is current == current.parent.right? 15 is 10's R child → YES. We came from the right → 10 was already visited before 15 in inorder. Climb up.",
+      kind: "climb"
+    },
+    {
+      target: 'n15',
+      line: [12], active: 'n10',
+      nodeState: { n15: 'target', n10: 'climbed' }, edgeState: { e_10_15: 'climb-up' }, parentArrow: 'n15',
+      curV: "10", caseV: "B", succV: "?",
+      action: "current = current.parent = 10.",
+      kind: "climb"
+    },
+    {
+      target: 'n15',
+      line: [10, 11], active: 'n10',
+      nodeState: { n15: 'target', n10: 'climbed' }, edgeState: { e_10_15: 'climb-up' }, parentArrow: 'n10',
+      curV: "10", caseV: "B", succV: "?",
+      action: "current.parent = 20 (exists). Is current == current.parent.right? 10 is 20's L child → NO. We came from the LEFT → 20 is next in inorder after 10's subtree (which contained 15). Exit loop.",
+      kind: "exit"
+    },
+    {
+      target: 'n15',
+      line: [13], active: 'n20',
+      nodeState: { n15: 'target', n10: 'climbed', n20: 'final' }, edgeState: { e_10_15: 'climb-up', e_20_10: 'climb-up' }, parentArrow: 'n10',
+      curV: "10", caseV: "B", succV: "20",
+      action: "★ Return current.parent = 20. Two climbs, one check.",
+      kind: "done"
+    }
+  ];
+
+  // Case C: p = 35 — climb all the way out, no successor.
+  const stepsC = [
+    {
+      target: 'n35',
+      line: [1, 2], active: null,
+      nodeState: { n35: 'target' }, edgeState: {}, parentArrow: null,
+      curV: "—", caseV: "—", succV: "?",
+      action: "Init with p = 35. Check: is p.right != null?",
+      kind: "check"
+    },
+    {
+      target: 'n35',
+      line: [2, 9], active: 'n35',
+      nodeState: { n35: 'target' }, edgeState: {}, parentArrow: null,
+      curV: "35", caseV: "B", succV: "?",
+      action: "p.right = null → Case B. current = p = 35.",
+      kind: "case"
+    },
+    {
+      target: 'n35',
+      line: [10, 11], active: 'n35',
+      nodeState: { n35: 'target' }, edgeState: {}, parentArrow: 'n35',
+      curV: "35", caseV: "B", succV: "?",
+      action: "parent = 30 (exists). 35 is 30's R child → YES, came from right. Climb.",
+      kind: "climb"
+    },
+    {
+      target: 'n35',
+      line: [12], active: 'n30',
+      nodeState: { n35: 'target', n30: 'climbed' }, edgeState: { e_30_35: 'climb-up' }, parentArrow: 'n35',
+      curV: "30", caseV: "B", succV: "?",
+      action: "current = 30.",
+      kind: "climb"
+    },
+    {
+      target: 'n35',
+      line: [10, 11], active: 'n30',
+      nodeState: { n35: 'target', n30: 'climbed' }, edgeState: { e_30_35: 'climb-up' }, parentArrow: 'n30',
+      curV: "30", caseV: "B", succV: "?",
+      action: "parent = 20 (exists). 30 is 20's R child → YES, came from right. Climb.",
+      kind: "climb"
+    },
+    {
+      target: 'n35',
+      line: [12], active: 'n20',
+      nodeState: { n35: 'target', n30: 'climbed', n20: 'climbed' }, edgeState: { e_30_35: 'climb-up', e_20_30: 'climb-up' }, parentArrow: 'n30',
+      curV: "20", caseV: "B", succV: "?",
+      action: "current = 20.",
+      kind: "climb"
+    },
+    {
+      target: 'n35',
+      line: [10], active: 'n20',
+      nodeState: { n35: 'target', n30: 'climbed', n20: 'climbed' }, edgeState: { e_30_35: 'climb-up', e_20_30: 'climb-up' }, parentArrow: null,
+      curV: "20", caseV: "B", succV: "?",
+      action: "current.parent = null → short-circuit fails on the first clause. Exit loop.",
+      kind: "exit"
+    },
+    {
+      target: 'n35',
+      line: [13], active: null,
+      nodeState: { n35: 'target', n30: 'climbed', n20: 'climbed' }, edgeState: { e_30_35: 'climb-up', e_20_30: 'climb-up' }, parentArrow: null,
+      curV: "—", caseV: "B", succV: "null",
+      action: "★ Return current.parent = null. 35 is the maximum of the tree, no successor exists.",
+      kind: "done"
+    }
+  ];
+
+  const allCases = { A: stepsA, B: stepsB, C: stepsC };
+
+  // ============ RENDERER ============
+  let caseKey = 'A';
+  let stepIdx = 0;
+  const curVEl = document.getElementById('curV');
+  const caseVEl = document.getElementById('caseV');
+  const succVEl = document.getElementById('succV');
+  const actionBodyEl = document.getElementById('action').querySelector('div:nth-child(2)');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx, prevIdx) {
+    const steps = allCases[caseKey];
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    curVEl.textContent = s.curV;
+    caseVEl.textContent = s.caseV;
+    succVEl.textContent = s.succV;
+
+    placePBadge(s.target);
+
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'visited', 'target', 'climbed', 'candidate', 'final');
+      const st = s.nodeState[key];
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (st) {
+        el.classList.add(st);
+      }
+      if ((st === 'candidate' || st === 'final') && prevIdx !== undefined && idx > prevIdx && (steps[prevIdx]?.nodeState?.[key] !== st)) {
+        void el.offsetWidth;
+        el.classList.remove(st);
+        void el.offsetWidth;
+        el.classList.add(st);
+      }
+    });
+
+    Object.keys(edgeEls).forEach(eId => {
+      const el = edgeEls[eId];
+      el.classList.remove('on-path', 'climb-up', 'descend');
+      if (s.edgeState[eId]) {
+        el.classList.add(s.edgeState[eId]);
+      }
+    });
+
+    // Parent arrows — only highlight the active child→parent arrow
+    Object.keys(parentArrowEls).forEach(childKey => {
+      const el = parentArrowEls[childKey];
+      el.classList.toggle('active', s.parentArrow === childKey);
+    });
+
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  const caseABtn = document.getElementById('caseABtn');
+  const caseBBtn = document.getElementById('caseBBtn');
+  const caseCBtn = document.getElementById('caseCBtn');
+  let playInterval = null;
+  function goTo(idx) {
+    const steps = allCases[caseKey];
+    const prev = stepIdx;
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  function switchCase(key) {
+    stopPlay();
+    caseKey = key;
+    stepIdx = 0;
+    [caseABtn, caseBBtn, caseCBtn].forEach(b => b.classList.remove('active'));
+    if (key === 'A') caseABtn.classList.add('active');
+    if (key === 'B') caseBBtn.classList.add('active');
+    if (key === 'C') caseCBtn.classList.add('active');
+    render(0);
+    prevBtn.disabled = true;
+    nextBtn.disabled = allCases[key].length === 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  caseABtn.addEventListener('click', () => switchCase('A'));
+  caseBBtn.addEventListener('click', () => switchCase('B'));
+  caseCBtn.addEventListener('click', () => switchCase('C'));
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      const steps = allCases[caseKey];
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1500);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

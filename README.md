@@ -85,6 +85,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [450](https://kinny94.github.io/dsa-visualizations/lc450-delete-node-in-bst.html) | Delete Node in a BST | BST · Descent · successor swap + rewire |
 | [99](https://kinny94.github.io/dsa-visualizations/lc99-recover-binary-search-tree.html) | Recover Binary Search Tree | BST · Inorder · first/last inversion |
 | [285](https://kinny94.github.io/dsa-visualizations/lc285-inorder-successor-in-bst.html) | Inorder Successor in BST | BST · Descent · running candidate |
+| [510](https://kinny94.github.io/dsa-visualizations/lc510-inorder-successor-in-bst-ii.html) | Inorder Successor in BST II | BST · Parent-pointer · climb-while-right |
 
 ## Adding a new animation
 
