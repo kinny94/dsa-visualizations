@@ -84,6 +84,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [701](https://kinny94.github.io/dsa-visualizations/lc701-insert-into-bst.html) | Insert into a Binary Search Tree | BST · Descent · plant at null slot |
 | [450](https://kinny94.github.io/dsa-visualizations/lc450-delete-node-in-bst.html) | Delete Node in a BST | BST · Descent · successor swap + rewire |
 | [99](https://kinny94.github.io/dsa-visualizations/lc99-recover-binary-search-tree.html) | Recover Binary Search Tree | BST · Inorder · first/last inversion |
+| [285](https://kinny94.github.io/dsa-visualizations/lc285-inorder-successor-in-bst.html) | Inorder Successor in BST | BST · Descent · running candidate |
 
 ## Adding a new animation
 

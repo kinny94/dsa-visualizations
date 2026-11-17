@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 285 — Inorder Successor in BST</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.node .pill-v { color: #ffd87a; }
+  .pill.succ .pill-v { color: #4de88c; }
+  .pill.dir .pill-v { color: #9ad4ff; }
+  .state-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .state-box {
+    flex: 1;
+    padding: 8px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+  }
+  .state-box .lbl { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 3px; }
+  .state-box .val { font-weight: bold; font-size: 14px; color: #4de88c; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 340px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.4s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 15px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.active circle { stroke: #ffa500; stroke-width: 4; fill: #2a2010; }
+  .node.active text.val { fill: #ffd87a; }
+  .node.visited circle { stroke: #9ad4ff; stroke-width: 2.5; fill: #1a2e4a; }
+  .node.visited text.val { fill: #9ad4ff; }
+  .node.target circle { stroke: #e94560; stroke-width: 4; fill: #4a1020; }
+  .node.target text.val { fill: #ff8ca0; }
+  .node.candidate circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; animation: pulse 0.6s ease-out; }
+  .node.candidate text.val { fill: #4de88c; }
+  .node.final circle { stroke: #4de88c; stroke-width: 5; fill: #0f3a1f; animation: pulse 0.8s ease-out; }
+  .node.final text.val { fill: #4de88c; }
+  .node.rejected circle { stroke: #555; stroke-width: 2; fill: #1a1a2e; }
+  .node.rejected text.val { fill: #666; }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.22); }
+    100% { transform: scale(1); }
+  }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.3s; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; }
+  .edge.rejected { stroke: #333; opacity: 0.4; }
+  .null-slot {
+    fill: none;
+    stroke: #ff8ca0;
+    stroke-width: 1.8;
+    stroke-dasharray: 3 3;
+  }
+  .null-label {
+    fill: #ff8ca0;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .target-badge {
+    fill: #e94560;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-visit { background: #9ad4ff; color: #1a1a2e; }
+  .kind-remember { background: #4de88c; color: #1a1a2e; }
+  .kind-skip { background: #ff8ca0; color: #1a1a2e; }
+  .kind-exit { background: #ffa500; color: #1a1a2e; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  code { color: #ffd87a; background: #0a1a30; padding: 1px 4px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 285 — Inorder Successor in BST</h1>
+    <div class="subtitle">Descend from root: if <code>node.val &gt; p.val</code> → remember & go left (smaller candidate may exist); else go right. Last remembered node is the successor. Tree = [5,3,6,2,4,null,null,1], p = 2 → expected successor 3.</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill node"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill succ"><span class="pill-k">successor</span><span class="pill-v" id="succV">null</span></span>
+      <span class="pill dir"><span class="pill-k">direction</span><span class="pill-v" id="dirV">—</span></span>
+    </div>
+    <div class="state-row">
+      <div class="state-box"><span class="lbl">target p.val</span><span class="val" style="color:#ff8ca0">2</span></div>
+      <div class="state-box"><span class="lbl">rule firing</span><span class="val" id="ruleV" style="color:#ffd87a">—</span></div>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Algorithm</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6; font-family: 'Monaco', monospace;">
+      <div>Walk from root while <code>node != null</code>:</div>
+      <div style="padding-left:12px; margin-top:4px;">
+        <div>• <code>node.val &gt; p.val</code>:</div>
+        <div style="padding-left:12px;">
+          <div>- <code>successor = node</code></div>
+          <div>- <code>node = node.left</code></div>
+        </div>
+        <div>• else:</div>
+        <div style="padding-left:12px;">
+          <div>- <code>node = node.right</code></div>
+        </div>
+      </div>
+      <div style="margin-top:6px;">Return <code>successor</code>.</div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why remember + go left?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        If <code>node.val &gt; p.val</code>, node is <em>a</em> successor candidate but maybe not the tightest. Going left searches for a smaller value that's still &gt; p.val. If left subtree has nothing &gt; p.val, we pivot right (Case 2) elsewhere and keep the current remembered node.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why discard + go right?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        If <code>node.val &le; p.val</code>, then node and its entire LEFT subtree are all ≤ p.val (BST invariant). None of them can be a strict successor. Only the right subtree might help.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">LC 510 variant</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        Given only <code>p</code> with a <code>.parent</code> pointer (no root): if <code>p.right</code> exists → leftmost of <code>p.right</code>; else walk up via parents until <code>p</code> is in the left subtree of its ancestor. Same two mental cases.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Family placement</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>BST descent with running candidate</strong>. Same skeleton as LC 270 Closest BST Value (running best), LC 700 Search (no tracker), LC 235 LCA (split-point detect). Inorder version is O(n); descent is O(h).
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public TreeNode inorderSuccessor(TreeNode root, TreeNode p) {",
+    "    TreeNode successor = null;",
+    "    TreeNode node = root;",
+    "    while (node != null) {",
+    "        if (node.val > p.val) {",
+    "            successor = node;",
+    "            node = node.left;",
+    "        } else {",
+    "            node = node.right;",
+    "        }",
+    "    }",
+    "    return successor;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //         5
+  //        / \
+  //       3   6
+  //      / \
+  //     2   4
+  //    /
+  //   1
+  // p = node(2)  →  expected successor = 3
+  const nodes = {
+    n5: { x: 320, y:  55, r: 24, val: '5' },
+    n3: { x: 200, y: 135, r: 22, val: '3' },
+    n6: { x: 440, y: 135, r: 22, val: '6' },
+    n2: { x: 130, y: 215, r: 20, val: '2' },
+    n4: { x: 270, y: 215, r: 20, val: '4' },
+    n1: { x:  80, y: 295, r: 18, val: '1' }
+  };
+  const edges = [
+    { id: 'e_5_3', from: 'n5', to: 'n3' },
+    { id: 'e_5_6', from: 'n5', to: 'n6' },
+    { id: 'e_3_2', from: 'n3', to: 'n2' },
+    { id: 'e_3_4', from: 'n3', to: 'n4' },
+    { id: 'e_2_1', from: 'n2', to: 'n1' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    line.dataset.id = e.id;
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+
+  // Null slot indicator at 2's right (where descent ultimately falls off)
+  const nullSlot = document.createElementNS(SVGNS, 'g');
+  const nullCircle = document.createElementNS(SVGNS, 'circle');
+  nullCircle.setAttribute('cx', 180);
+  nullCircle.setAttribute('cy', 285);
+  nullCircle.setAttribute('r', 15);
+  nullCircle.setAttribute('class', 'null-slot');
+  nullSlot.appendChild(nullCircle);
+  const nullText = document.createElementNS(SVGNS, 'text');
+  nullText.setAttribute('x', 180);
+  nullText.setAttribute('y', 285);
+  nullText.setAttribute('class', 'null-label');
+  nullText.textContent = 'null';
+  nullSlot.appendChild(nullText);
+  nullSlot.style.opacity = '0';
+  svg.appendChild(nullSlot);
+  const nullEdge = document.createElementNS(SVGNS, 'line');
+  const ne_dx = 180 - 130, ne_dy = 285 - 215;
+  const ne_len = Math.hypot(ne_dx, ne_dy);
+  const ne_ux = ne_dx/ne_len, ne_uy = ne_dy/ne_len;
+  nullEdge.setAttribute('x1', 130 + ne_ux*20);
+  nullEdge.setAttribute('y1', 215 + ne_uy*20);
+  nullEdge.setAttribute('x2', 180 - ne_ux*15);
+  nullEdge.setAttribute('y2', 285 - ne_uy*15);
+  nullEdge.setAttribute('stroke', '#ff8ca0');
+  nullEdge.setAttribute('stroke-width', '1.5');
+  nullEdge.setAttribute('stroke-dasharray', '3 3');
+  nullEdge.setAttribute('opacity', '0');
+  svg.appendChild(nullEdge);
+
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    g.dataset.key = key;
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // "p" badge next to the target node (n2)
+  const pBadge = document.createElementNS(SVGNS, 'text');
+  pBadge.setAttribute('x', 130);
+  pBadge.setAttribute('y', 248);
+  pBadge.setAttribute('class', 'target-badge');
+  pBadge.textContent = 'p';
+  svg.appendChild(pBadge);
+
+  // ============ STEPS ============
+  const steps = [
+    {
+      line: [1, 2, 3], active: null, successor: null,
+      nodeState: { n2: 'target' }, edgeState: {},
+      showNull: false,
+      nodeV: "—", succV: "null", dirV: "—", ruleV: "init",
+      action: "Init: successor = null, node = root (5). Target p = node holding value 2. Goal: find the smallest value > 2.",
+      kind: "init"
+    },
+    {
+      line: [4, 5], active: "n5", successor: null,
+      nodeState: { n2: 'target' }, edgeState: {},
+      showNull: false,
+      nodeV: "5", succV: "null", dirV: "—", ruleV: "compare 5 > 2?",
+      action: "Enter loop. node = 5. Compare 5 > 2 → YES.",
+      kind: "visit"
+    },
+    {
+      line: [6, 7], active: "n3", successor: "n5",
+      nodeState: { n5: 'candidate', n2: 'target' }, edgeState: { e_5_3: 'on-path' },
+      showNull: false,
+      nodeV: "3", succV: "5", dirV: "left", ruleV: "> → remember + left",
+      action: "★ successor = node(5). First candidate locked. Go LEFT — maybe a smaller value still > 2 lives there.",
+      kind: "remember"
+    },
+    {
+      line: [5], active: "n3", successor: "n5",
+      nodeState: { n5: 'candidate', n2: 'target' }, edgeState: { e_5_3: 'on-path' },
+      showNull: false,
+      nodeV: "3", succV: "5", dirV: "left", ruleV: "compare 3 > 2?",
+      action: "node = 3. Compare 3 > 2 → YES.",
+      kind: "visit"
+    },
+    {
+      line: [6, 7], active: "n2", successor: "n3",
+      nodeState: { n5: 'rejected', n3: 'candidate', n2: 'target' }, edgeState: { e_5_3: 'on-path', e_3_2: 'on-path' },
+      showNull: false,
+      nodeV: "2", succV: "3", dirV: "left", ruleV: "> → remember + left",
+      action: "★ successor = node(3) — OVERWRITES the earlier 5. 3 is tighter: still > 2, but smaller than 5. Go LEFT.",
+      kind: "remember"
+    },
+    {
+      line: [5], active: "n2", successor: "n3",
+      nodeState: { n5: 'rejected', n3: 'candidate', n2: 'target' }, edgeState: { e_5_3: 'on-path', e_3_2: 'on-path' },
+      showNull: false,
+      nodeV: "2", succV: "3", dirV: "—", ruleV: "compare 2 > 2?",
+      action: "node = 2 (= p itself). Compare 2 > 2 → NO.",
+      kind: "visit"
+    },
+    {
+      line: [8, 9], active: null, successor: "n3",
+      nodeState: { n5: 'rejected', n3: 'candidate', n2: 'visited' }, edgeState: { e_5_3: 'on-path', e_3_2: 'on-path' },
+      showNull: true,
+      nodeV: "null", succV: "3", dirV: "right", ruleV: "≤ → skip + right",
+      action: "≤ p.val: node and its entire LEFT subtree (just 1 here) are all ≤ 2. Only the right subtree might help. Go RIGHT. node.right = null.",
+      kind: "skip"
+    },
+    {
+      line: [4], active: null, successor: "n3",
+      nodeState: { n5: 'rejected', n3: 'candidate', n2: 'visited' }, edgeState: { e_5_3: 'on-path', e_3_2: 'on-path' },
+      showNull: true,
+      nodeV: "null", succV: "3", dirV: "—", ruleV: "node == null",
+      action: "Loop condition fails (node == null). Exit while loop.",
+      kind: "exit"
+    },
+    {
+      line: [12], active: null, successor: "n3",
+      nodeState: { n5: 'rejected', n3: 'final', n2: 'visited' }, edgeState: { e_5_3: 'on-path', e_3_2: 'on-path' },
+      showNull: false,
+      nodeV: "—", succV: "3", dirV: "—", ruleV: "return",
+      action: "★ Return successor = node(3). Only 3 descents, O(h) time. Node 1 (left of p) was never even visited — the BST invariant pruned it away, which the plain inorder approach wouldn't have.",
+      kind: "done"
+    }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const succVEl = document.getElementById('succV');
+  const dirVEl = document.getElementById('dirV');
+  const ruleVEl = document.getElementById('ruleV');
+  const actionBodyEl = document.getElementById('action').querySelector('div:nth-child(2)');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx, prevIdx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.nodeV;
+    succVEl.textContent = s.succV ? nodes[s.successor].val : "null";
+    dirVEl.textContent = s.dirV;
+    ruleVEl.textContent = s.ruleV;
+
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'visited', 'target', 'candidate', 'final', 'rejected');
+      const st = s.nodeState[key];
+      // 'active' only when it's the current loop pointer AND not the final-return step
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (st) {
+        el.classList.add(st);
+      }
+      // Re-trigger pulse animations when candidate/final changes
+      if ((st === 'candidate' || st === 'final') && prevIdx !== undefined && idx > prevIdx && steps[prevIdx].nodeState[key] !== st) {
+        void el.offsetWidth;
+        el.classList.remove(st);
+        void el.offsetWidth;
+        el.classList.add(st);
+      }
+    });
+
+    Object.keys(edgeEls).forEach(eId => {
+      const el = edgeEls[eId];
+      el.classList.remove('on-path', 'rejected');
+      if (s.edgeState[eId]) {
+        el.classList.add(s.edgeState[eId]);
+      }
+    });
+
+    nullSlot.style.opacity = s.showNull ? '1' : '0';
+    nullEdge.setAttribute('opacity', s.showNull ? '0.6' : '0');
+
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    const prev = stepIdx;
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1500);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
