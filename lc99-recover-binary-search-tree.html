@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 99 — Recover Binary Search Tree</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 440px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.prev .pill-v { color: #9ad4ff; }
+  .pill.first .pill-v { color: #ff8ca0; }
+  .pill.second .pill-v { color: #ff8ca0; }
+  .pill.cur .pill-v { color: #ffd87a; }
+  .seq-row {
+    display: flex;
+    gap: 4px;
+    align-items: stretch;
+    padding: 6px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .seq-slot {
+    min-width: 28px;
+    padding: 4px 8px;
+    background: #0a1a30;
+    border: 1px solid #1a4a7a;
+    border-radius: 3px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+    font-size: 12px;
+    color: #666;
+    transition: all 0.3s;
+  }
+  .seq-slot.visited { color: #eee; background: #1a2e4a; border-color: #2a4a7a; }
+  .seq-slot.current { color: #ffd87a; background: #2a2010; border-color: #ffa500; font-weight: bold; transform: scale(1.1); }
+  .seq-slot.inv-left { color: #ff8ca0; background: #4a1020; border-color: #e94560; font-weight: bold; }
+  .seq-slot.inv-right { color: #ff8ca0; background: #4a1020; border-color: #e94560; font-weight: bold; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 340px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.4s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 15px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.active circle { stroke: #ffa500; stroke-width: 4; fill: #2a2010; }
+  .node.active text.val { fill: #ffd87a; }
+  .node.visited circle { stroke: #9ad4ff; stroke-width: 2.5; fill: #1a2e4a; }
+  .node.visited text.val { fill: #9ad4ff; }
+  .node.prev circle { stroke: #9ad4ff; stroke-width: 4; fill: #0a2a4a; }
+  .node.prev text.val { fill: #9ad4ff; }
+  .node.offender circle { stroke: #e94560; stroke-width: 4; fill: #4a1020; }
+  .node.offender text.val { fill: #ff8ca0; }
+  .node.offender-first circle { stroke: #e94560; stroke-width: 4; fill: #4a1020; }
+  .node.offender-first text.val { fill: #ff8ca0; }
+  .node.offender-second circle { stroke: #e94560; stroke-width: 4; fill: #4a1020; animation: pulse 0.6s ease-out; }
+  .node.offender-second text.val { fill: #ff8ca0; }
+  .node.fixed circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; animation: pulse 0.6s ease-out; }
+  .node.fixed text.val { fill: #4de88c; }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.3s; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; }
+  .swap-arrow {
+    stroke: #4de88c;
+    stroke-width: 2.5;
+    fill: none;
+    marker-end: url(#arrowhead);
+    marker-start: url(#arrowstart);
+    stroke-dasharray: 5 3;
+    animation: dash 1s linear infinite;
+  }
+  @keyframes dash { to { stroke-dashoffset: -16; } }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-visit { background: #9ad4ff; color: #1a1a2e; }
+  .kind-compare { background: #ffd87a; color: #1a1a2e; }
+  .kind-inversion { background: #e94560; color: #fff; }
+  .kind-swap { background: #4de88c; color: #1a1a2e; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  code { color: #ffd87a; background: #0a1a30; padding: 1px 4px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 99 — Recover Binary Search Tree</h1>
+    <div class="subtitle">Inorder on a valid BST is strictly sorted — two inversions (or one) betray the swapped pair. Lock <code>first</code> on the first inversion's prev; overwrite <code>second</code> with every inversion's curr. Tree = [3,5,4,1,null,null,2]; swapped pair = (5, 2).</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill cur"><span class="pill-k">curr</span><span class="pill-v" id="curV">—</span></span>
+      <span class="pill prev"><span class="pill-k">prev</span><span class="pill-v" id="prevV">null</span></span>
+      <span class="pill first"><span class="pill-k">first</span><span class="pill-v" id="firstV">null</span></span>
+      <span class="pill second"><span class="pill-k">second</span><span class="pill-v" id="secondV">null</span></span>
+    </div>
+    <div class="panel-title" style="margin-top: 4px;">Inorder sequence (as visited)</div>
+    <div class="seq-row" id="seqRow"></div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0 0, 8 4, 0 8" fill="#4de88c"/>
+          </marker>
+          <marker id="arrowstart" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto">
+            <polygon points="8 0, 0 4, 8 8" fill="#4de88c"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Algorithm</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6; font-family: 'Monaco', monospace;">
+      <div>Inorder walk. At each visit:</div>
+      <div style="padding-left:12px; margin-top:4px;">
+        <div>• if <code>prev != null && prev.val &gt; node.val</code>:</div>
+        <div style="padding-left:12px;">
+          <div>- if <code>first == null</code> → <code>first = prev</code></div>
+          <div>- <code>second = node</code></div>
+        </div>
+        <div>• <code>prev = node</code></div>
+      </div>
+      <div style="margin-top:6px;">At end: swap <code>first.val</code> ↔ <code>second.val</code>.</div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why first/last asymmetry?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        A swap creates a "too-big" value floating LEFT (shows up in the <em>prev</em> of the first inversion) and a "too-small" value floating RIGHT (shows up in the <em>curr</em> of the last inversion). Adjacent swap = both fall into one inversion; non-adjacent = they split across two.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Swap values, not nodes</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        The problem forbids changing structure. We only overwrite the two <code>.val</code> fields — pointers stay untouched.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Family placement</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>Inorder-sorted exploit.</strong> Siblings: LC 98 Validate BST (any inversion → invalid), LC 230 Kth Smallest, LC 530/783 Min Abs Diff, LC 653 Two Sum IV. Morris variant drops space to O(1) — temporarily threads right pointers.
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "private TreeNode prev = null;",
+    "private TreeNode first = null;",
+    "private TreeNode second = null;",
+    "",
+    "public void recoverTree(TreeNode root) {",
+    "    inorder(root);",
+    "    int tmp = first.val;",
+    "    first.val = second.val;",
+    "    second.val = tmp;",
+    "}",
+    "",
+    "private void inorder(TreeNode node) {",
+    "    if (node == null) return;",
+    "    inorder(node.left);",
+    "    if (prev != null && prev.val > node.val) {",
+    "        if (first == null) first = prev;",
+    "        second = node;",
+    "    }",
+    "    prev = node;",
+    "    inorder(node.right);",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //   Tree before recovery: [3, 5, 4, 1, null, null, 2]
+  //         3
+  //        / \
+  //       5   4
+  //      /     \
+  //     1       2
+  //
+  //   Correct swap: 5 and 2.  After recovery, tree is:
+  //         3
+  //        / \
+  //       2   4
+  //      /     \
+  //     1       5
+  const nodes = {
+    n3: { x: 320, y:  55, r: 24, val: '3' },
+    n5: { x: 200, y: 140, r: 22, val: '5' },  // offender A (will become 2)
+    n4: { x: 440, y: 140, r: 22, val: '4' },
+    n1: { x: 130, y: 230, r: 20, val: '1' },
+    n2: { x: 510, y: 230, r: 20, val: '2' }   // offender B (will become 5)
+  };
+  const edges = [
+    { id: 'e_3_5', from: 'n3', to: 'n5' },
+    { id: 'e_3_4', from: 'n3', to: 'n4' },
+    { id: 'e_5_1', from: 'n5', to: 'n1' },
+    { id: 'e_4_2', from: 'n4', to: 'n2' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+
+  // Swap arrow between offenders (shown on the final swap step)
+  const swapArrow = document.createElementNS(SVGNS, 'path');
+  swapArrow.setAttribute('class', 'swap-arrow');
+  // Curve from n5 (200, 140) to n2 (510, 230) — arc over the top
+  swapArrow.setAttribute('d', 'M 220 128 Q 355 55, 490 218');
+  swapArrow.style.opacity = '0';
+  svg.appendChild(swapArrow);
+
+  const nodeEls = {};
+  const nodeTextEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    g.dataset.key = key;
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    nodeTextEls[key] = t;
+  });
+
+  // Sequence slots — inorder visit order is: 1, 5, 3, 4, 2
+  const seqOrder = [
+    { k: 'n1', v: '1' },
+    { k: 'n5', v: '5' },
+    { k: 'n3', v: '3' },
+    { k: 'n4', v: '4' },
+    { k: 'n2', v: '2' }
+  ];
+  const seqRowEl = document.getElementById('seqRow');
+  const seqEls = seqOrder.map((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'seq-slot';
+    d.textContent = s.v;
+    d.dataset.i = i;
+    seqRowEl.appendChild(d);
+    return d;
+  });
+
+  // ============ STEPS ============
+  // We visit nodes in inorder: n1, n5, n3, n4, n2
+  const steps = [
+    {
+      line: [1,2,3], active: null, prev: null, first: null, second: null,
+      nodeState: {}, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: {}, showSwap: false,
+      prevV: "null", firstV: "null", secondV: "null", curV: "—",
+      action: "Init: prev=null, first=null, second=null. Walk inorder — expect strictly increasing values in a valid BST; any dip is an inversion.",
+      kind: "init"
+    },
+    {
+      line: [12, 13, 14], active: "n1", prev: null, first: null, second: null,
+      nodeState: {}, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'current' }, showSwap: false,
+      prevV: "null", firstV: "null", secondV: "null", curV: "1",
+      action: "Descend to leftmost leaf 1. Visit node 1. prev == null → no comparison. Advance prev = 1.",
+      kind: "visit"
+    },
+    {
+      line: [19], active: "n1", prev: "n1", first: null, second: null,
+      nodeState: { n1: 'visited' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited' }, showSwap: false,
+      prevV: "1", firstV: "null", secondV: "null", curV: "1",
+      action: "prev = 1. Return up to 5 (1's parent).",
+      kind: "visit"
+    },
+    {
+      line: [15], active: "n5", prev: "n1", first: null, second: null,
+      nodeState: { n1: 'visited', n1: 'visited' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'current' }, showSwap: false,
+      prevV: "1", firstV: "null", secondV: "null", curV: "5",
+      action: "Visit node 5. Compare prev.val=1 and node.val=5 → 1 < 5, NO inversion. (Yet 5 is wrongly placed — but we won't notice at this local step; we'll notice on the NEXT visit.)",
+      kind: "compare"
+    },
+    {
+      line: [19], active: "n5", prev: "n5", first: null, second: null,
+      nodeState: { n1: 'visited' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'visited' }, showSwap: false,
+      prevV: "5", firstV: "null", secondV: "null", curV: "5",
+      action: "Advance prev = 5. Node 5 has no right subtree, so return up to 3 (the root).",
+      kind: "visit"
+    },
+    {
+      line: [15], active: "n3", prev: "n5", first: null, second: null,
+      nodeState: { n1: 'visited', n5: 'visited' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'visited', 2: 'current' }, showSwap: false,
+      prevV: "5", firstV: "null", secondV: "null", curV: "3",
+      action: "Visit node 3 (the root). Compare prev.val=5 and node.val=3 → 5 > 3. ★ INVERSION detected.",
+      kind: "compare"
+    },
+    {
+      line: [16, 17], active: "n3", prev: "n5", first: "n5", second: "n3",
+      nodeState: { n1: 'visited', n5: 'offender-first', n3: 'offender-second' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'inv-left', 2: 'inv-right' }, showSwap: false,
+      prevV: "5", firstV: "5", secondV: "3", curV: "3",
+      action: "first was null → first = prev = node(5). second = node(3). Inversion #1 captured. (Note: second may be overwritten later if another inversion exists.)",
+      kind: "inversion"
+    },
+    {
+      line: [19], active: "n3", prev: "n3", first: "n5", second: "n3",
+      nodeState: { n1: 'visited', n5: 'offender-first', n3: 'visited' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'inv-left', 2: 'visited' }, showSwap: false,
+      prevV: "3", firstV: "5", secondV: "3", curV: "3",
+      action: "Advance prev = 3. Descend into right subtree of 3 — go to node 4.",
+      kind: "visit"
+    },
+    {
+      line: [15], active: "n4", prev: "n3", first: "n5", second: "n3",
+      nodeState: { n1: 'visited', n5: 'offender-first', n3: 'visited' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'inv-left', 2: 'visited', 3: 'current' }, showSwap: false,
+      prevV: "3", firstV: "5", secondV: "3", curV: "4",
+      action: "Visit node 4. Compare prev.val=3 and node.val=4 → 3 < 4, NO inversion.",
+      kind: "compare"
+    },
+    {
+      line: [19], active: "n4", prev: "n4", first: "n5", second: "n3",
+      nodeState: { n1: 'visited', n5: 'offender-first', n3: 'visited', n4: 'visited' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'inv-left', 2: 'visited', 3: 'visited' }, showSwap: false,
+      prevV: "4", firstV: "5", secondV: "3", curV: "4",
+      action: "Advance prev = 4. Descend into right child of 4 — go to node 2.",
+      kind: "visit"
+    },
+    {
+      line: [15], active: "n2", prev: "n4", first: "n5", second: "n3",
+      nodeState: { n1: 'visited', n5: 'offender-first', n3: 'visited', n4: 'visited' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'inv-left', 2: 'visited', 3: 'visited', 4: 'current' }, showSwap: false,
+      prevV: "4", firstV: "5", secondV: "3", curV: "2",
+      action: "Visit node 2. Compare prev.val=4 and node.val=2 → 4 > 2. ★ INVERSION #2 detected.",
+      kind: "compare"
+    },
+    {
+      line: [16, 17], active: "n2", prev: "n4", first: "n5", second: "n2",
+      nodeState: { n1: 'visited', n5: 'offender-first', n3: 'visited', n4: 'visited', n2: 'offender-second' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'inv-left', 2: 'visited', 3: 'visited', 4: 'inv-right' }, showSwap: false,
+      prevV: "4", firstV: "5", secondV: "2", curV: "2",
+      action: "first != null → skip the first-assignment. second = node(2) ★ OVERWRITES the previous second (which was 3). Node 3 is no longer flagged — it was a false companion from inversion #1.",
+      kind: "inversion"
+    },
+    {
+      line: [19, 21], active: null, prev: "n2", first: "n5", second: "n2",
+      nodeState: { n1: 'visited', n5: 'offender-first', n3: 'visited', n4: 'visited', n2: 'offender-second' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'inv-left', 2: 'visited', 3: 'visited', 4: 'inv-right' }, showSwap: false,
+      prevV: "2", firstV: "5", secondV: "2", curV: "—",
+      action: "Advance prev = 2. Node 2 has no right subtree. Unwind all the way. Inorder complete. Two offenders found: first = 5, second = 2.",
+      kind: "visit"
+    },
+    {
+      line: [6, 7, 8, 9], active: null, prev: "n2", first: "n5", second: "n2",
+      nodeState: { n1: 'visited', n5: 'offender-first', n3: 'visited', n4: 'visited', n2: 'offender-second' }, edgeState: {}, nodeLabels: { n5: '5', n2: '2' },
+      seqState: { 0: 'visited', 1: 'inv-left', 2: 'visited', 3: 'visited', 4: 'inv-right' }, showSwap: true,
+      prevV: "2", firstV: "5", secondV: "2", curV: "—",
+      action: "★ Swap first.val ↔ second.val — only the VALUES move, node identities and tree structure stay put.",
+      kind: "swap"
+    },
+    {
+      line: [7, 8, 9], active: null, prev: "n2", first: "n5", second: "n2",
+      nodeState: { n1: 'visited', n5: 'fixed', n3: 'visited', n4: 'visited', n2: 'fixed' }, edgeState: {}, nodeLabels: { n5: '2', n2: '5' },
+      seqState: { 0: 'visited', 1: 'visited', 2: 'visited', 3: 'visited', 4: 'visited' }, showSwap: false,
+      prevV: "—", firstV: "—", secondV: "—", curV: "—",
+      action: "Values swapped. Tree is now a valid BST: inorder reads 1, 2, 3, 4, 5. Done.",
+      kind: "done"
+    }
+  ];
+  // update seq labels post-swap on the done step
+  // Note: we also need to re-derive the inorder sequence post-swap for the slot labels:
+  // post-swap tree values: n1=1, n5=2, n3=3, n4=4, n2=5 → inorder: 1,2,3,4,5
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const curVEl = document.getElementById('curV');
+  const prevVEl = document.getElementById('prevV');
+  const firstVEl = document.getElementById('firstV');
+  const secondVEl = document.getElementById('secondV');
+  const actionBodyEl = document.getElementById('action').querySelector('div:nth-child(2)');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx, prevIdx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    curVEl.textContent = s.curV;
+    prevVEl.textContent = s.prevV;
+    firstVEl.textContent = s.firstV;
+    secondVEl.textContent = s.secondV;
+
+    // Node classes + labels
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'visited', 'prev', 'offender', 'offender-first', 'offender-second', 'fixed');
+      const st = s.nodeState[key];
+      // Active takes precedence over 'prev' badge
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (key === s.prev && !s.nodeState[key]) {
+        el.classList.add('prev');
+      } else if (st) {
+        el.classList.add(st);
+      }
+      // Re-trigger pulse animations for 'offender-second' and 'fixed'
+      if ((st === 'offender-second' || st === 'fixed') && prevIdx !== undefined && idx > prevIdx && steps[prevIdx].nodeState[key] !== st) {
+        void el.offsetWidth;
+        el.classList.remove(st);
+        void el.offsetWidth;
+        el.classList.add(st);
+      }
+      // Label (value shown)
+      if (s.nodeLabels && s.nodeLabels[key]) {
+        nodeTextEls[key].textContent = s.nodeLabels[key];
+      }
+    });
+
+    // Sequence slots
+    seqEls.forEach((el, i) => {
+      el.classList.remove('visited', 'current', 'inv-left', 'inv-right');
+      const st = s.seqState[i];
+      if (st) {
+        el.classList.add(st);
+      }
+      // Post-swap, show corrected sequence
+      if (idx === steps.length - 1) {
+        const correct = ['1','2','3','4','5'];
+        el.textContent = correct[i];
+      } else {
+        const original = ['1','5','3','4','2'];
+        el.textContent = original[i];
+      }
+    });
+
+    // Swap arrow
+    swapArrow.style.opacity = s.showSwap ? '1' : '0';
+
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    const prev = stepIdx;
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1500);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
