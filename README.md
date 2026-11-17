@@ -80,6 +80,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [270](https://kinny94.github.io/dsa-visualizations/lc270-closest-binary-search-tree-value.html) | Closest Binary Search Tree Value | BST · Descent · running best + tie-break |
 | [653](https://kinny94.github.io/dsa-visualizations/lc653-two-sum-iv-bst.html) | Two Sum IV — Input is a BST | BST · Two iterators · inorder meet in middle |
 | [938](https://kinny94.github.io/dsa-visualizations/lc938-range-sum-bst.html) | Range Sum of BST | BST · Descent · subtree pruning |
+| [669](https://kinny94.github.io/dsa-visualizations/lc669-trim-binary-search-tree.html) | Trim a Binary Search Tree | BST · Reconstruct-via-rewire |
 
 ## Adding a new animation
 
