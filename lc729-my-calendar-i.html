@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 729 — My Calendar I</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.call   .pill-v { color: #ffd87a; }
+  .pill.floor  .pill-v { color: #9ad4ff; }
+  .pill.ceil   .pill-v { color: #ff8ca0; }
+  .pill.leftok .pill-v { color: #9ad4ff; }
+  .pill.rightok .pill-v { color: #ff8ca0; }
+  .pill.ok  .pill-v { color: #4de88c; }
+  .pill.bad .pill-v { color: #ff5577; }
+  .timeline-wrap {
+    overflow: hidden;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 10px;
+    flex: 0 0 auto;
+  }
+  svg.timeline { display: block; width: 100%; height: 170px; }
+  .map-wrap {
+    overflow: hidden;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 10px;
+    flex: 0 0 auto;
+  }
+  svg.map { display: block; width: 100%; height: 150px; }
+
+  /* Timeline axis */
+  .axis-line { stroke: #3a3a4a; stroke-width: 1.5; }
+  .tick     { stroke: #3a3a4a; stroke-width: 1; }
+  .tick-label { fill: #8a93a6; font-family: 'Monaco', monospace; font-size: 10px; text-anchor: middle; }
+
+  /* Interval bars on the timeline */
+  .ivl-bar rect {
+    fill: #1a4a7a;
+    stroke: #2a6a9a;
+    stroke-width: 1.5;
+    rx: 2;
+    transition: all 0.4s;
+  }
+  .ivl-bar text {
+    fill: #9ad4ff;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+  }
+  .ivl-bar.preview rect { fill: #3a3a10; stroke: #ffd87a; stroke-dasharray: 4 3; }
+  .ivl-bar.preview text { fill: #ffd87a; }
+  .ivl-bar.floor rect { fill: #0f3460; stroke: #7aa2ff; stroke-width: 2.5; }
+  .ivl-bar.floor text { fill: #9ad4ff; }
+  .ivl-bar.ceil  rect { fill: #4a1033; stroke: #ff8ca0; stroke-width: 2.5; }
+  .ivl-bar.ceil  text { fill: #ff8ca0; }
+  .ivl-bar.accepted rect { fill: #0f3a1f; stroke: #4de88c; animation: pulse 0.5s ease-out; }
+  .ivl-bar.accepted text { fill: #4de88c; }
+  .ivl-bar.rejected rect { fill: #4a1020; stroke: #e94560; stroke-dasharray: 5 3; animation: shake 0.5s ease-in-out; }
+  .ivl-bar.rejected text { fill: #ff8ca0; }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+  }
+  /* Bracket markers showing half-open [start, end) */
+  .bracket-l { stroke: currentColor; stroke-width: 2; fill: none; }
+  .bracket-r { stroke: currentColor; stroke-width: 2; fill: none; }
+
+  /* TreeMap list */
+  .map-entry rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 1.5;
+    rx: 4;
+    transition: all 0.4s;
+  }
+  .map-entry text {
+    fill: #bbb;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .map-entry.floor rect { fill: #0f3460; stroke: #7aa2ff; stroke-width: 2.5; }
+  .map-entry.floor text { fill: #9ad4ff; }
+  .map-entry.ceil  rect { fill: #4a1033; stroke: #ff8ca0; stroke-width: 2.5; }
+  .map-entry.ceil  text { fill: #ff8ca0; }
+  .map-entry.fresh rect { animation: pulse 0.5s ease-out; }
+  .map-pointer {
+    fill: none;
+    stroke-width: 1.5;
+    transition: opacity 0.3s;
+  }
+  .map-pointer.floor { stroke: #7aa2ff; marker-end: url(#arrowFloor); }
+  .map-pointer.ceil  { stroke: #ff8ca0; marker-end: url(#arrowCeil); }
+  .map-pointer.off { opacity: 0; }
+  .map-pointer.on { opacity: 1; }
+  .map-label {
+    font-family: 'Monaco', monospace;
+    font-size: 10px;
+    text-anchor: middle;
+    font-weight: bold;
+    transition: opacity 0.3s;
+    opacity: 0;
+  }
+  .map-label.floor { fill: #9ad4ff; }
+  .map-label.ceil  { fill: #ff8ca0; }
+  .map-label.on { opacity: 1; }
+
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init    { background: #ffa500; color: #1a1a2e; }
+  .kind-call    { background: #ffd87a; color: #1a1a2e; }
+  .kind-lookup  { background: #9ad4ff; color: #1a1a2e; }
+  .kind-check   { background: #ffd87a; color: #1a1a2e; }
+  .kind-accept  { background: #4de88c; color: #1a1a2e; }
+  .kind-reject  { background: #e94560; color: #fff; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  code { color: #ffd87a; background: #0a1a30; padding: 1px 4px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 729 — My Calendar I</h1>
+    <div class="subtitle">TreeMap keyed by interval start. For each new <code>[s, e)</code>: find <code>floorKey(s)</code> (nearest start ≤ s) and <code>ceilingKey(s)</code> (nearest start ≥ s). Check two local gaps — <code>floor.end ≤ s</code> and <code>e ≤ ceiling.start</code>. Both pass ⇒ insert and return true.</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill call"><span class="pill-k">call</span><span class="pill-v" id="callV">—</span></span>
+      <span class="pill floor"><span class="pill-k">floor</span><span class="pill-v" id="floorV">—</span></span>
+      <span class="pill ceil"><span class="pill-k">ceiling</span><span class="pill-v" id="ceilV">—</span></span>
+      <span class="pill leftok"><span class="pill-k">leftOK</span><span class="pill-v" id="leftOKV">—</span></span>
+      <span class="pill rightok"><span class="pill-k">rightOK</span><span class="pill-v" id="rightOKV">—</span></span>
+      <span class="pill ok" id="resultPill" style="display:none"><span class="pill-k">result</span><span class="pill-v" id="resultV">—</span></span>
+    </div>
+
+    <div class="panel-title" style="margin-top: 4px;">Timeline (0 … 70)</div>
+    <div class="timeline-wrap">
+      <svg class="timeline" id="timeline" viewBox="0 0 700 170" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <div class="panel-title" style="margin-top: 4px;">TreeMap entries (sorted by start)</div>
+    <div class="map-wrap">
+      <svg class="map" id="map" viewBox="0 0 700 150" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrowFloor" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0 0, 8 4, 0 8" fill="#7aa2ff"/>
+          </marker>
+          <marker id="arrowCeil" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0 0, 8 4, 0 8" fill="#ff8ca0"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Algorithm</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6; font-family: 'Monaco', monospace;">
+      <div>book(s, e):</div>
+      <div style="padding-left:12px; margin-top:4px;">
+        <div>• prev = floorKey(s)</div>
+        <div>• next = ceilingKey(s)</div>
+        <div>• leftOK  = prev==null ||</div>
+        <div>&nbsp;&nbsp;&nbsp;map.get(prev) ≤ s</div>
+        <div>• rightOK = next==null ||</div>
+        <div>&nbsp;&nbsp;&nbsp;e ≤ next</div>
+        <div>• if both → put, return true</div>
+        <div>• else return false</div>
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why only two neighbors?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        Stored intervals are non-overlapping by construction — we rejected every would-be overlap. So they lie strictly sorted-and-separated on the timeline. If the new interval overlaps anything, it must overlap the closest one on each side; it can't reach further without first swallowing the nearer one.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Half-open semantics</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        Intervals are <code>[start, end)</code>. Touching endpoints are allowed: <code>[10, 20)</code> and <code>[20, 30)</code> don't overlap. That's why checks use <code>≤</code>, not <code>&lt;</code>.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Family placement</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>BST ordered-set with floor / ceiling.</strong> Same primitive: LC 981 Time-Based KV Store, LC 352 Data Stream as Disjoint Intervals, LC 715 Range Module, LC 1146 Snapshot Array. Related BST-descent sibling: LC 285 Inorder Successor. <em>Follow-ups 731 / 732 escalate to segment trees + lazy propagation or a sweep-line diff map — different family.</em>
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "class MyCalendar {",
+    "    private final TreeMap<Integer,Integer> calendar",
+    "        = new TreeMap<>();",
+    "",
+    "    public boolean book(int start, int end) {",
+    "        Integer prev = calendar.floorKey(start);",
+    "        Integer next = calendar.ceilingKey(start);",
+    "",
+    "        boolean leftOK  = (prev == null)",
+    "            || calendar.get(prev) <= start;",
+    "        boolean rightOK = (next == null)",
+    "            || end <= next;",
+    "",
+    "        if (leftOK && rightOK) {",
+    "            calendar.put(start, end);",
+    "            return true;",
+    "        }",
+    "        return false;",
+    "    }",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TIMELINE ============
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const tl = document.getElementById('timeline');
+
+  // Timeline range 0..70 mapped to 30..680 pixels (viewBox 700 wide)
+  const T_MIN = 0, T_MAX = 70;
+  const TL_X0 = 30, TL_X1 = 680;
+  const TL_Y = 115;   // axis line y
+  const BAR_Y = 55, BAR_H = 44;
+  function tx(t) {
+    return TL_X0 + (t - T_MIN) / (T_MAX - T_MIN) * (TL_X1 - TL_X0);
+  }
+
+  // Axis
+  const axis = document.createElementNS(SVGNS, 'line');
+  axis.setAttribute('x1', TL_X0); axis.setAttribute('x2', TL_X1);
+  axis.setAttribute('y1', TL_Y); axis.setAttribute('y2', TL_Y);
+  axis.setAttribute('class', 'axis-line');
+  tl.appendChild(axis);
+  for (let t = 0; t <= 70; t += 5) {
+    const tick = document.createElementNS(SVGNS, 'line');
+    tick.setAttribute('x1', tx(t)); tick.setAttribute('x2', tx(t));
+    tick.setAttribute('y1', TL_Y - (t % 10 === 0 ? 6 : 3));
+    tick.setAttribute('y2', TL_Y + (t % 10 === 0 ? 6 : 3));
+    tick.setAttribute('class', 'tick');
+    tl.appendChild(tick);
+    if (t % 10 === 0) {
+      const lbl = document.createElementNS(SVGNS, 'text');
+      lbl.setAttribute('x', tx(t)); lbl.setAttribute('y', TL_Y + 22);
+      lbl.setAttribute('class', 'tick-label');
+      lbl.textContent = t;
+      tl.appendChild(lbl);
+    }
+  }
+
+  // Interval bar factory (reused for both existing + preview)
+  function makeBar(parent, s, e, cls, label) {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'ivl-bar ' + (cls || ''));
+    const rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', tx(s));
+    rect.setAttribute('y', BAR_Y);
+    rect.setAttribute('width', Math.max(2, tx(e) - tx(s)));
+    rect.setAttribute('height', BAR_H);
+    g.appendChild(rect);
+
+    // [ bracket on left
+    const bl = document.createElementNS(SVGNS, 'path');
+    bl.setAttribute('class', 'bracket-l');
+    bl.setAttribute('d', `M ${tx(s)+6} ${BAR_Y - 4} L ${tx(s)} ${BAR_Y - 4} L ${tx(s)} ${BAR_Y + BAR_H + 4} L ${tx(s)+6} ${BAR_Y + BAR_H + 4}`);
+    g.appendChild(bl);
+    // ) bracket on right
+    const br = document.createElementNS(SVGNS, 'path');
+    br.setAttribute('class', 'bracket-r');
+    br.setAttribute('d', `M ${tx(e)-6} ${BAR_Y - 4} Q ${tx(e)+5} ${BAR_Y + BAR_H / 2}, ${tx(e)-6} ${BAR_Y + BAR_H + 4}`);
+    g.appendChild(br);
+
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', (tx(s) + tx(e)) / 2);
+    t.setAttribute('y', BAR_Y + BAR_H / 2);
+    t.textContent = label || `[${s}, ${e})`;
+    g.appendChild(t);
+
+    parent.appendChild(g);
+    return g;
+  }
+
+  // ============ MAP VIEW ============
+  const mapSvg = document.getElementById('map');
+  // Entry boxes at y=55, h=50, w=90 each, gap=20
+  const ENTRY_Y = 55, ENTRY_H = 50, ENTRY_W = 110, ENTRY_GAP = 20;
+  function entryX(i) { return 40 + i * (ENTRY_W + ENTRY_GAP); }
+
+  // Labels floor / ceiling pointers (dynamically positioned)
+  const floorPtr = document.createElementNS(SVGNS, 'line');
+  floorPtr.setAttribute('class', 'map-pointer floor off');
+  mapSvg.appendChild(floorPtr);
+  const floorLbl = document.createElementNS(SVGNS, 'text');
+  floorLbl.setAttribute('class', 'map-label floor');
+  floorLbl.textContent = 'floor';
+  mapSvg.appendChild(floorLbl);
+
+  const ceilPtr = document.createElementNS(SVGNS, 'line');
+  ceilPtr.setAttribute('class', 'map-pointer ceil off');
+  mapSvg.appendChild(ceilPtr);
+  const ceilLbl = document.createElementNS(SVGNS, 'text');
+  ceilLbl.setAttribute('class', 'map-label ceil');
+  ceilLbl.textContent = 'ceiling';
+  mapSvg.appendChild(ceilLbl);
+
+  // ============ STATE RENDERING ============
+  // We represent calendar state as a list of accepted [s,e] and a current booking being evaluated.
+  // Each step specifies: accepted list, current booking {s,e, status}, floor/ceil pointers.
+
+  // Precompute the booking sequence outcomes
+  // Order:
+  //   book(10, 20)  → ACCEPT
+  //   book(50, 60)  → ACCEPT
+  //   book(30, 40)  → ACCEPT
+  //   book(25, 35)  → REJECT (overlaps [30,40) — ceiling check fails)
+  //   book(40, 50)  → ACCEPT (touches both sides, half-open OK)
+  //   book(45, 55)  → REJECT (overlaps [40,50) — floor check fails)
+  // After each accepted call the sorted map is updated.
+
+  const steps = [];
+
+  // init
+  steps.push({
+    line: [1, 2, 3], kind: 'init',
+    callV: '—', floorV: '—', ceilV: '—', leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [],                          // intervals currently in the calendar
+    preview: null,                         // {s, e, status: 'preview' | 'accepted' | 'rejected'}
+    floorIdx: null, ceilIdx: null,         // indices into `accepted` for the map view pointers
+    action: "Init: empty TreeMap. Each book(s, e) call will find floor/ceiling and run two checks."
+  });
+
+  // --- book(10, 20) ---
+  steps.push({
+    line: [5], kind: 'call',
+    callV: 'book(10, 20)', floorV: '—', ceilV: '—', leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [], preview: {s: 10, e: 20, status: 'preview'}, floorIdx: null, ceilIdx: null,
+    action: "Call book(10, 20). Calendar is empty — both floorKey and ceilingKey return null."
+  });
+  steps.push({
+    line: [9, 10, 11, 12], kind: 'check',
+    callV: 'book(10, 20)', floorV: 'null', ceilV: 'null',
+    leftOKV: 'true (prev==null)', rightOKV: 'true (next==null)', result: null,
+    accepted: [], preview: {s: 10, e: 20, status: 'preview'}, floorIdx: null, ceilIdx: null,
+    action: "Both neighbors null → both checks pass by the null short-circuit."
+  });
+  steps.push({
+    line: [14, 15, 16], kind: 'accept',
+    callV: 'book(10, 20)', floorV: 'null', ceilV: 'null',
+    leftOKV: 'true', rightOKV: 'true', result: 'true',
+    accepted: [{s: 10, e: 20}], preview: {s: 10, e: 20, status: 'accepted'}, floorIdx: null, ceilIdx: null,
+    action: "put(10, 20). Return true. Calendar: {10 → 20}."
+  });
+
+  // --- book(50, 60) ---
+  steps.push({
+    line: [5], kind: 'call',
+    callV: 'book(50, 60)', floorV: '—', ceilV: '—', leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [{s: 10, e: 20}], preview: {s: 50, e: 60, status: 'preview'}, floorIdx: null, ceilIdx: null,
+    action: "Call book(50, 60). Calendar has one entry 10→20."
+  });
+  steps.push({
+    line: [6, 7], kind: 'lookup',
+    callV: 'book(50, 60)', floorV: '10 (→20)', ceilV: 'null',
+    leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [{s: 10, e: 20}], preview: {s: 50, e: 60, status: 'preview'}, floorIdx: 0, ceilIdx: null,
+    action: "floorKey(50) = 10 (greatest key ≤ 50). ceilingKey(50) = null (no key ≥ 50 in the map)."
+  });
+  steps.push({
+    line: [9, 10, 11, 12], kind: 'check',
+    callV: 'book(50, 60)', floorV: '10 (→20)', ceilV: 'null',
+    leftOKV: 'true (20 ≤ 50)', rightOKV: 'true (next==null)', result: null,
+    accepted: [{s: 10, e: 20}], preview: {s: 50, e: 60, status: 'preview'}, floorIdx: 0, ceilIdx: null,
+    action: "leftOK: map.get(10)=20 ≤ 50 ✓. rightOK: next==null ✓. Both pass."
+  });
+  steps.push({
+    line: [14, 15, 16], kind: 'accept',
+    callV: 'book(50, 60)', floorV: '10', ceilV: 'null',
+    leftOKV: 'true', rightOKV: 'true', result: 'true',
+    accepted: [{s: 10, e: 20}, {s: 50, e: 60}],
+    preview: {s: 50, e: 60, status: 'accepted'}, floorIdx: null, ceilIdx: null,
+    action: "put(50, 60). Return true. Calendar: {10 → 20, 50 → 60}."
+  });
+
+  // --- book(30, 40) --- sandwich between two neighbors; both OK
+  steps.push({
+    line: [5], kind: 'call',
+    callV: 'book(30, 40)', floorV: '—', ceilV: '—', leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [{s: 10, e: 20}, {s: 50, e: 60}],
+    preview: {s: 30, e: 40, status: 'preview'}, floorIdx: null, ceilIdx: null,
+    action: "Call book(30, 40). The new interval lands in the gap between the two existing ones."
+  });
+  steps.push({
+    line: [6, 7], kind: 'lookup',
+    callV: 'book(30, 40)', floorV: '10 (→20)', ceilV: '50',
+    leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [{s: 10, e: 20}, {s: 50, e: 60}],
+    preview: {s: 30, e: 40, status: 'preview'}, floorIdx: 0, ceilIdx: 1,
+    action: "floorKey(30) = 10. ceilingKey(30) = 50. Both neighbors exist — this is the general case."
+  });
+  steps.push({
+    line: [9, 10, 11, 12], kind: 'check',
+    callV: 'book(30, 40)', floorV: '10 (→20)', ceilV: '50',
+    leftOKV: 'true (20 ≤ 30)', rightOKV: 'true (40 ≤ 50)', result: null,
+    accepted: [{s: 10, e: 20}, {s: 50, e: 60}],
+    preview: {s: 30, e: 40, status: 'preview'}, floorIdx: 0, ceilIdx: 1,
+    action: "leftOK: map.get(10)=20 ≤ 30 ✓. rightOK: 40 ≤ 50 ✓. Both pass."
+  });
+  steps.push({
+    line: [14, 15, 16], kind: 'accept',
+    callV: 'book(30, 40)', floorV: '10', ceilV: '50',
+    leftOKV: 'true', rightOKV: 'true', result: 'true',
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 50, e: 60}],
+    preview: {s: 30, e: 40, status: 'accepted'}, floorIdx: null, ceilIdx: null,
+    action: "put(30, 40). Return true. Calendar: {10 → 20, 30 → 40, 50 → 60}."
+  });
+
+  // --- book(25, 35) --- REJECTED (ceiling check fails)
+  steps.push({
+    line: [5], kind: 'call',
+    callV: 'book(25, 35)', floorV: '—', ceilV: '—', leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 50, e: 60}],
+    preview: {s: 25, e: 35, status: 'preview'}, floorIdx: null, ceilIdx: null,
+    action: "Call book(25, 35). Looking at the timeline you can already see this collides with [30, 40)."
+  });
+  steps.push({
+    line: [6, 7], kind: 'lookup',
+    callV: 'book(25, 35)', floorV: '10 (→20)', ceilV: '30',
+    leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 50, e: 60}],
+    preview: {s: 25, e: 35, status: 'preview'}, floorIdx: 0, ceilIdx: 1,
+    action: "floorKey(25) = 10. ceilingKey(25) = 30 (smallest key ≥ 25)."
+  });
+  steps.push({
+    line: [9, 10, 11, 12], kind: 'check',
+    callV: 'book(25, 35)', floorV: '10 (→20)', ceilV: '30',
+    leftOKV: 'true (20 ≤ 25)', rightOKV: 'false (35 > 30)', result: null,
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 50, e: 60}],
+    preview: {s: 25, e: 35, status: 'preview'}, floorIdx: 0, ceilIdx: 1,
+    action: "leftOK: 20 ≤ 25 ✓. rightOK: 35 ≤ 30? ✗. The new interval's end crashes into the ceiling [30, 40)."
+  });
+  steps.push({
+    line: [18], kind: 'reject',
+    callV: 'book(25, 35)', floorV: '10', ceilV: '30',
+    leftOKV: 'true', rightOKV: 'false', result: 'false',
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 50, e: 60}],
+    preview: {s: 25, e: 35, status: 'rejected'}, floorIdx: null, ceilIdx: null,
+    action: "Return false. Calendar unchanged — no put()."
+  });
+
+  // --- book(40, 50) --- touches both sides, accept (half-open)
+  steps.push({
+    line: [5], kind: 'call',
+    callV: 'book(40, 50)', floorV: '—', ceilV: '—', leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 50, e: 60}],
+    preview: {s: 40, e: 50, status: 'preview'}, floorIdx: null, ceilIdx: null,
+    action: "Call book(40, 50). Starts exactly where [30, 40) ends and ends exactly where [50, 60) begins — classic half-open boundary case."
+  });
+  steps.push({
+    line: [6, 7], kind: 'lookup',
+    callV: 'book(40, 50)', floorV: '30 (→40)', ceilV: '50',
+    leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 50, e: 60}],
+    preview: {s: 40, e: 50, status: 'preview'}, floorIdx: 1, ceilIdx: 2,
+    action: "floorKey(40) = 30. ceilingKey(40) = 50 (equal keys count for ceiling)."
+  });
+  steps.push({
+    line: [9, 10, 11, 12], kind: 'check',
+    callV: 'book(40, 50)', floorV: '30 (→40)', ceilV: '50',
+    leftOKV: 'true (40 ≤ 40)', rightOKV: 'true (50 ≤ 50)', result: null,
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 50, e: 60}],
+    preview: {s: 40, e: 50, status: 'preview'}, floorIdx: 1, ceilIdx: 2,
+    action: "leftOK: map.get(30)=40 ≤ 40 ✓ (touching is allowed). rightOK: 50 ≤ 50 ✓ (touching again). Both pass by the ≤."
+  });
+  steps.push({
+    line: [14, 15, 16], kind: 'accept',
+    callV: 'book(40, 50)', floorV: '30', ceilV: '50',
+    leftOKV: 'true', rightOKV: 'true', result: 'true',
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 40, e: 50}, {s: 50, e: 60}],
+    preview: {s: 40, e: 50, status: 'accepted'}, floorIdx: null, ceilIdx: null,
+    action: "put(40, 50). Return true. Intervals [30,40) and [40,50) share endpoint 40 — no overlap by the half-open definition."
+  });
+
+  // --- book(45, 55) --- REJECTED (floor check fails this time)
+  steps.push({
+    line: [5], kind: 'call',
+    callV: 'book(45, 55)', floorV: '—', ceilV: '—', leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 40, e: 50}, {s: 50, e: 60}],
+    preview: {s: 45, e: 55, status: 'preview'}, floorIdx: null, ceilIdx: null,
+    action: "Call book(45, 55). Starts inside [40, 50) — expect a floor-side conflict."
+  });
+  steps.push({
+    line: [6, 7], kind: 'lookup',
+    callV: 'book(45, 55)', floorV: '40 (→50)', ceilV: '50',
+    leftOKV: '—', rightOKV: '—', result: null,
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 40, e: 50}, {s: 50, e: 60}],
+    preview: {s: 45, e: 55, status: 'preview'}, floorIdx: 2, ceilIdx: 3,
+    action: "floorKey(45) = 40 (greatest ≤ 45). ceilingKey(45) = 50."
+  });
+  steps.push({
+    line: [9, 10, 11, 12], kind: 'check',
+    callV: 'book(45, 55)', floorV: '40 (→50)', ceilV: '50',
+    leftOKV: 'false (50 > 45)', rightOKV: 'false (55 > 50)', result: null,
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 40, e: 50}, {s: 50, e: 60}],
+    preview: {s: 45, e: 55, status: 'preview'}, floorIdx: 2, ceilIdx: 3,
+    action: "leftOK: map.get(40)=50 ≤ 45? ✗ — the floor interval extends past our start. (rightOK also fails; either failure alone rejects.)"
+  });
+  steps.push({
+    line: [18], kind: 'reject',
+    callV: 'book(45, 55)', floorV: '40', ceilV: '50',
+    leftOKV: 'false', rightOKV: 'false', result: 'false',
+    accepted: [{s: 10, e: 20}, {s: 30, e: 40}, {s: 40, e: 50}, {s: 50, e: 60}],
+    preview: {s: 45, e: 55, status: 'rejected'}, floorIdx: null, ceilIdx: null,
+    action: "Return false. Calendar unchanged. Each book is O(log n); 6 calls → ~6 log 4 TreeMap ops."
+  });
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const callVEl = document.getElementById('callV');
+  const floorVEl = document.getElementById('floorV');
+  const ceilVEl = document.getElementById('ceilV');
+  const leftOKVEl = document.getElementById('leftOKV');
+  const rightOKVEl = document.getElementById('rightOKV');
+  const resultVEl = document.getElementById('resultV');
+  const resultPillEl = document.getElementById('resultPill');
+  const actionBodyEl = document.getElementById('action').querySelector('div:nth-child(2)');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  // Mutable children holders (we redraw bars and entries each step)
+  let barContainer = null, mapEntriesContainer = null;
+
+  function clearDynamic() {
+    if (barContainer) {
+      barContainer.remove();
+    }
+    if (mapEntriesContainer) {
+      mapEntriesContainer.remove();
+    }
+    barContainer = document.createElementNS(SVGNS, 'g');
+    tl.appendChild(barContainer);
+    mapEntriesContainer = document.createElementNS(SVGNS, 'g');
+    // Insert before pointers so pointers stay on top
+    mapSvg.insertBefore(mapEntriesContainer, floorPtr);
+  }
+
+  function render(idx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    callVEl.textContent    = s.callV;
+    floorVEl.textContent   = s.floorV;
+    ceilVEl.textContent    = s.ceilV;
+    leftOKVEl.textContent  = s.leftOKV;
+    rightOKVEl.textContent = s.rightOKV;
+
+    if (s.result !== null) {
+      resultPillEl.style.display = '';
+      resultVEl.textContent = s.result;
+      resultPillEl.classList.remove('ok', 'bad');
+      resultPillEl.classList.add(s.result === 'true' ? 'ok' : 'bad');
+    } else {
+      resultPillEl.style.display = 'none';
+    }
+
+    // Clear + redraw timeline bars
+    clearDynamic();
+    s.accepted.forEach((iv, i) => {
+      let cls = '';
+      if (s.floorIdx === i) {
+        cls = 'floor';
+      } else if (s.ceilIdx === i) {
+        cls = 'ceil';
+      }
+      makeBar(barContainer, iv.s, iv.e, cls);
+    });
+    if (s.preview) {
+      let cls = 'preview';
+      if (s.preview.status === 'accepted') {
+        cls = 'accepted';
+      } else if (s.preview.status === 'rejected') {
+        cls = 'rejected';
+      }
+      // Draw preview on a slightly shifted row so it stands out from existing
+      // Actually re-use same row; just different cls.
+      makeBar(barContainer, s.preview.s, s.preview.e, cls);
+    }
+
+    // Redraw map entries
+    s.accepted.forEach((iv, i) => {
+      const g = document.createElementNS(SVGNS, 'g');
+      let cls = 'map-entry';
+      if (s.floorIdx === i) {
+        cls += ' floor';
+      } else if (s.ceilIdx === i) {
+        cls += ' ceil';
+      }
+      g.setAttribute('class', cls);
+      const rect = document.createElementNS(SVGNS, 'rect');
+      rect.setAttribute('x', entryX(i)); rect.setAttribute('y', ENTRY_Y);
+      rect.setAttribute('width', ENTRY_W); rect.setAttribute('height', ENTRY_H);
+      g.appendChild(rect);
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', entryX(i) + ENTRY_W / 2);
+      t.setAttribute('y', ENTRY_Y + ENTRY_H / 2);
+      t.textContent = `${iv.s} → ${iv.e}`;
+      g.appendChild(t);
+      mapEntriesContainer.appendChild(g);
+    });
+
+    // Pointers (floor / ceil)
+    if (s.floorIdx !== null && s.floorIdx !== undefined) {
+      const x = entryX(s.floorIdx) + ENTRY_W / 2;
+      floorPtr.setAttribute('x1', x); floorPtr.setAttribute('x2', x);
+      floorPtr.setAttribute('y1', 20); floorPtr.setAttribute('y2', ENTRY_Y - 2);
+      floorPtr.classList.remove('off');
+      floorPtr.classList.add('on');
+      floorLbl.setAttribute('x', x); floorLbl.setAttribute('y', 15);
+      floorLbl.classList.add('on');
+    } else {
+      floorPtr.classList.remove('on');
+      floorPtr.classList.add('off');
+      floorLbl.classList.remove('on');
+    }
+    if (s.ceilIdx !== null && s.ceilIdx !== undefined) {
+      const x = entryX(s.ceilIdx) + ENTRY_W / 2;
+      ceilPtr.setAttribute('x1', x); ceilPtr.setAttribute('x2', x);
+      ceilPtr.setAttribute('y1', 20); ceilPtr.setAttribute('y2', ENTRY_Y - 2);
+      ceilPtr.classList.remove('off');
+      ceilPtr.classList.add('on');
+      ceilLbl.setAttribute('x', x); ceilLbl.setAttribute('y', 15);
+      ceilLbl.classList.add('on');
+    } else {
+      ceilPtr.classList.remove('on');
+      ceilPtr.classList.add('off');
+      ceilLbl.classList.remove('on');
+    }
+
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1600);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

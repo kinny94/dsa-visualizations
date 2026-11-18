@@ -90,6 +90,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [1008](https://kinny94.github.io/dsa-visualizations/lc1008-construct-bst-from-preorder.html) | Construct BST from Preorder Traversal | BST · Monotonic stack · rightmost spine |
 | [426](https://kinny94.github.io/dsa-visualizations/lc426-convert-bst-to-sorted-doubly-linked-list.html) | Convert BST to Sorted Doubly Linked List | BST · Inorder · first + last wiring |
 | [333](https://kinny94.github.io/dsa-visualizations/lc333-largest-bst-subtree.html) | Largest BST Subtree | BST · Post-order · (isBST, size, min, max) bundle |
+| [729](https://kinny94.github.io/dsa-visualizations/lc729-my-calendar-i.html) | My Calendar I | BST · TreeMap floor/ceiling |
 
 ## Adding a new animation
 
