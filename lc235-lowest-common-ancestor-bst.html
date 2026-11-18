@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 235 — Lowest Common Ancestor of a BST</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .toggle-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .toggle-btn {
+    padding: 4px 12px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    color: #9ad4ff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .toggle-btn.active {
+    background: #e94560;
+    color: white;
+    border-color: #e94560;
+  }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.cur .pill-v { color: #ffd87a; }
+  .pill.pq .pill-v { color: #ff8ca0; }
+  .pill.dir .pill-v { color: #9ad4ff; }
+  .pill.lca .pill-v { color: #4de88c; }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 320px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.4s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.active circle { stroke: #ffa500; stroke-width: 4; fill: #2a2010; }
+  .node.active text.val { fill: #ffd87a; }
+  .node.visited circle { stroke: #9ad4ff; stroke-width: 2.5; fill: #1a2e4a; }
+  .node.visited text.val { fill: #9ad4ff; }
+  .node.p-mark circle { stroke: #ff8ca0; stroke-width: 3.5; fill: #4a1020; }
+  .node.p-mark text.val { fill: #ff8ca0; }
+  .node.q-mark circle { stroke: #ff8ca0; stroke-width: 3.5; fill: #4a1020; }
+  .node.q-mark text.val { fill: #ff8ca0; }
+  .node.lca circle { stroke: #4de88c; stroke-width: 5; fill: #0f3a1f; animation: pulse 0.8s ease-out; }
+  .node.lca text.val { fill: #4de88c; }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.22); }
+    100% { transform: scale(1); }
+  }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.3s; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; }
+  .edge.pruned { stroke: #333; opacity: 0.4; }
+  .pq-badge {
+    fill: #ff8ca0;
+    font-size: 11px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+  }
+  .side-label {
+    fill: #888;
+    font-size: 10px;
+    font-family: 'Monaco', monospace;
+    font-style: italic;
+    text-anchor: middle;
+  }
+  .side-label.visible-p { fill: #ff8ca0; font-weight: bold; }
+  .side-label.visible-q { fill: #ff8ca0; font-weight: bold; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-check { background: #9ad4ff; color: #1a1a2e; }
+  .kind-left { background: #9ad4ff; color: #1a1a2e; }
+  .kind-right { background: #9ad4ff; color: #1a1a2e; }
+  .kind-split { background: #4de88c; color: #1a1a2e; }
+  .kind-match { background: #4de88c; color: #1a1a2e; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button.ctrl {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button.ctrl:hover { background: #ff5577; }
+  button.ctrl:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  code { color: #ffd87a; background: #0a1a30; padding: 1px 4px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 235 — Lowest Common Ancestor of a BST</h1>
+    <div class="subtitle">Descend from root. Both &gt; node → right. Both &lt; node → left. Otherwise (split OR one equals node) → this IS the LCA. Tree = [6,2,8,0,4,7,9,null,null,3,5].</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="toggle-row">
+      <button class="toggle-btn active" id="caseABtn">split: p=3, q=5</button>
+      <button class="toggle-btn" id="caseBBtn">split: p=0, q=5</button>
+      <button class="toggle-btn" id="caseCBtn">p is ancestor: p=2, q=4</button>
+    </div>
+    <div class="pills">
+      <span class="pill cur"><span class="pill-k">node</span><span class="pill-v" id="nodeV">—</span></span>
+      <span class="pill pq"><span class="pill-k">p, q</span><span class="pill-v" id="pqV">—</span></span>
+      <span class="pill dir"><span class="pill-k">verdict</span><span class="pill-v" id="dirV">—</span></span>
+      <span class="pill lca"><span class="pill-k">lca</span><span class="pill-v" id="lcaV">?</span></span>
+    </div>
+    <div class="tree-wrap">
+      <svg id="tree" viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Pick a case and click Play / Next.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Algorithm</div>
+    <pre style="font-family: 'Monaco', monospace; font-size: 10.5px; line-height: 1.55; color: #ccc; white-space: pre-wrap;">node = root;
+while (node != null) {
+    if (node.val &lt; p.val &&
+        node.val &lt; q.val) {
+        node = node.right;
+    } else if (node.val &gt; p.val &&
+               node.val &gt; q.val) {
+        node = node.left;
+    } else {
+        return node;  // LCA
+    }
+}</pre>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">The three verdicts</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <div>① both &lt; node → go <strong>left</strong></div>
+        <div>② both &gt; node → go <strong>right</strong></div>
+        <div>③ split OR one equals node → <strong>LCA</strong></div>
+      </div>
+    </div>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why the split point IS the LCA</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        If p and q sit on opposite sides of a node, both subtrees contain exactly one of them. No lower node contains both. The split point is the deepest common ancestor.
+      </div>
+    </div>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why one-equals-node also exits</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        If <code>node.val == p.val</code>, then q is somewhere in node's subtree (both less → above, descended here) — so node is an ancestor of q, and an ancestor of itself. Nothing lower contains p.
+      </div>
+    </div>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">vs LC 236 (binary tree)</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        LC 236 can't descend by value comparison — it needs post-order propagation, O(n). LC 235 exploits the BST invariant for O(h).
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button class="ctrl" id="prev">◀ Prev</button>
+  <button class="ctrl" id="play">▶ Play</button>
+  <button class="ctrl" id="next">Next ▶</button>
+  <button class="ctrl" id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public TreeNode lowestCommonAncestor(",
+    "        TreeNode root, TreeNode p, TreeNode q) {",
+    "    TreeNode node = root;",
+    "    while (node != null) {",
+    "        if (node.val < p.val && node.val < q.val) {",
+    "            node = node.right;",
+    "        } else if (node.val > p.val && node.val > q.val) {",
+    "            node = node.left;",
+    "        } else {",
+    "            return node;",
+    "        }",
+    "    }",
+    "    return null;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //            6
+  //          /   \
+  //         2     8
+  //        / \   / \
+  //       0   4 7   9
+  //          / \
+  //         3   5
+  const nodes = {
+    n6: { x: 320, y:  50, r: 22, val: '6' },
+    n2: { x: 180, y: 125, r: 20, val: '2' },
+    n8: { x: 460, y: 125, r: 20, val: '8' },
+    n0: { x: 110, y: 200, r: 18, val: '0' },
+    n4: { x: 250, y: 200, r: 18, val: '4' },
+    n7: { x: 400, y: 200, r: 18, val: '7' },
+    n9: { x: 520, y: 200, r: 18, val: '9' },
+    n3: { x: 210, y: 275, r: 16, val: '3' },
+    n5: { x: 290, y: 275, r: 16, val: '5' }
+  };
+  const edges = [
+    { id: 'e_6_2', from: 'n6', to: 'n2' },
+    { id: 'e_6_8', from: 'n6', to: 'n8' },
+    { id: 'e_2_0', from: 'n2', to: 'n0' },
+    { id: 'e_2_4', from: 'n2', to: 'n4' },
+    { id: 'e_8_7', from: 'n8', to: 'n7' },
+    { id: 'e_8_9', from: 'n8', to: 'n9' },
+    { id: 'e_4_3', from: 'n4', to: 'n3' },
+    { id: 'e_4_5', from: 'n4', to: 'n5' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    g.dataset.key = key;
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // p and q badges
+  const pBadge = document.createElementNS(SVGNS, 'text');
+  pBadge.setAttribute('class', 'pq-badge');
+  pBadge.textContent = 'p';
+  svg.appendChild(pBadge);
+  const qBadge = document.createElementNS(SVGNS, 'text');
+  qBadge.setAttribute('class', 'pq-badge');
+  qBadge.textContent = 'q';
+  svg.appendChild(qBadge);
+
+  function placeBadges(pKey, qKey) {
+    const p = nodes[pKey], q = nodes[qKey];
+    pBadge.setAttribute('x', p.x - p.r - 6);
+    pBadge.setAttribute('y', p.y + 4);
+    qBadge.setAttribute('x', q.x + q.r + 6);
+    qBadge.setAttribute('y', q.y + 4);
+  }
+
+  // ============ STEPS per case ============
+  // Case A: p=3 (n3), q=5 (n5) — split at 4
+  const stepsA = [
+    {
+      target: { p: 'n3', q: 'n5' },
+      line: [3, 4], active: null,
+      nodeState: { n3: 'p-mark', n5: 'q-mark' }, edgeState: {},
+      nodeV: "—", pqV: "3, 5", dirV: "—", lcaV: "?",
+      action: "Init. node = root = 6. Target p=3, q=5.",
+      kind: "init"
+    },
+    {
+      target: { p: 'n3', q: 'n5' },
+      line: [5, 7], active: 'n6',
+      nodeState: { n3: 'p-mark', n5: 'q-mark' }, edgeState: {},
+      nodeV: "6", pqV: "3, 5", dirV: "both < 6", lcaV: "?",
+      action: "At 6. 6 < 3? No. 6 > 3 && 6 > 5 → YES (both less). Go LEFT.",
+      kind: "left"
+    },
+    {
+      target: { p: 'n3', q: 'n5' },
+      line: [8], active: 'n2',
+      nodeState: { n6: 'visited', n3: 'p-mark', n5: 'q-mark' }, edgeState: { e_6_2: 'on-path' },
+      nodeV: "2", pqV: "3, 5", dirV: "both > 2", lcaV: "?",
+      action: "At 2. 2 < 3 && 2 < 5 → YES (both greater). Go RIGHT.",
+      kind: "right"
+    },
+    {
+      target: { p: 'n3', q: 'n5' },
+      line: [5, 6], active: 'n4',
+      nodeState: { n6: 'visited', n2: 'visited', n3: 'p-mark', n5: 'q-mark' }, edgeState: { e_6_2: 'on-path', e_2_4: 'on-path' },
+      nodeV: "4", pqV: "3, 5", dirV: "SPLIT", lcaV: "?",
+      action: "At 4. 4 < 3? No. 4 > 3 && 4 > 5? No (4 < 5). Neither — ★ SPLIT detected. p=3 is in 4's LEFT subtree, q=5 is in 4's RIGHT. Fall through to `else`.",
+      kind: "split"
+    },
+    {
+      target: { p: 'n3', q: 'n5' },
+      line: [9, 10], active: null,
+      nodeState: { n6: 'visited', n2: 'visited', n4: 'lca', n3: 'p-mark', n5: 'q-mark' }, edgeState: { e_6_2: 'on-path', e_2_4: 'on-path' },
+      nodeV: "—", pqV: "3, 5", dirV: "return", lcaV: "4",
+      action: "★ Return node = 4. LCA found in 3 descents.",
+      kind: "done"
+    }
+  ];
+
+  // Case B: p=0 (n0), q=5 (n5) — split at 2
+  const stepsB = [
+    {
+      target: { p: 'n0', q: 'n5' },
+      line: [3, 4], active: null,
+      nodeState: { n0: 'p-mark', n5: 'q-mark' }, edgeState: {},
+      nodeV: "—", pqV: "0, 5", dirV: "—", lcaV: "?",
+      action: "Init. node = root = 6. Target p=0, q=5.",
+      kind: "init"
+    },
+    {
+      target: { p: 'n0', q: 'n5' },
+      line: [5, 7], active: 'n6',
+      nodeState: { n0: 'p-mark', n5: 'q-mark' }, edgeState: {},
+      nodeV: "6", pqV: "0, 5", dirV: "both < 6", lcaV: "?",
+      action: "At 6. Both 0 and 5 are less than 6 → go LEFT.",
+      kind: "left"
+    },
+    {
+      target: { p: 'n0', q: 'n5' },
+      line: [5, 7], active: 'n2',
+      nodeState: { n6: 'visited', n0: 'p-mark', n5: 'q-mark' }, edgeState: { e_6_2: 'on-path' },
+      nodeV: "2", pqV: "0, 5", dirV: "SPLIT", lcaV: "?",
+      action: "At 2. 2 < 0? No. 2 > 0 && 2 > 5? No (2 < 5). Neither — ★ SPLIT. p=0 is in 2's LEFT, q=5 is in 2's RIGHT.",
+      kind: "split"
+    },
+    {
+      target: { p: 'n0', q: 'n5' },
+      line: [9, 10], active: null,
+      nodeState: { n6: 'visited', n2: 'lca', n0: 'p-mark', n5: 'q-mark' }, edgeState: { e_6_2: 'on-path' },
+      nodeV: "—", pqV: "0, 5", dirV: "return", lcaV: "2",
+      action: "★ Return node = 2. Two descents.",
+      kind: "done"
+    }
+  ];
+
+  // Case C: p=2 (n2), q=4 (n4) — one-equals-node at 2
+  const stepsC = [
+    {
+      target: { p: 'n2', q: 'n4' },
+      line: [3, 4], active: null,
+      nodeState: { n2: 'p-mark', n4: 'q-mark' }, edgeState: {},
+      nodeV: "—", pqV: "2, 4", dirV: "—", lcaV: "?",
+      action: "Init. node = root = 6. Target p=2, q=4.",
+      kind: "init"
+    },
+    {
+      target: { p: 'n2', q: 'n4' },
+      line: [5, 7], active: 'n6',
+      nodeState: { n2: 'p-mark', n4: 'q-mark' }, edgeState: {},
+      nodeV: "6", pqV: "2, 4", dirV: "both < 6", lcaV: "?",
+      action: "At 6. 6 > 2 && 6 > 4 → YES (both less). Go LEFT.",
+      kind: "left"
+    },
+    {
+      target: { p: 'n2', q: 'n4' },
+      line: [5, 7], active: 'n2',
+      nodeState: { n6: 'visited', n2: 'p-mark', n4: 'q-mark' }, edgeState: { e_6_2: 'on-path' },
+      nodeV: "2", pqV: "2, 4", dirV: "node == p", lcaV: "?",
+      action: "At 2. 2 < 2? No (strict <). 2 > 2 && 2 > 4? No. Neither — ★ one-equals-node case. node.val == p.val, and q=4 is in node's right subtree → 2 is an ancestor of both.",
+      kind: "match"
+    },
+    {
+      target: { p: 'n2', q: 'n4' },
+      line: [9, 10], active: null,
+      nodeState: { n6: 'visited', n2: 'lca', n4: 'q-mark' }, edgeState: { e_6_2: 'on-path' },
+      nodeV: "—", pqV: "2, 4", dirV: "return", lcaV: "2",
+      action: "★ Return node = 2. The same `else` branch handles both split AND one-equals-node — no case split needed in code.",
+      kind: "done"
+    }
+  ];
+
+  const allCases = { A: stepsA, B: stepsB, C: stepsC };
+
+  // ============ RENDERER ============
+  let caseKey = 'A';
+  let stepIdx = 0;
+  const nodeVEl = document.getElementById('nodeV');
+  const pqVEl = document.getElementById('pqV');
+  const dirVEl = document.getElementById('dirV');
+  const lcaVEl = document.getElementById('lcaV');
+  const actionBodyEl = document.getElementById('action').querySelector('div:nth-child(2)');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx, prevIdx) {
+    const steps = allCases[caseKey];
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    nodeVEl.textContent = s.nodeV;
+    pqVEl.textContent = s.pqV;
+    dirVEl.textContent = s.dirV;
+    lcaVEl.textContent = s.lcaV;
+
+    placeBadges(s.target.p, s.target.q);
+
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'visited', 'p-mark', 'q-mark', 'lca');
+      const st = s.nodeState[key];
+      if (key === s.active) {
+        el.classList.add('active');
+      }
+      // Also apply p-mark/q-mark as additive highlight overlays
+      if (st === 'p-mark' || st === 'q-mark' || st === 'visited' || st === 'lca') {
+        if (key !== s.active) {
+          el.classList.add(st);
+        } else {
+          // The p/q mark still matters visually when it's also active — keep as 'active' highlighted and add p/q
+          el.classList.add(st);
+        }
+      }
+      // Pulse on becoming 'lca'
+      if (st === 'lca' && prevIdx !== undefined && idx > prevIdx && (steps[prevIdx]?.nodeState?.[key] !== 'lca')) {
+        void el.offsetWidth;
+        el.classList.remove('lca');
+        void el.offsetWidth;
+        el.classList.add('lca');
+      }
+    });
+
+    Object.keys(edgeEls).forEach(eId => {
+      const el = edgeEls[eId];
+      el.classList.remove('on-path', 'pruned');
+      if (s.edgeState[eId]) {
+        el.classList.add(s.edgeState[eId]);
+      }
+    });
+
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  const caseABtn = document.getElementById('caseABtn');
+  const caseBBtn = document.getElementById('caseBBtn');
+  const caseCBtn = document.getElementById('caseCBtn');
+  let playInterval = null;
+  function goTo(idx) {
+    const steps = allCases[caseKey];
+    const prev = stepIdx;
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  function switchCase(key) {
+    stopPlay();
+    caseKey = key;
+    stepIdx = 0;
+    [caseABtn, caseBBtn, caseCBtn].forEach(b => b.classList.remove('active'));
+    if (key === 'A') caseABtn.classList.add('active');
+    if (key === 'B') caseBBtn.classList.add('active');
+    if (key === 'C') caseCBtn.classList.add('active');
+    render(0);
+    prevBtn.disabled = true;
+    nextBtn.disabled = allCases[key].length === 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  caseABtn.addEventListener('click', () => switchCase('A'));
+  caseBBtn.addEventListener('click', () => switchCase('B'));
+  caseCBtn.addEventListener('click', () => switchCase('C'));
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      const steps = allCases[caseKey];
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1500);
+  });
+  goTo(0);
+</script>
+</body>
+</html>

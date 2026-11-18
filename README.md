@@ -86,6 +86,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [99](https://kinny94.github.io/dsa-visualizations/lc99-recover-binary-search-tree.html) | Recover Binary Search Tree | BST · Inorder · first/last inversion |
 | [285](https://kinny94.github.io/dsa-visualizations/lc285-inorder-successor-in-bst.html) | Inorder Successor in BST | BST · Descent · running candidate |
 | [510](https://kinny94.github.io/dsa-visualizations/lc510-inorder-successor-in-bst-ii.html) | Inorder Successor in BST II | BST · Parent-pointer · climb-while-right |
+| [235](https://kinny94.github.io/dsa-visualizations/lc235-lowest-common-ancestor-bst.html) | Lowest Common Ancestor of a BST | BST · Descent · split detection |
 
 ## Adding a new animation
 
