@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 1008 — Construct BST from Preorder Traversal</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 300px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.cur .pill-v { color: #ffd87a; }
+  .pill.top .pill-v { color: #9ad4ff; }
+  .pill.action .pill-v { color: #4de88c; }
+  .array-row {
+    display: flex;
+    gap: 4px;
+    align-items: stretch;
+    padding: 6px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .array-slot {
+    min-width: 32px;
+    padding: 5px 9px;
+    background: #0a1a30;
+    border: 1px solid #1a4a7a;
+    border-radius: 3px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    color: #666;
+    transition: all 0.3s;
+  }
+  .array-slot.visited { color: #9ad4ff; background: #1a2e4a; border-color: #2a4a7a; }
+  .array-slot.current { color: #ffd87a; background: #2a2010; border-color: #ffa500; font-weight: bold; transform: scale(1.1); }
+  .main-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .stack-wrap {
+    display: flex;
+    flex-direction: column;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .stack-title {
+    font-size: 10px;
+    color: #9ad4ff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .stack-body {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 4px;
+    justify-content: flex-start;
+    flex: 1;
+    padding: 4px;
+    border-top: 1px dashed #333;
+  }
+  .stack-item {
+    padding: 6px 10px;
+    background: #0f3460;
+    border: 2px solid #1a4a7a;
+    border-radius: 4px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    color: #eee;
+    font-weight: bold;
+    transition: all 0.4s;
+  }
+  .stack-item.top {
+    border-color: #ffa500;
+    background: #2a2010;
+    color: #ffd87a;
+  }
+  .stack-item.popping {
+    border-color: #ff8ca0;
+    background: #4a1020;
+    color: #ff8ca0;
+    opacity: 0.6;
+    transform: translateX(-20px);
+  }
+  .stack-item.pushed {
+    animation: slideIn 0.4s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .tree-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  svg { display: block; width: 100%; height: 280px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.4s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 14px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.hidden { opacity: 0; }
+  .node.placed circle { stroke: #9ad4ff; stroke-width: 2.5; fill: #1a2e4a; }
+  .node.placed text.val { fill: #9ad4ff; }
+  .node.just-placed circle { stroke: #4de88c; stroke-width: 4; fill: #0f3a1f; animation: pulse 0.6s ease-out; }
+  .node.just-placed text.val { fill: #4de88c; }
+  .node.on-stack circle { stroke: #ffa500; stroke-width: 3; }
+  @keyframes pulse {
+    0% { transform: scale(0.6); opacity: 0.3; }
+    60% { transform: scale(1.25); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.3s; opacity: 0; }
+  .edge.visible { opacity: 1; }
+  .edge.new-edge { stroke: #4de88c; stroke-width: 3; animation: flash 0.6s ease-out; }
+  @keyframes flash {
+    0% { stroke-width: 5; opacity: 1; }
+    100% { stroke-width: 3; opacity: 1; }
+  }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init { background: #ffa500; color: #1a1a2e; }
+  .kind-left { background: #4de88c; color: #1a1a2e; }
+  .kind-pop { background: #ff8ca0; color: #1a1a2e; }
+  .kind-right { background: #4de88c; color: #1a1a2e; }
+  .kind-done { background: #4de88c; color: #1a1a2e; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button.ctrl {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button.ctrl:hover { background: #ff5577; }
+  button.ctrl:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  code { color: #ffd87a; background: #0a1a30; padding: 1px 4px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 1008 — Construct BST from Preorder Traversal</h1>
+    <div class="subtitle">Walk preorder with a monotonic-decreasing stack of the "rightmost spine". Each value either slots as left-child of top (if smaller) or pops until it finds its right-parent (if larger). O(n) amortized. preorder = [8, 5, 1, 7, 10, 12].</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill cur"><span class="pill-k">current</span><span class="pill-v" id="curV">—</span></span>
+      <span class="pill top"><span class="pill-k">stack top</span><span class="pill-v" id="topV">—</span></span>
+      <span class="pill action"><span class="pill-k">verdict</span><span class="pill-v" id="verdictV">—</span></span>
+    </div>
+    <div class="panel-title" style="margin-top: 2px;">preorder</div>
+    <div class="array-row" id="arrayRow"></div>
+    <div class="main-body">
+      <div class="stack-wrap">
+        <div class="stack-title">stack (top ↑)</div>
+        <div class="stack-body" id="stackBody"></div>
+      </div>
+      <div class="tree-wrap">
+        <svg id="tree" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Algorithm</div>
+    <pre style="font-family: 'Monaco', monospace; font-size: 10px; line-height: 1.55; color: #ccc; white-space: pre-wrap;">root = new Node(preorder[0]);
+stack.push(root);
+for (i = 1; i &lt; n; i++) {
+  v = preorder[i];
+  node = new Node(v);
+  if (v &lt; stack.top().val) {
+    stack.top().left = node;
+  } else {
+    parent = null;
+    while (!stack.empty()
+           && stack.top().val &lt; v) {
+      parent = stack.pop();
+    }
+    parent.right = node;
+  }
+  stack.push(node);
+}</pre>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Stack invariant</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        The stack holds the <strong>rightmost spine</strong> of the tree being built — nodes whose right child slot is still open, strictly decreasing from bottom to top.
+      </div>
+    </div>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why last-popped is the parent</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        When we pop while <code>top &lt; v</code>, each popped node's subtree is done — <code>v</code> doesn't fit as their left child (too big) nor as their right child (there's a smaller eligible ancestor). The last pop is the shallowest ancestor whose <strong>right subtree v starts</strong>.
+      </div>
+    </div>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why O(n)?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        Each node is pushed and popped at most once — amortized O(1) per preorder element. Total O(n) time, O(h) space.
+      </div>
+    </div>
+    <div style="margin-top: 12px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Family placement</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>Monotonic stack on a preorder stream.</strong> Siblings: LC 255 Verify Preorder in BST (same invariant, no build), LC 654 Maximum Binary Tree, LC 331 Verify Preorder Serialization. Alt engine: <strong>bounds recursion</strong> — same O(n), recursive style.
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button class="ctrl" id="prev">◀ Prev</button>
+  <button class="ctrl" id="play">▶ Play</button>
+  <button class="ctrl" id="next">Next ▶</button>
+  <button class="ctrl" id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "public TreeNode bstFromPreorder(int[] preorder) {",
+    "    TreeNode root = new TreeNode(preorder[0]);",
+    "    Deque<TreeNode> stack = new ArrayDeque<>();",
+    "    stack.push(root);",
+    "    for (int i = 1; i < preorder.length; i++) {",
+    "        TreeNode node = new TreeNode(preorder[i]);",
+    "        if (preorder[i] < stack.peek().val) {",
+    "            stack.peek().left = node;",
+    "        } else {",
+    "            TreeNode parent = null;",
+    "            while (!stack.isEmpty()",
+    "                && stack.peek().val < preorder[i]) {",
+    "                parent = stack.pop();",
+    "            }",
+    "            parent.right = node;",
+    "        }",
+    "        stack.push(node);",
+    "    }",
+    "    return root;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ ARRAY ROW ============
+  const preorder = [8, 5, 1, 7, 10, 12];
+  const arrayRowEl = document.getElementById('arrayRow');
+  const arraySlots = preorder.map((v, i) => {
+    const d = document.createElement('div');
+    d.className = 'array-slot';
+    d.textContent = v;
+    d.dataset.i = i;
+    arrayRowEl.appendChild(d);
+    return d;
+  });
+
+  // ============ TREE ============
+  // Final tree layout (hidden until placed):
+  //            8
+  //          /   \
+  //         5     10
+  //        / \     \
+  //       1   7     12
+  const nodes = {
+    n8:  { x: 320, y:  40, r: 22, val: '8'  },
+    n5:  { x: 200, y: 115, r: 20, val: '5'  },
+    n10: { x: 440, y: 115, r: 20, val: '10' },
+    n1:  { x: 130, y: 190, r: 18, val: '1'  },
+    n7:  { x: 270, y: 190, r: 18, val: '7'  },
+    n12: { x: 510, y: 190, r: 18, val: '12' }
+  };
+  const edges = [
+    { id: 'e_8_5',   from: 'n8',  to: 'n5'  },
+    { id: 'e_8_10',  from: 'n8',  to: 'n10' },
+    { id: 'e_5_1',   from: 'n5',  to: 'n1'  },
+    { id: 'e_5_7',   from: 'n5',  to: 'n7'  },
+    { id: 'e_10_12', from: 'n10', to: 'n12' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+
+  const nodeEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node hidden');
+    g.dataset.key = key;
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+  });
+
+  // Stack body renderer
+  const stackBodyEl = document.getElementById('stackBody');
+  function renderStack(stackItems, popping = [], justPushed = null) {
+    stackBodyEl.innerHTML = '';
+    stackItems.forEach((val, i) => {
+      const d = document.createElement('div');
+      d.className = 'stack-item';
+      if (i === stackItems.length - 1) d.classList.add('top');
+      if (justPushed === val && i === stackItems.length - 1) d.classList.add('pushed');
+      d.textContent = val;
+      stackBodyEl.appendChild(d);
+    });
+    // Render popped items with popping class (at the top)
+    popping.forEach(val => {
+      const d = document.createElement('div');
+      d.className = 'stack-item popping';
+      d.textContent = val;
+      stackBodyEl.appendChild(d);
+    });
+  }
+
+  // ============ STEPS ============
+  // Each step encodes:
+  //  - preorderIdx: which element is "current" (highlighted in array row)
+  //  - placedNodes: which node keys are visible in the tree
+  //  - justPlaced: node key that just got attached (green pulse)
+  //  - visibleEdges: which edges are shown
+  //  - newEdge: edge that was just drawn
+  //  - stack: array of values (bottom to top)
+  //  - popping: values that just got popped
+  //  - justPushed: value that just got pushed
+  const steps = [
+    {
+      line: [1, 2, 3, 4], activeArrIdx: 0,
+      placedNodes: ['n8'], justPlaced: 'n8',
+      visibleEdges: [], newEdge: null,
+      stack: [8], popping: [], justPushed: 8,
+      curV: "8", topV: "—", verdictV: "root",
+      action: "Init. preorder[0] = 8 becomes the root. Push onto stack. Stack is now the initial rightmost spine.",
+      kind: "init"
+    },
+    {
+      line: [5, 6, 7, 8, 17], activeArrIdx: 1,
+      placedNodes: ['n8', 'n5'], justPlaced: 'n5',
+      visibleEdges: ['e_8_5'], newEdge: 'e_8_5',
+      stack: [8, 5], popping: [], justPushed: 5,
+      curV: "5", topV: "8", verdictV: "5 < 8 → left",
+      action: "v = 5. Compare with stack top (8): 5 < 8 → becomes 8's LEFT child. Push 5.",
+      kind: "left"
+    },
+    {
+      line: [5, 6, 7, 8, 17], activeArrIdx: 2,
+      placedNodes: ['n8', 'n5', 'n1'], justPlaced: 'n1',
+      visibleEdges: ['e_8_5', 'e_5_1'], newEdge: 'e_5_1',
+      stack: [8, 5, 1], popping: [], justPushed: 1,
+      curV: "1", topV: "5", verdictV: "1 < 5 → left",
+      action: "v = 1. Compare with stack top (5): 1 < 5 → becomes 5's LEFT child. Push 1. Spine is 8→5→1, strictly decreasing.",
+      kind: "left"
+    },
+    {
+      line: [5, 6, 9, 10, 11, 12, 13], activeArrIdx: 3,
+      placedNodes: ['n8', 'n5', 'n1'], justPlaced: null,
+      visibleEdges: ['e_8_5', 'e_5_1'], newEdge: null,
+      stack: [8, 5, 1], popping: [], justPushed: null,
+      curV: "7", topV: "1", verdictV: "7 > 1 → POP",
+      action: "v = 7. 7 < 1? No. Enter pop loop: while top < v, pop. Pop 1 (parent = 1).",
+      kind: "pop"
+    },
+    {
+      line: [11, 12, 13], activeArrIdx: 3,
+      placedNodes: ['n8', 'n5', 'n1'], justPlaced: null,
+      visibleEdges: ['e_8_5', 'e_5_1'], newEdge: null,
+      stack: [8, 5], popping: [1], justPushed: null,
+      curV: "7", topV: "5", verdictV: "7 > 5 → POP",
+      action: "After popping 1, top = 5. 5 < 7 → pop again. Pop 5 (parent = 5).",
+      kind: "pop"
+    },
+    {
+      line: [11, 15, 17], activeArrIdx: 3,
+      placedNodes: ['n8', 'n5', 'n1', 'n7'], justPlaced: 'n7',
+      visibleEdges: ['e_8_5', 'e_5_1', 'e_5_7'], newEdge: 'e_5_7',
+      stack: [8, 7], popping: [], justPushed: 7,
+      curV: "7", topV: "8", verdictV: "7 < 8 → STOP",
+      action: "After popping 5, top = 8. 8 < 7? No → exit loop. parent = 5 (last popped). 5.right = 7. Push 7. Spine is now 8→7.",
+      kind: "right"
+    },
+    {
+      line: [5, 6, 9, 10, 11, 12, 13], activeArrIdx: 4,
+      placedNodes: ['n8', 'n5', 'n1', 'n7'], justPlaced: null,
+      visibleEdges: ['e_8_5', 'e_5_1', 'e_5_7'], newEdge: null,
+      stack: [8, 7], popping: [], justPushed: null,
+      curV: "10", topV: "7", verdictV: "10 > 7 → POP",
+      action: "v = 10. 10 < 7? No. Enter pop loop. Pop 7 (parent = 7). top is now 8.",
+      kind: "pop"
+    },
+    {
+      line: [11, 15, 17], activeArrIdx: 4,
+      placedNodes: ['n8', 'n5', 'n1', 'n7', 'n10'], justPlaced: 'n10',
+      visibleEdges: ['e_8_5', 'e_5_1', 'e_5_7', 'e_8_10'], newEdge: 'e_8_10',
+      stack: [10], popping: [], justPushed: 10,
+      curV: "10", topV: "—", verdictV: "pop 8 → stop",
+      action: "8 < 10 → pop 8 too (parent = 8). Stack empty, exit loop. parent = 8 (last popped). 8.right = 10. Push 10.",
+      kind: "right"
+    },
+    {
+      line: [5, 6, 9, 10, 11, 12, 13, 15, 17], activeArrIdx: 5,
+      placedNodes: ['n8', 'n5', 'n1', 'n7', 'n10', 'n12'], justPlaced: 'n12',
+      visibleEdges: ['e_8_5', 'e_5_1', 'e_5_7', 'e_8_10', 'e_10_12'], newEdge: 'e_10_12',
+      stack: [12], popping: [], justPushed: 12,
+      curV: "12", topV: "10", verdictV: "12 > 10 → pop → right",
+      action: "v = 12. Pop 10 (parent = 10). Stack empty, exit. 10.right = 12. Push 12.",
+      kind: "right"
+    },
+    {
+      line: [19], activeArrIdx: -1,
+      placedNodes: ['n8', 'n5', 'n1', 'n7', 'n10', 'n12'], justPlaced: null,
+      visibleEdges: ['e_8_5', 'e_5_1', 'e_5_7', 'e_8_10', 'e_10_12'], newEdge: null,
+      stack: [12], popping: [], justPushed: null,
+      curV: "—", topV: "12", verdictV: "done",
+      action: "All 6 preorder values consumed. Return root. Each node was pushed and popped at most once — amortized O(1), total O(n).",
+      kind: "done"
+    }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const curVEl = document.getElementById('curV');
+  const topVEl = document.getElementById('topV');
+  const verdictVEl = document.getElementById('verdictV');
+  const actionBodyEl = document.getElementById('action').querySelector('div:nth-child(2)');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx, prevIdx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    curVEl.textContent = s.curV;
+    topVEl.textContent = s.topV;
+    verdictVEl.textContent = s.verdictV;
+
+    // Array row
+    arraySlots.forEach((el, i) => {
+      el.classList.remove('visited', 'current');
+      if (i === s.activeArrIdx) {
+        el.classList.add('current');
+      } else if (s.activeArrIdx === -1 || i < s.activeArrIdx) {
+        el.classList.add('visited');
+      }
+    });
+
+    // Nodes
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('placed', 'just-placed', 'hidden');
+      if (!s.placedNodes.includes(key)) {
+        el.classList.add('hidden');
+      } else if (key === s.justPlaced && prevIdx !== undefined && idx > prevIdx) {
+        el.classList.add('just-placed');
+      } else {
+        el.classList.add('placed');
+      }
+      // Re-trigger just-placed animation
+      if (key === s.justPlaced && prevIdx !== undefined && idx > prevIdx) {
+        void el.offsetWidth;
+        el.classList.remove('just-placed');
+        void el.offsetWidth;
+        el.classList.add('just-placed');
+      }
+    });
+
+    // Edges
+    Object.keys(edgeEls).forEach(eId => {
+      const el = edgeEls[eId];
+      el.classList.remove('visible', 'new-edge');
+      if (s.visibleEdges.includes(eId)) {
+        el.classList.add('visible');
+        if (eId === s.newEdge && prevIdx !== undefined && idx > prevIdx) {
+          void el.offsetWidth;
+          el.classList.add('new-edge');
+        }
+      }
+    });
+
+    // Stack
+    renderStack(s.stack, s.popping, s.justPushed);
+
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    const prev = stepIdx;
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1600);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
