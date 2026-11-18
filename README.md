@@ -88,6 +88,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [510](https://kinny94.github.io/dsa-visualizations/lc510-inorder-successor-in-bst-ii.html) | Inorder Successor in BST II | BST · Parent-pointer · climb-while-right |
 | [235](https://kinny94.github.io/dsa-visualizations/lc235-lowest-common-ancestor-bst.html) | Lowest Common Ancestor of a BST | BST · Descent · split detection |
 | [1008](https://kinny94.github.io/dsa-visualizations/lc1008-construct-bst-from-preorder.html) | Construct BST from Preorder Traversal | BST · Monotonic stack · rightmost spine |
+| [426](https://kinny94.github.io/dsa-visualizations/lc426-convert-bst-to-sorted-doubly-linked-list.html) | Convert BST to Sorted Doubly Linked List | BST · Inorder · first + last wiring |
 
 ## Adding a new animation
 

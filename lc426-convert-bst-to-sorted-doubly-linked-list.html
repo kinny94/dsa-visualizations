@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 426 — Convert BST to Sorted Doubly Linked List</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.first .pill-v { color: #4de88c; }
+  .pill.last  .pill-v { color: #ffd87a; }
+  .pill.cur   .pill-v { color: #9ad4ff; }
+  .tree-wrap {
+    overflow: auto;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 6px;
+    flex: 0 0 auto;
+  }
+  svg.tree { display: block; width: 100%; height: 300px; }
+  .dll-wrap {
+    overflow: hidden;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 6px;
+    flex: 0 0 auto;
+  }
+  svg.dll { display: block; width: 100%; height: 150px; }
+  .node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.4s;
+  }
+  .node text.val {
+    fill: #bbb;
+    font-size: 15px;
+    font-family: 'Monaco', monospace;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.3s;
+  }
+  .node.active circle { stroke: #ffa500; stroke-width: 4; fill: #2a2010; }
+  .node.active text.val { fill: #ffd87a; }
+  .node.visited circle { stroke: #9ad4ff; stroke-width: 2.5; fill: #1a2e4a; }
+  .node.visited text.val { fill: #9ad4ff; }
+  .node.last circle { stroke: #ffd87a; stroke-width: 3.5; fill: #2a2a10; }
+  .node.last text.val { fill: #ffd87a; }
+  .node.first circle { stroke: #4de88c; stroke-width: 3.5; fill: #0f3a1f; }
+  .node.first text.val { fill: #4de88c; }
+  .node.first.last circle { stroke: #4de88c; stroke-width: 3.5; fill: #0f3a1f; }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+  .node.just-wired circle { animation: pulse 0.5s ease-out; }
+  .edge { stroke: #3a3a4a; stroke-width: 2; fill: none; transition: all 0.3s; }
+  .edge.on-path { stroke: #ffa500; stroke-width: 3; stroke-dasharray: 4 3; }
+  /* DLL slots and arrows */
+  .dll-slot rect {
+    fill: #0a1a30;
+    stroke: #1a4a7a;
+    stroke-width: 1.5;
+    rx: 4;
+    transition: all 0.4s;
+  }
+  .dll-slot text {
+    fill: #666;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.4s;
+  }
+  .dll-slot.wired rect { fill: #0f3a1f; stroke: #4de88c; }
+  .dll-slot.wired text { fill: #4de88c; }
+  .dll-slot.current rect { fill: #2a2a10; stroke: #ffd87a; stroke-width: 2.5; }
+  .dll-slot.current text { fill: #ffd87a; }
+  .dll-arrow { stroke: #4de88c; stroke-width: 2; fill: none; opacity: 0; transition: opacity 0.4s; }
+  .dll-arrow.on { opacity: 1; }
+  .dll-arrow.fresh { stroke-dasharray: 5 3; animation: dash 0.8s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -16; } }
+  .dll-close-arc {
+    stroke: #4de88c;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0;
+    stroke-dasharray: 6 3;
+    animation: dash 1s linear infinite;
+  }
+  .dll-close-arc.on { opacity: 1; }
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init    { background: #ffa500; color: #1a1a2e; }
+  .kind-descend { background: #ffa500; color: #1a1a2e; }
+  .kind-visit   { background: #9ad4ff; color: #1a1a2e; }
+  .kind-wire    { background: #4de88c; color: #1a1a2e; }
+  .kind-close   { background: #e94560; color: #fff; }
+  .kind-done    { background: #4de88c; color: #1a1a2e; }
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  code { color: #ffd87a; background: #0a1a30; padding: 1px 4px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 426 — Convert BST to Sorted Doubly Linked List</h1>
+    <div class="subtitle">Inorder walk with two instance fields <code>first</code> and <code>last</code>. At each visit, wire <code>last.right = node; node.left = last</code>; set <code>first</code> on the first visit only. After the walk, close the circle: <code>last.right = first; first.left = last</code>. Input: BST [4, 2, 5, 1, 3].</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill cur"><span class="pill-k">current</span><span class="pill-v" id="curV">—</span></span>
+      <span class="pill first"><span class="pill-k">first</span><span class="pill-v" id="firstV">null</span></span>
+      <span class="pill last"><span class="pill-k">last</span><span class="pill-v" id="lastV">null</span></span>
+    </div>
+    <div class="panel-title" style="margin-top: 4px;">BST (inorder = 1, 2, 3, 4, 5)</div>
+    <div class="tree-wrap">
+      <svg class="tree" id="tree" viewBox="0 0 560 300" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="panel-title" style="margin-top: 4px;">DLL being wired (inorder order)</div>
+    <div class="dll-wrap">
+      <svg class="dll" id="dll" viewBox="0 0 560 150" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrowRight" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0 0, 8 4, 0 8" fill="#4de88c"/>
+          </marker>
+          <marker id="arrowLeft" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto">
+            <polygon points="8 0, 0 4, 8 8" fill="#4de88c"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Algorithm</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6; font-family: 'Monaco', monospace;">
+      <div>Inorder with two fields:</div>
+      <div style="padding-left:12px; margin-top:4px;">
+        <div>• <code>solve(node.left)</code></div>
+        <div>• if <code>last != null</code>:</div>
+        <div style="padding-left:12px;">
+          <div>- <code>last.right = node</code></div>
+          <div>- <code>node.left  = last</code></div>
+        </div>
+        <div>&nbsp;&nbsp;else <code>first = node</code></div>
+        <div>• <code>last = node</code></div>
+        <div>• <code>solve(node.right)</code></div>
+      </div>
+      <div style="margin-top:6px;">After traversal: close the circle<br><code>last.right = first; first.left = last</code>.</div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why inorder?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        A BST's inorder traversal yields its values in sorted order. The problem wants a sorted DLL, so each inorder visit is handed the correct next neighbor for free — nothing to compare or sort.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">The two instance fields</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <code>last</code> is the previously visited node — the bridge for wiring. <code>first</code> is locked on visit #1 — we need it later to close the circle. Both are instance fields so recursion frames share them.
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Family placement</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>Inorder-sorted exploit</strong> → "do work between consecutive visits." Siblings: LC 99 Recover BST (compare for inversion), LC 98 Validate BST, LC 230 Kth Smallest, LC 530/783 Min Abs Diff, LC 173 BST Iterator. Here the between-visit work is DLL wiring instead of comparison.
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  const codeText = [
+    "Node first = null;",
+    "Node last  = null;",
+    "",
+    "public Node treeToDoublyList(Node root) {",
+    "    if (root == null) return null;",
+    "    solve(root);",
+    "    last.right = first;",
+    "    first.left = last;",
+    "    return first;",
+    "}",
+    "",
+    "private void solve(Node node) {",
+    "    if (node == null) return;",
+    "    solve(node.left);",
+    "    if (last != null) {",
+    "        last.right = node;",
+    "        node.left  = last;",
+    "    } else {",
+    "        first = node;",
+    "    }",
+    "    last = node;",
+    "    solve(node.right);",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ============ TREE ============
+  //   Input: root = [4, 2, 5, 1, 3]
+  //         4
+  //        / \
+  //       2   5
+  //      / \
+  //     1   3
+  const nodes = {
+    n4: { x: 280, y:  50, r: 24, val: '4' },
+    n2: { x: 170, y: 140, r: 22, val: '2' },
+    n5: { x: 400, y: 140, r: 22, val: '5' },
+    n1: { x: 100, y: 230, r: 20, val: '1' },
+    n3: { x: 240, y: 230, r: 20, val: '3' }
+  };
+  const edges = [
+    { id: 'e_4_2', from: 'n4', to: 'n2' },
+    { id: 'e_4_5', from: 'n4', to: 'n5' },
+    { id: 'e_2_1', from: 'n2', to: 'n1' },
+    { id: 'e_2_3', from: 'n2', to: 'n3' }
+  ];
+  const svg = document.getElementById('tree');
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const edgeEls = {};
+  edges.forEach(e => {
+    const a = nodes[e.from], b = nodes[e.to];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len, uy = dy / len;
+    const x1 = a.x + ux * a.r, y1 = a.y + uy * a.r;
+    const x2 = b.x - ux * b.r, y2 = b.y - uy * b.r;
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'edge');
+    svg.appendChild(line);
+    edgeEls[e.id] = line;
+  });
+
+  const nodeEls = {};
+  const nodeTextEls = {};
+  Object.entries(nodes).forEach(([key, n]) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'node');
+    g.dataset.key = key;
+    const circle = document.createElementNS(SVGNS, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y); circle.setAttribute('r', n.r);
+    g.appendChild(circle);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+    t.setAttribute('class', 'val');
+    t.textContent = n.val;
+    g.appendChild(t);
+    svg.appendChild(g);
+    nodeEls[key] = g;
+    nodeTextEls[key] = t;
+  });
+
+  // ============ DLL row ============
+  // Inorder sequence: 1, 2, 3, 4, 5  (slot indices 0..4)
+  const dllSvg = document.getElementById('dll');
+  const dllOrder = [
+    { k: 'n1', v: '1' },
+    { k: 'n2', v: '2' },
+    { k: 'n3', v: '3' },
+    { k: 'n4', v: '4' },
+    { k: 'n5', v: '5' }
+  ];
+  const slotW = 70, slotH = 50, slotGap = 36;
+  const slotsLeft = 50, slotsTop = 38;
+  const slotEls = [];
+  dllOrder.forEach((s, i) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'dll-slot');
+    g.dataset.i = i;
+    const rect = document.createElementNS(SVGNS, 'rect');
+    const x = slotsLeft + i * (slotW + slotGap);
+    rect.setAttribute('x', x); rect.setAttribute('y', slotsTop);
+    rect.setAttribute('width', slotW); rect.setAttribute('height', slotH);
+    g.appendChild(rect);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', x + slotW / 2); t.setAttribute('y', slotsTop + slotH / 2);
+    t.textContent = s.v;
+    g.appendChild(t);
+    dllSvg.appendChild(g);
+    slotEls.push(g);
+  });
+
+  // Between-slot arrows: right-going (top) and left-going (bottom), one pair per adjacent gap.
+  // We have 4 gaps for 5 slots.  Each gap gets a ->  and  <-  arrow.
+  const rightArrows = [];
+  const leftArrows  = [];
+  for (let i = 0; i < 4; i++) {
+    const xL = slotsLeft + i * (slotW + slotGap) + slotW;        // right edge of slot i
+    const xR = slotsLeft + (i + 1) * (slotW + slotGap);          // left edge of slot i+1
+    // right arrow  i -> i+1  (above center)
+    const ar = document.createElementNS(SVGNS, 'line');
+    ar.setAttribute('x1', xL + 2); ar.setAttribute('y1', slotsTop + slotH / 2 - 7);
+    ar.setAttribute('x2', xR - 2); ar.setAttribute('y2', slotsTop + slotH / 2 - 7);
+    ar.setAttribute('class', 'dll-arrow');
+    ar.setAttribute('marker-end', 'url(#arrowRight)');
+    dllSvg.appendChild(ar);
+    rightArrows.push(ar);
+    // left arrow  i+1 -> i   (below center)
+    const al = document.createElementNS(SVGNS, 'line');
+    al.setAttribute('x1', xR - 2); al.setAttribute('y1', slotsTop + slotH / 2 + 7);
+    al.setAttribute('x2', xL + 2); al.setAttribute('y2', slotsTop + slotH / 2 + 7);
+    al.setAttribute('class', 'dll-arrow');
+    al.setAttribute('marker-end', 'url(#arrowLeft)');
+    dllSvg.appendChild(al);
+    leftArrows.push(al);
+  }
+
+  // Closing-circle arc: from slot 4 (value 5) right side to slot 0 (value 1) left side.
+  const closeArc = document.createElementNS(SVGNS, 'path');
+  closeArc.setAttribute('class', 'dll-close-arc');
+  const sx = slotsLeft + 4 * (slotW + slotGap) + slotW; // right edge of slot 4
+  const sy = slotsTop + slotH / 2;
+  const ex = slotsLeft;                                  // left edge of slot 0
+  const ey = slotsTop + slotH / 2;
+  // Arc up and over
+  closeArc.setAttribute('d', `M ${sx} ${sy} C ${sx + 30} ${sy - 120}, ${ex - 30} ${ey - 120}, ${ex} ${ey}`);
+  closeArc.setAttribute('marker-end', 'url(#arrowRight)');
+  dllSvg.appendChild(closeArc);
+
+  // ============ STEPS ============
+  // Inorder visit order: 1, 2, 3, 4, 5 (slots 0..4)
+  // Tree edges "on-path" during descent segments
+  const E = {
+    e_4_2: 'e_4_2', e_2_1: 'e_2_1', e_2_3: 'e_2_3', e_4_5: 'e_4_5'
+  };
+  const steps = [
+    {
+      line: [1, 2], active: null, prev: null,
+      nodeState: {}, edgeOn: [],
+      curV: "—", firstV: "null", lastV: "null",
+      slotState: {}, rightOn: [], leftOn: [], closeOn: false, freshArrow: null,
+      kind: "init",
+      action: "Init: instance fields first=null, last=null. solve(root) kicks off the inorder walk from root 4."
+    },
+    {
+      line: [14], active: "n4", prev: null,
+      nodeState: {}, edgeOn: ['e_4_2', 'e_2_1'],
+      curV: "4", firstV: "null", lastV: "null",
+      slotState: {}, rightOn: [], leftOn: [], closeOn: false, freshArrow: null,
+      kind: "descend",
+      action: "solve(4) → solve(4.left=2) → solve(2.left=1). Descend the left spine all the way to node 1 (the inorder-leftmost)."
+    },
+    {
+      line: [13, 14], active: "n1", prev: null,
+      nodeState: {}, edgeOn: ['e_4_2', 'e_2_1'],
+      curV: "1", firstV: "null", lastV: "null",
+      slotState: { 0: 'current' }, rightOn: [], leftOn: [], closeOn: false, freshArrow: null,
+      kind: "visit",
+      action: "At node 1: solve(1.left=null) returns immediately. ★ INORDER VISIT of node 1 — between the two recursive calls."
+    },
+    {
+      line: [15, 18, 19, 21], active: "n1", prev: null,
+      nodeState: { n1: 'first' }, edgeOn: [],
+      curV: "1", firstV: "1", lastV: "1",
+      slotState: { 0: 'wired' }, rightOn: [], leftOn: [], closeOn: false, freshArrow: null,
+      kind: "wire",
+      action: "last == null → this is the FIRST visit. Record first = 1 (the DLL head — we'll need it to close the circle). Then last = 1."
+    },
+    {
+      line: [22], active: "n2", prev: "n1",
+      nodeState: { n1: 'visited' }, edgeOn: ['e_4_2'],
+      curV: "2", firstV: "1", lastV: "1",
+      slotState: { 0: 'wired' }, rightOn: [], leftOn: [], closeOn: false, freshArrow: null,
+      kind: "descend",
+      action: "solve(1.right=null) returns. Pop up to node 2. ★ INORDER VISIT of node 2."
+    },
+    {
+      line: [15, 16, 17, 21], active: "n2", prev: "n1",
+      nodeState: { n1: 'visited', n2: 'last' }, edgeOn: [],
+      curV: "2", firstV: "1", lastV: "2",
+      slotState: { 0: 'wired', 1: 'wired' }, rightOn: [0], leftOn: [0], closeOn: false, freshArrow: 0,
+      kind: "wire",
+      action: "last = 1 ≠ null → wire 1.right = 2 and 2.left = 1. The first DLL link is born. Then last = 2."
+    },
+    {
+      line: [22, 14], active: "n3", prev: "n2",
+      nodeState: { n1: 'visited', n2: 'visited' }, edgeOn: ['e_2_3'],
+      curV: "3", firstV: "1", lastV: "2",
+      slotState: { 0: 'wired', 1: 'wired', 2: 'current' }, rightOn: [0], leftOn: [0], closeOn: false, freshArrow: null,
+      kind: "descend",
+      action: "solve(2.right=3). Descend to node 3. solve(3.left=null) returns. ★ INORDER VISIT of node 3."
+    },
+    {
+      line: [15, 16, 17, 21], active: "n3", prev: "n2",
+      nodeState: { n1: 'visited', n2: 'visited', n3: 'last' }, edgeOn: [],
+      curV: "3", firstV: "1", lastV: "3",
+      slotState: { 0: 'wired', 1: 'wired', 2: 'wired' }, rightOn: [0, 1], leftOn: [0, 1], closeOn: false, freshArrow: 1,
+      kind: "wire",
+      action: "Wire 2.right = 3 and 3.left = 2. Chain: 1 ⇄ 2 ⇄ 3. Then last = 3."
+    },
+    {
+      line: [22], active: "n4", prev: "n3",
+      nodeState: { n1: 'visited', n2: 'visited', n3: 'visited' }, edgeOn: [],
+      curV: "4", firstV: "1", lastV: "3",
+      slotState: { 0: 'wired', 1: 'wired', 2: 'wired' }, rightOn: [0, 1], leftOn: [0, 1], closeOn: false, freshArrow: null,
+      kind: "descend",
+      action: "solve(3.right=null) returns. Pop up through 2, back to node 4. ★ INORDER VISIT of node 4 (the root)."
+    },
+    {
+      line: [15, 16, 17, 21], active: "n4", prev: "n3",
+      nodeState: { n1: 'visited', n2: 'visited', n3: 'visited', n4: 'last' }, edgeOn: [],
+      curV: "4", firstV: "1", lastV: "4",
+      slotState: { 0: 'wired', 1: 'wired', 2: 'wired', 3: 'wired' }, rightOn: [0, 1, 2], leftOn: [0, 1, 2], closeOn: false, freshArrow: 2,
+      kind: "wire",
+      action: "Wire 3.right = 4 and 4.left = 3. Chain: 1 ⇄ 2 ⇄ 3 ⇄ 4. Then last = 4."
+    },
+    {
+      line: [22, 14], active: "n5", prev: "n4",
+      nodeState: { n1: 'visited', n2: 'visited', n3: 'visited', n4: 'visited' }, edgeOn: ['e_4_5'],
+      curV: "5", firstV: "1", lastV: "4",
+      slotState: { 0: 'wired', 1: 'wired', 2: 'wired', 3: 'wired', 4: 'current' }, rightOn: [0, 1, 2], leftOn: [0, 1, 2], closeOn: false, freshArrow: null,
+      kind: "descend",
+      action: "solve(4.right=5). Descend to node 5. solve(5.left=null) returns. ★ INORDER VISIT of node 5."
+    },
+    {
+      line: [15, 16, 17, 21], active: "n5", prev: "n4",
+      nodeState: { n1: 'visited', n2: 'visited', n3: 'visited', n4: 'visited', n5: 'last' }, edgeOn: [],
+      curV: "5", firstV: "1", lastV: "5",
+      slotState: { 0: 'wired', 1: 'wired', 2: 'wired', 3: 'wired', 4: 'wired' }, rightOn: [0, 1, 2, 3], leftOn: [0, 1, 2, 3], closeOn: false, freshArrow: 3,
+      kind: "wire",
+      action: "Wire 4.right = 5 and 5.left = 4. Chain: 1 ⇄ 2 ⇄ 3 ⇄ 4 ⇄ 5. Then last = 5. solve(5.right=null) returns, unwinds all the way."
+    },
+    {
+      line: [7, 8], active: null, prev: "n5",
+      nodeState: { n1: 'first', n2: 'visited', n3: 'visited', n4: 'visited', n5: 'last' }, edgeOn: [],
+      curV: "—", firstV: "1", lastV: "5",
+      slotState: { 0: 'wired', 1: 'wired', 2: 'wired', 3: 'wired', 4: 'wired' }, rightOn: [0, 1, 2, 3], leftOn: [0, 1, 2, 3], closeOn: true, freshArrow: null,
+      kind: "close",
+      action: "★ CLOSE THE CIRCLE. last(5).right = first(1) and first(1).left = last(5). The single remaining open gap — between the tail and the head — gets stitched shut."
+    },
+    {
+      line: [9], active: null, prev: null,
+      nodeState: { n1: 'first', n2: 'visited', n3: 'visited', n4: 'visited', n5: 'visited' }, edgeOn: [],
+      curV: "—", firstV: "1", lastV: "5",
+      slotState: { 0: 'wired', 1: 'wired', 2: 'wired', 3: 'wired', 4: 'wired' }, rightOn: [0, 1, 2, 3], leftOn: [0, 1, 2, 3], closeOn: true, freshArrow: null,
+      kind: "done",
+      action: "Return first (the DLL head, value 1). Circular sorted DLL: 1 ⇄ 2 ⇄ 3 ⇄ 4 ⇄ 5 ⇄ (back to 1). Time O(n); space O(h) recursion stack."
+    }
+  ];
+
+  // ============ RENDERER ============
+  let stepIdx = 0;
+  const curVEl = document.getElementById('curV');
+  const firstVEl = document.getElementById('firstV');
+  const lastVEl = document.getElementById('lastV');
+  const actionBodyEl = document.getElementById('action').querySelector('div:nth-child(2)');
+  const actionKindEl = document.getElementById('actionKind');
+  const codeLines = codeEl.querySelectorAll('.code-line');
+  const stepInfoEl = document.getElementById('stepInfo');
+  const stepLabelEl = document.getElementById('stepLabel');
+
+  function render(idx, prevIdx) {
+    const s = steps[idx];
+    codeLines.forEach((el, i) => {
+      el.classList.toggle('active', s.line.includes(i + 1));
+    });
+    curVEl.textContent   = s.curV;
+    firstVEl.textContent = s.firstV;
+    lastVEl.textContent  = s.lastV;
+
+    Object.keys(nodeEls).forEach(key => {
+      const el = nodeEls[key];
+      el.classList.remove('active', 'visited', 'last', 'first', 'just-wired');
+      const st = s.nodeState[key];
+      if (key === s.active) {
+        el.classList.add('active');
+      } else if (st === 'first') {
+        el.classList.add('first');
+      } else if (st === 'last') {
+        el.classList.add('last');
+      } else if (st === 'visited') {
+        el.classList.add('visited');
+      }
+      // just-wired pulse when this step changed state to 'last' or 'first'
+      if (prevIdx !== undefined && idx > prevIdx) {
+        const prevSt = steps[prevIdx].nodeState[key];
+        if (st && st !== prevSt && (st === 'last' || st === 'first')) {
+          void el.offsetWidth;
+          el.classList.add('just-wired');
+        }
+      }
+    });
+
+    // Tree edge highlighting
+    Object.keys(edgeEls).forEach(id => {
+      edgeEls[id].classList.toggle('on-path', s.edgeOn.includes(id));
+    });
+
+    // DLL slots
+    slotEls.forEach((el, i) => {
+      el.classList.remove('wired', 'current');
+      const st = s.slotState[i];
+      if (st) {
+        el.classList.add(st);
+      }
+    });
+    // DLL arrows
+    rightArrows.forEach((el, i) => {
+      el.classList.toggle('on', s.rightOn.includes(i));
+      el.classList.toggle('fresh', s.freshArrow === i);
+    });
+    leftArrows.forEach((el, i) => {
+      el.classList.toggle('on', s.leftOn.includes(i));
+      el.classList.toggle('fresh', s.freshArrow === i);
+    });
+    closeArc.classList.toggle('on', s.closeOn);
+
+    actionBodyEl.textContent = s.action;
+    actionKindEl.className = 'kind kind-' + s.kind;
+    actionKindEl.textContent = s.kind;
+    stepInfoEl.textContent = `step ${idx + 1} / ${steps.length}`;
+    stepLabelEl.textContent = `step ${idx + 1} / ${steps.length}`;
+  }
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  let playInterval = null;
+  function goTo(idx) {
+    const prev = stepIdx;
+    stepIdx = Math.max(0, Math.min(steps.length - 1, idx));
+    render(stepIdx, prev);
+    prevBtn.disabled = stepIdx === 0;
+    nextBtn.disabled = stepIdx === steps.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx - 1); });
+  nextBtn.addEventListener('click', () => { stopPlay(); goTo(stepIdx + 1); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  function stopPlay() {
+    if (playInterval) {
+      clearInterval(playInterval);
+      playInterval = null;
+      playBtn.textContent = '▶ Play';
+    }
+  }
+  playBtn.addEventListener('click', () => {
+    if (playInterval) { stopPlay(); return; }
+    playBtn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      if (stepIdx >= steps.length - 1) { stopPlay(); return; }
+      goTo(stepIdx + 1);
+    }, 1500);
+  });
+  goTo(0);
+</script>
+</body>
+</html>
