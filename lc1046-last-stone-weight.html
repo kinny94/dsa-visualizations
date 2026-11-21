@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 1046 — Last Stone Weight</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.size .pill-v { color: #ffd87a; }
+  .pill.y .pill-v    { color: #ffb347; }  /* orange — heaviest */
+  .pill.x .pill-v    { color: #9ad4ff; }  /* blue — second */
+  .pill.diff .pill-v { color: #d8b4ff; }
+  .pill.ok  .pill-v  { color: #4de88c; }
+  .pill.bad .pill-v  { color: #ff5577; }
+
+  .viz-wrap {
+    overflow: hidden;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 10px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+  svg.viz {
+    display: block;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 280px;
+  }
+
+  /* Tree edges */
+  .tree-edge {
+    stroke: #3a3a4a;
+    stroke-width: 1.5;
+    transition: stroke 0.3s, stroke-width 0.3s;
+  }
+  .tree-edge.fade { opacity: 0.25; }
+
+  /* Tree nodes */
+  .heap-node circle {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 2;
+    transition: all 0.4s;
+  }
+  .heap-node text {
+    fill: #bbb;
+    font-family: 'Monaco', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    transition: fill 0.3s;
+  }
+  .heap-node.root circle { fill: #2a1a0a; stroke: #ffb347; stroke-width: 2.5; }
+  .heap-node.root text { fill: #ffd87a; }
+  .heap-node.poll-y circle { fill: #4a2810; stroke: #ffb347; stroke-width: 3; animation: pulse 0.5s ease-out; }
+  .heap-node.poll-y text { fill: #ffb347; }
+  .heap-node.poll-x circle { fill: #0f3460; stroke: #9ad4ff; stroke-width: 3; animation: pulse 0.5s ease-out; }
+  .heap-node.poll-x text { fill: #9ad4ff; }
+  .heap-node.pushed circle { fill: #0f3a1f; stroke: #4de88c; stroke-width: 3; animation: pulse 0.6s ease-out; }
+  .heap-node.pushed text { fill: #4de88c; }
+  .heap-node.destroyed circle { fill: #4a1020; stroke: #e94560; stroke-dasharray: 4 3; animation: shake 0.5s ease-in-out; }
+  .heap-node.destroyed text { fill: #ff8ca0; text-decoration: line-through; }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+  }
+
+  /* Array slots */
+  .arr-slot rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 1.5;
+    rx: 3;
+    transition: all 0.4s;
+  }
+  .arr-slot text.val {
+    fill: #bbb;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .arr-slot text.idx {
+    fill: #666;
+    font-family: 'Monaco', monospace;
+    font-size: 10px;
+    text-anchor: middle;
+  }
+  .arr-slot.root rect { fill: #2a1a0a; stroke: #ffb347; stroke-width: 2.5; }
+  .arr-slot.root text.val { fill: #ffd87a; }
+  .arr-slot.poll-y rect { fill: #4a2810; stroke: #ffb347; stroke-width: 2.5; }
+  .arr-slot.poll-y text.val { fill: #ffb347; }
+  .arr-slot.poll-x rect { fill: #0f3460; stroke: #9ad4ff; stroke-width: 2.5; }
+  .arr-slot.poll-x text.val { fill: #9ad4ff; }
+  .arr-slot.pushed rect { fill: #0f3a1f; stroke: #4de88c; stroke-width: 2.5; }
+  .arr-slot.pushed text.val { fill: #4de88c; }
+  .arr-slot.empty rect { fill: #0a1222; stroke: #1a2a40; stroke-dasharray: 3 3; }
+  .arr-slot.empty text.val { fill: #333; }
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8a93a6;
+    margin: 4px 0 2px 0;
+    font-family: 'Monaco', monospace;
+  }
+
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init   { background: #ffa500; color: #1a1a2e; }
+  .kind-build  { background: #ffd87a; color: #1a1a2e; }
+  .kind-poll   { background: #ffb347; color: #1a1a2e; }
+  .kind-push   { background: #4de88c; color: #1a1a2e; }
+  .kind-skip   { background: #e94560; color: #fff; }
+  .kind-end    { background: #4de88c; color: #1a1a2e; }
+
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  code { color: #ffd87a; background: #0a1a30; padding: 1px 4px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 1046 — Last Stone Weight</h1>
+    <div class="subtitle">Max-heap workhorse. Each round: poll the top two (<code>y</code>, <code>x</code>). If <code>y &gt; x</code>, push the difference. If <code>y == x</code>, both destroyed — push nothing. Repeat while heap size &gt; 1.</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill size"><span class="pill-k">size</span><span class="pill-v" id="sizeV">—</span></span>
+      <span class="pill y"><span class="pill-k">y (poll)</span><span class="pill-v" id="yV">—</span></span>
+      <span class="pill x"><span class="pill-k">x (poll)</span><span class="pill-v" id="xV">—</span></span>
+      <span class="pill diff"><span class="pill-k">y − x</span><span class="pill-v" id="diffV">—</span></span>
+      <span class="pill ok" id="resultPill" style="display:none"><span class="pill-k">result</span><span class="pill-v" id="resultV">—</span></span>
+    </div>
+
+    <div class="viz-wrap">
+      <div class="section-label">Max-heap (tree view) — root is always the heaviest stone</div>
+      <svg class="viz" id="tree" viewBox="0 0 700 320" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="section-label" style="margin-top: 8px;">Array storage (same heap, level-order)</div>
+      <svg class="viz" id="arr" viewBox="0 0 700 70" preserveAspectRatio="xMidYMid meet" style="min-height: 60px; max-height: 70px;"></svg>
+    </div>
+
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Algorithm</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6; font-family: 'Monaco', monospace;">
+      <div>1. Build max-heap from stones.</div>
+      <div>2. While size &gt; 1:</div>
+      <div style="padding-left:12px;">
+        <div>y = heap.poll()</div>
+        <div>x = heap.poll()</div>
+        <div>if y != x:</div>
+        <div style="padding-left:12px;">heap.offer(y − x)</div>
+      </div>
+      <div>3. Return 0 if empty, else peek().</div>
+    </div>
+
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why a max-heap?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        Each round needs the <strong>two heaviest</strong> stones. A max-heap gives both in O(log n) each via <code>poll()</code>. Sorting and re-sorting every round is O(n² log n); the heap brings the total to O(n log n).
+      </div>
+    </div>
+
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why <code>y − x ≥ 0</code>?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        A max-heap pops in non-increasing order, so the first poll <code>y</code> is always ≥ the second poll <code>x</code>. Pushing <code>y − x</code> is a valid non-negative stone weight — no abs-value needed.
+      </div>
+    </div>
+
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Family placement</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>Heap §3.2 — Repeated extremes with mutation.</strong> Pull top (one or two), transform, push result back. Same shape: LC 2208 Minimum Operations to Halve Array Sum (halve top, push back), LC 1962 Remove Max Number of Edges, LC 1753 Max Score from Removing Stones (max-heap of three piles).
+      </div>
+    </div>
+
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Complexity</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>Time:</strong> O(n log n) — up to n iterations, each with two polls + one offer at O(log n). <br>
+        <strong>Space:</strong> O(n) for the heap.<br>
+        Build loop is O(n log n); drop to O(n) with constructor heapify.
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ---------- CODE PANEL ----------
+  const codeText = [
+    "public int lastStoneWeight(int[] stones) {",
+    "    PriorityQueue<Integer> heap =",
+    "        new PriorityQueue<>(Collections.reverseOrder());",
+    "    for (int s : stones) {",
+    "        heap.offer(s);",
+    "    }",
+    "",
+    "    while (heap.size() > 1) {",
+    "        int y = heap.poll();",
+    "        int x = heap.poll();",
+    "        if (y != x) {",
+    "            heap.offer(y - x);",
+    "        }",
+    "    }",
+    "",
+    "    return heap.isEmpty() ? 0 : heap.peek();",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ---------- SVG CONSTANTS ----------
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const treeSvg = document.getElementById('tree');
+  const arrSvg  = document.getElementById('arr');
+
+  // Pre-computed tree positions for a heap with up to 7 nodes (3 levels full).
+  // Even though our example uses up to 6 nodes, we keep slot 6 defined for completeness.
+  const TREE_POS = [
+    [350, 45],   // 0 — root
+    [200, 140],  // 1
+    [500, 140],  // 2
+    [120, 240],  // 3
+    [280, 240],  // 4
+    [420, 240],  // 5
+    [580, 240]   // 6
+  ];
+  const NODE_R = 24;
+
+  // Draw tree edges once (static — same structure, nodes come/go)
+  function drawEdges() {
+    // Children of i are 2i+1, 2i+2 — for i in 0..2
+    for (let i = 0; i <= 2; i++) {
+      for (const c of [2*i + 1, 2*i + 2]) {
+        if (c >= TREE_POS.length) continue;
+        const [px, py] = TREE_POS[i];
+        const [cx, cy] = TREE_POS[c];
+        const line = document.createElementNS(SVGNS, 'line');
+        line.setAttribute('x1', px);
+        line.setAttribute('y1', py + NODE_R - 2);
+        line.setAttribute('x2', cx);
+        line.setAttribute('y2', cy - NODE_R + 2);
+        line.setAttribute('class', 'tree-edge');
+        line.dataset.parent = i;
+        line.dataset.child = c;
+        treeSvg.appendChild(line);
+      }
+    }
+  }
+  drawEdges();
+
+  // Node layer (on top of edges)
+  const nodeLayer = document.createElementNS(SVGNS, 'g');
+  treeSvg.appendChild(nodeLayer);
+
+  // Array layer
+  const ARR_Y = 20, ARR_H = 36;
+  const SLOT_W = 70, SLOT_GAP = 6;
+  const MAX_SLOTS = 7;
+  const ARR_X0 = (700 - MAX_SLOTS * SLOT_W - (MAX_SLOTS - 1) * SLOT_GAP) / 2;
+  function slotX(i) { return ARR_X0 + i * (SLOT_W + SLOT_GAP); }
+
+  function drawArray(heap, highlight) {
+    arrSvg.innerHTML = '';
+    for (let i = 0; i < MAX_SLOTS; i++) {
+      const g = document.createElementNS(SVGNS, 'g');
+      const present = i < heap.length;
+      let cls = 'arr-slot ' + (present ? '' : 'empty');
+      if (present && highlight) {
+        if (highlight.poppedY === i) cls += ' poll-y';
+        else if (highlight.poppedX === i) cls += ' poll-x';
+        else if (highlight.pushed === i) cls += ' pushed';
+        else if (i === 0) cls += ' root';
+      } else if (present && i === 0) {
+        cls += ' root';
+      }
+      g.setAttribute('class', cls.trim());
+
+      const r = document.createElementNS(SVGNS, 'rect');
+      r.setAttribute('x', slotX(i));
+      r.setAttribute('y', ARR_Y);
+      r.setAttribute('width', SLOT_W);
+      r.setAttribute('height', ARR_H);
+      g.appendChild(r);
+
+      const val = document.createElementNS(SVGNS, 'text');
+      val.setAttribute('class', 'val');
+      val.setAttribute('x', slotX(i) + SLOT_W / 2);
+      val.setAttribute('y', ARR_Y + ARR_H / 2);
+      val.textContent = present ? heap[i] : '—';
+      g.appendChild(val);
+
+      const idxL = document.createElementNS(SVGNS, 'text');
+      idxL.setAttribute('class', 'idx');
+      idxL.setAttribute('x', slotX(i) + SLOT_W / 2);
+      idxL.setAttribute('y', ARR_Y - 5);
+      idxL.textContent = 'idx ' + i;
+      g.appendChild(idxL);
+
+      arrSvg.appendChild(g);
+    }
+  }
+
+  function drawTree(heap, highlight) {
+    nodeLayer.innerHTML = '';
+    // Fade edges whose child index is out of heap bounds
+    treeSvg.querySelectorAll('.tree-edge').forEach(e => {
+      const c = parseInt(e.dataset.child);
+      if (c >= heap.length) {
+        e.classList.add('fade');
+      } else {
+        e.classList.remove('fade');
+      }
+    });
+
+    for (let i = 0; i < heap.length; i++) {
+      const [x, y] = TREE_POS[i];
+      let cls = 'heap-node';
+      if (highlight) {
+        if (highlight.poppedY === i) cls += ' poll-y';
+        else if (highlight.poppedX === i) cls += ' poll-x';
+        else if (highlight.pushed === i) cls += ' pushed';
+        else if (highlight.destroyedAt === i) cls += ' destroyed';
+        else if (i === 0) cls += ' root';
+      } else if (i === 0) {
+        cls += ' root';
+      }
+
+      const g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('class', cls);
+
+      const circ = document.createElementNS(SVGNS, 'circle');
+      circ.setAttribute('cx', x);
+      circ.setAttribute('cy', y);
+      circ.setAttribute('r', NODE_R);
+      g.appendChild(circ);
+
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', x);
+      t.setAttribute('y', y);
+      t.textContent = heap[i];
+      g.appendChild(t);
+
+      nodeLayer.appendChild(g);
+    }
+  }
+
+  // ---------- STEP DATA ----------
+  // Example: stones = [2, 7, 4, 1, 8, 1]
+  // Max-heap after build (offer-by-offer): [8, 7, 4, 1, 2, 1]
+  //
+  // Round 1: y=8 x=7  diff=1 push 1  →  [4, 2, 1, 1, 1]
+  // Round 2: y=4 x=2  diff=2 push 2  →  [2, 1, 1, 1]
+  // Round 3: y=2 x=1  diff=1 push 1  →  [1, 1, 1]
+  // Round 4: y=1 x=1  equal, skip    →  [1]
+  // Return 1.
+
+  const H_BUILT = [8, 7, 4, 1, 2, 1];
+
+  // After round 1 push
+  const H_R1 = [4, 2, 1, 1, 1];
+  // After round 2 push
+  const H_R2 = [2, 1, 1, 1];
+  // After round 3 push
+  const H_R3 = [1, 1, 1];
+  // After round 4 (two polls, no push)
+  const H_R4 = [1];
+
+  const steps = [];
+
+  steps.push({
+    line: [1], kind: 'init',
+    heap: H_BUILT.slice(),
+    highlight: null,
+    pills: { size: '—', y: '—', x: '—', diff: '—', result: null },
+    action: "Input: stones = [2, 7, 4, 1, 8, 1]. We'll build a max-heap and smash the top two in a loop."
+  });
+
+  steps.push({
+    line: [2, 3, 4, 5, 6], kind: 'build',
+    heap: H_BUILT.slice(),
+    highlight: null,
+    pills: { size: 6, y: '—', x: '—', diff: '—', result: null },
+    action: "Build max-heap by offer()ing each stone. Internal order becomes [8, 7, 4, 1, 2, 1] — root is 8, the heaviest."
+  });
+
+  // ============ ROUND 1 ============
+  steps.push({
+    line: [8, 9], kind: 'poll',
+    heap: H_BUILT.slice(),
+    highlight: { poppedY: 0 },
+    pills: { size: 6, y: '8 (polling)', x: '—', diff: '—', result: null },
+    action: "Round 1: y = heap.poll() = 8 (root, the heaviest)."
+  });
+
+  steps.push({
+    line: [10], kind: 'poll',
+    heap: [7, 2, 4, 1, 1],  // after poll 8 and sift-down
+    highlight: { poppedX: 0 },
+    pills: { size: 5, y: 8, x: '7 (polling)', diff: '—', result: null },
+    action: "x = heap.poll() = 7 (new root after 8 was removed and the heap re-balanced)."
+  });
+
+  steps.push({
+    line: [11, 12], kind: 'push',
+    heap: H_R1.slice(),  // after push 1
+    highlight: { pushed: 4 },  // the new 1 sits at idx 4 after sift-up (no sift since 1 ≤ parent)
+    pills: { size: 5, y: 8, x: 7, diff: 1, result: null },
+    action: "y ≠ x. Push y − x = 8 − 7 = 1 back into the heap. Heap becomes [4, 2, 1, 1, 1]."
+  });
+
+  // ============ ROUND 2 ============
+  steps.push({
+    line: [8, 9], kind: 'poll',
+    heap: H_R1.slice(),
+    highlight: { poppedY: 0 },
+    pills: { size: 5, y: '4 (polling)', x: '—', diff: '—', result: null },
+    action: "Round 2: y = heap.poll() = 4 (new heaviest)."
+  });
+
+  steps.push({
+    line: [10], kind: 'poll',
+    heap: [2, 1, 1, 1],  // after poll 4 and sift-down
+    highlight: { poppedX: 0 },
+    pills: { size: 4, y: 4, x: '2 (polling)', diff: '—', result: null },
+    action: "x = heap.poll() = 2."
+  });
+
+  steps.push({
+    line: [11, 12], kind: 'push',
+    heap: H_R2.slice(),  // after push 2
+    highlight: { pushed: 0 },  // new 2 sifts all the way to root
+    pills: { size: 4, y: 4, x: 2, diff: 2, result: null },
+    action: "y ≠ x. Push y − x = 4 − 2 = 2 back. It sifts up to the root. Heap becomes [2, 1, 1, 1]."
+  });
+
+  // ============ ROUND 3 ============
+  steps.push({
+    line: [8, 9], kind: 'poll',
+    heap: H_R2.slice(),
+    highlight: { poppedY: 0 },
+    pills: { size: 4, y: '2 (polling)', x: '—', diff: '—', result: null },
+    action: "Round 3: y = heap.poll() = 2."
+  });
+
+  steps.push({
+    line: [10], kind: 'poll',
+    heap: [1, 1, 1],  // after poll 2
+    highlight: { poppedX: 0 },
+    pills: { size: 3, y: 2, x: '1 (polling)', diff: '—', result: null },
+    action: "x = heap.poll() = 1."
+  });
+
+  steps.push({
+    line: [11, 12], kind: 'push',
+    heap: H_R3.slice(),  // after push 1
+    highlight: { pushed: 2 },  // new 1 appended at idx 2
+    pills: { size: 3, y: 2, x: 1, diff: 1, result: null },
+    action: "y ≠ x. Push y − x = 2 − 1 = 1. Heap becomes [1, 1, 1]."
+  });
+
+  // ============ ROUND 4 — EQUAL, DESTROY BOTH ============
+  steps.push({
+    line: [8, 9], kind: 'poll',
+    heap: H_R3.slice(),
+    highlight: { poppedY: 0 },
+    pills: { size: 3, y: '1 (polling)', x: '—', diff: '—', result: null },
+    action: "Round 4: y = heap.poll() = 1."
+  });
+
+  steps.push({
+    line: [10], kind: 'poll',
+    heap: [1, 1],  // after first poll of 1
+    highlight: { poppedX: 0 },
+    pills: { size: 2, y: 1, x: '1 (polling)', diff: '—', result: null },
+    action: "x = heap.poll() = 1. Same value as y."
+  });
+
+  steps.push({
+    line: [11], kind: 'skip',
+    heap: H_R4.slice(),  // just [1]
+    highlight: { destroyedAt: null },
+    pills: { size: 1, y: 1, x: 1, diff: 0, result: null },
+    action: "y == x. Both stones destroyed — don't push anything. Heap now holds just [1]."
+  });
+
+  // ============ TERMINATE ============
+  steps.push({
+    line: [8], kind: 'end',
+    heap: H_R4.slice(),
+    highlight: null,
+    pills: { size: 1, y: '—', x: '—', diff: '—', result: null },
+    action: "Loop guard fails: size == 1, not > 1. Exit the while loop."
+  });
+
+  steps.push({
+    line: [16], kind: 'end',
+    heap: H_R4.slice(),
+    highlight: { pushed: 0 },  // highlight the surviving stone
+    pills: { size: 1, y: '—', x: '—', diff: '—', result: 1 },
+    action: "Heap is not empty → return heap.peek() = 1. The last stone's weight is 1."
+  });
+
+  // ---------- RENDER ----------
+  function clearActiveLines() {
+    document.querySelectorAll('.code-line.active').forEach(el => el.classList.remove('active'));
+  }
+  function activateLines(lines) {
+    clearActiveLines();
+    for (const ln of lines) {
+      const el = codeEl.querySelector(`.code-line[data-line="${ln}"]`);
+      if (el) el.classList.add('active');
+    }
+  }
+
+  function setPill(id, value, hidden) {
+    const el = document.getElementById(id);
+    el.textContent = value === null || value === undefined ? '—' : value;
+    if (hidden !== undefined) {
+      el.parentElement.style.display = hidden ? 'none' : '';
+    }
+  }
+
+  function render(stepIdx) {
+    const s = steps[stepIdx];
+    activateLines(s.line);
+
+    document.getElementById('stepInfo').textContent = `step ${stepIdx} / ${steps.length - 1}`;
+    document.getElementById('stepLabel').textContent = `step ${stepIdx} / ${steps.length - 1} — ${s.kind}`;
+
+    setPill('sizeV',   s.pills.size);
+    setPill('yV',      s.pills.y);
+    setPill('xV',      s.pills.x);
+    setPill('diffV',   s.pills.diff);
+    const resPill = document.getElementById('resultPill');
+    if (s.pills.result !== null && s.pills.result !== undefined) {
+      resPill.style.display = '';
+      document.getElementById('resultV').textContent = s.pills.result;
+    } else {
+      resPill.style.display = 'none';
+    }
+
+    // Action card
+    const ak = document.getElementById('actionKind');
+    ak.className = 'kind kind-' + s.kind;
+    ak.textContent = s.kind;
+    document.getElementById('actionBody').textContent = s.action;
+
+    drawTree(s.heap, s.highlight);
+    drawArray(s.heap, s.highlight);
+  }
+
+  // ---------- CONTROLS ----------
+  let cur = 0;
+  let playing = false;
+  let timer = null;
+
+  function go(delta) {
+    cur = Math.max(0, Math.min(steps.length - 1, cur + delta));
+    render(cur);
+    updateButtons();
+  }
+  function reset() {
+    stopPlay();
+    cur = 0;
+    render(cur);
+    updateButtons();
+  }
+  function updateButtons() {
+    document.getElementById('prev').disabled = cur === 0;
+    document.getElementById('next').disabled = cur === steps.length - 1;
+  }
+  function startPlay() {
+    if (cur === steps.length - 1) { cur = 0; render(cur); }
+    playing = true;
+    document.getElementById('play').textContent = '❚❚ Pause';
+    timer = setInterval(() => {
+      if (cur >= steps.length - 1) { stopPlay(); return; }
+      go(1);
+    }, 1200);
+  }
+  function stopPlay() {
+    playing = false;
+    document.getElementById('play').textContent = '▶ Play';
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+  document.getElementById('prev').onclick  = () => { stopPlay(); go(-1); };
+  document.getElementById('next').onclick  = () => { stopPlay(); go(1); };
+  document.getElementById('reset').onclick = reset;
+  document.getElementById('play').onclick  = () => playing ? stopPlay() : startPlay();
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft')  { stopPlay(); go(-1); }
+    if (e.key === 'ArrowRight') { stopPlay(); go(1); }
+    if (e.key === ' ')          { e.preventDefault(); playing ? stopPlay() : startPlay(); }
+    if (e.key === 'r' || e.key === 'R') reset();
+  });
+
+  render(0);
+  updateButtons();
+</script>
+</body>
+</html>
