@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LC 1642 — Furthest Building You Can Reach</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+  header {
+    padding: 10px 18px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 16px; color: #e94560; }
+  .subtitle { font-size: 11px; color: #aaa; margin-top: 2px; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr 320px;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .panel {
+    background: #16213e;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    padding: 10px;
+    overflow: auto;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  pre.code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .code-line {
+    display: block;
+    padding: 1px 6px;
+    border-left: 2px solid transparent;
+    white-space: pre;
+    color: #bbb;
+    transition: background 0.15s;
+  }
+  .code-line.active {
+    background: rgba(233, 69, 96, 0.22);
+    border-left-color: #e94560;
+    color: #fff;
+  }
+  .stage { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 999px;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+  }
+  .pill .pill-k { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .pill .pill-v { font-weight: bold; color: #ffa500; }
+  .pill.i    .pill-v { color: #ffd87a; }
+  .pill.diff .pill-v { color: #ffb347; }
+  .pill.size .pill-v { color: #d8b4ff; }
+  .pill.brick .pill-v { color: #ff8ca0; }
+  .pill.ladder .pill-v { color: #9ad4ff; }
+  .pill.ok  .pill-v  { color: #4de88c; }
+  .pill.bad .pill-v  { color: #ff5577; }
+
+  .viz-wrap {
+    overflow: hidden;
+    background: #0f1529;
+    border-radius: 4px;
+    padding: 10px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  svg.viz {
+    display: block;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 240px;
+  }
+  svg.heap {
+    display: block;
+    width: 100%;
+    min-height: 70px;
+    max-height: 80px;
+  }
+
+  /* Building bars */
+  .b-base { fill: #1a2e4a; stroke: #2a4a7a; stroke-width: 1.5; }
+  .b-bar  { transition: all 0.4s; }
+  .b-bar.visited rect { fill: #0f3a1f; stroke: #4de88c; }
+  .b-bar.current  rect { fill: #4a2810; stroke: #ffb347; stroke-width: 2.5; animation: pulse 0.5s ease-out; }
+  .b-bar.unreached rect { fill: #1a2e4a; stroke: #2a4a7a; }
+  .b-bar.failed rect { fill: #4a1020; stroke: #e94560; stroke-dasharray: 5 3; animation: shake 0.5s ease-in-out; }
+  .b-bar text.val {
+    fill: #bbb;
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .b-bar.visited text.val { fill: #4de88c; }
+  .b-bar.current text.val { fill: #ffd87a; }
+  .b-bar.failed text.val { fill: #ff8ca0; }
+  .b-idx {
+    fill: #666;
+    font-family: 'Monaco', monospace;
+    font-size: 10px;
+    text-anchor: middle;
+  }
+  .b-pos {
+    fill: #ffb347;
+    font-family: 'Monaco', monospace;
+    font-size: 10px;
+    text-anchor: middle;
+    font-weight: bold;
+  }
+
+  /* Climb arcs */
+  .climb-arc {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-dasharray: 4 3;
+    transition: all 0.3s;
+  }
+  .climb-arc.ladder { stroke: #9ad4ff; marker-end: url(#arrowLadder); }
+  .climb-arc.brick  { stroke: #ff8ca0; marker-end: url(#arrowBrick);  }
+  .climb-arc.pending { stroke: #ffd87a; marker-end: url(#arrowPending); }
+  .climb-arc.free { stroke: #4de88c; stroke-dasharray: none; marker-end: url(#arrowFree); }
+  .climb-label {
+    font-family: 'Monaco', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-anchor: middle;
+  }
+  .climb-label.ladder { fill: #9ad4ff; }
+  .climb-label.brick  { fill: #ff8ca0; }
+  .climb-label.pending { fill: #ffd87a; }
+  .climb-label.free { fill: #4de88c; }
+
+  /* Heap row */
+  .heap-slot rect {
+    fill: #1a2e4a;
+    stroke: #2a4a7a;
+    stroke-width: 1.5;
+    rx: 3;
+    transition: all 0.4s;
+  }
+  .heap-slot text {
+    fill: #bbb;
+    font-family: 'Monaco', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .heap-slot.top rect { fill: #0f3460; stroke: #9ad4ff; stroke-width: 2.5; }
+  .heap-slot.top text { fill: #9ad4ff; }
+  .heap-slot.popped rect { fill: #4a1020; stroke: #e94560; stroke-dasharray: 4 3; animation: shake 0.4s; }
+  .heap-slot.popped text { fill: #ff8ca0; text-decoration: line-through; }
+  .heap-slot.fresh rect { animation: pulse 0.4s ease-out; stroke: #ffd87a; }
+  .heap-slot.fresh text { fill: #ffd87a; }
+  .heap-label {
+    fill: #8a93a6;
+    font-family: 'Monaco', monospace;
+    font-size: 10px;
+    text-anchor: middle;
+  }
+
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+  }
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8a93a6;
+    margin: 4px 0 2px 0;
+    font-family: 'Monaco', monospace;
+  }
+
+  .action-card {
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    min-height: 68px;
+  }
+  .action-card .kind {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .kind-init   { background: #ffa500; color: #1a1a2e; }
+  .kind-free   { background: #4de88c; color: #1a1a2e; }
+  .kind-offer  { background: #ffd87a; color: #1a1a2e; }
+  .kind-pop    { background: #9ad4ff; color: #1a1a2e; }
+  .kind-fail   { background: #e94560; color: #fff; }
+  .kind-end    { background: #4de88c; color: #1a1a2e; }
+
+  .controls {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+  }
+  button {
+    background: #e94560;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  button:hover { background: #ff5577; }
+  button:disabled { background: #444; cursor: not-allowed; }
+  .step-info {
+    font-size: 11px;
+    color: #aaa;
+    min-width: 100px;
+    text-align: center;
+    font-family: 'Monaco', monospace;
+  }
+  code { color: #ffd87a; background: #0a1a30; padding: 1px 4px; border-radius: 3px; font-family: 'Monaco', monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>LC 1642 — Furthest Building You Can Reach</h1>
+    <div class="subtitle">Min-heap "keep K largest" pattern. Tentatively ladder every climb; when the heap exceeds <code>ladders</code>, demote the smallest climb to bricks. If <code>bricks &lt; 0</code>, stuck — return current index.</div>
+  </div>
+  <div class="step-info" id="stepInfo">step 0</div>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-title">Code</div>
+    <pre class="code" id="code"></pre>
+  </div>
+  <div class="panel stage">
+    <div class="pills">
+      <span class="pill i"><span class="pill-k">i</span><span class="pill-v" id="iV">—</span></span>
+      <span class="pill diff"><span class="pill-k">diff</span><span class="pill-v" id="diffV">—</span></span>
+      <span class="pill size"><span class="pill-k">pq size</span><span class="pill-v" id="sizeV">—</span></span>
+      <span class="pill ladder"><span class="pill-k">ladders</span><span class="pill-v" id="ladderV">1</span></span>
+      <span class="pill brick"><span class="pill-k">bricks</span><span class="pill-v" id="brickV">5</span></span>
+      <span class="pill ok" id="resultPill" style="display:none"><span class="pill-k">return</span><span class="pill-v" id="resultV">—</span></span>
+    </div>
+
+    <div class="viz-wrap">
+      <div class="section-label">Skyline — orange = current, green = reached, red-dashed = failed to cross</div>
+      <svg class="viz" id="skyline" viewBox="0 0 700 260" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrowLadder" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0 0, 8 4, 0 8" fill="#9ad4ff"/>
+          </marker>
+          <marker id="arrowBrick" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0 0, 8 4, 0 8" fill="#ff8ca0"/>
+          </marker>
+          <marker id="arrowPending" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0 0, 8 4, 0 8" fill="#ffd87a"/>
+          </marker>
+          <marker id="arrowFree" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0 0, 8 4, 0 8" fill="#4de88c"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="section-label">Min-heap (ladder-covered climbs) — top = smallest = first to demote</div>
+      <svg class="heap" id="heap" viewBox="0 0 700 70" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <div class="action-card" id="action">
+      <div class="kind kind-init" id="actionKind">start</div>
+      <div id="actionBody">Click Play or Next to begin.</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Algorithm</div>
+    <div style="font-size: 11px; color: #ccc; line-height: 1.6; font-family: 'Monaco', monospace;">
+      <div>for i in 0 .. n-2:</div>
+      <div style="padding-left:12px;">
+        <div>diff = h[i+1] − h[i]</div>
+        <div>if diff ≤ 0: continue</div>
+        <div>pq.offer(diff)   // try ladder</div>
+        <div>if pq.size &gt; ladders:</div>
+        <div style="padding-left:12px;">
+          <div>bricks −= pq.poll()</div>
+          <div>if bricks &lt; 0: return i</div>
+        </div>
+      </div>
+      <div>return n − 1</div>
+    </div>
+
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">The invariant</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        At every step, the heap holds exactly the top-<code>ladders</code> biggest climbs seen so far. Everything else has been paid with bricks. The min of the heap is the "weakest link" — the next climb to be demoted to bricks when a bigger candidate shows up.
+      </div>
+    </div>
+
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Why min-heap, not max-heap?</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        Classic "<strong>keep K largest</strong>" pattern. To keep the K biggest things, use a min-heap of size K: the smallest of the current survivors sits on top, ready to be evicted when a bigger candidate arrives.
+      </div>
+    </div>
+
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Family placement</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>Heap §3.1 — K-selection / Keep K largest.</strong> Same shape: LC 215 Kth Largest, LC 973 K Closest Points, LC 347 Top K Frequent, LC 703 Kth Largest in Stream. Also fits <strong>§3.5 Scheduling</strong> (resource-tight greedy via heap). The trick that makes this problem feel unique: the "tentative assign → retroactively demote" move; the heap itself does the bookkeeping.
+      </div>
+    </div>
+
+    <div style="margin-top: 14px;">
+      <div class="panel-title" style="margin-bottom: 4px;">Complexity</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.6;">
+        <strong>Time:</strong> O(n log L) where L = ladders. Each climb does at most one push + one poll, each on a heap of size at most L+1.<br>
+        <strong>Space:</strong> O(L).
+      </div>
+    </div>
+  </div>
+</main>
+<div class="controls">
+  <button id="prev">◀ Prev</button>
+  <button id="play">▶ Play</button>
+  <button id="next">Next ▶</button>
+  <button id="reset">⟲ Reset</button>
+  <span class="step-info" id="stepLabel"></span>
+</div>
+<script>
+  // ---------- CODE PANEL ----------
+  const codeText = [
+    "public int furthestBuilding(int[] heights,",
+    "                            int bricks, int ladders) {",
+    "    PriorityQueue<Integer> pq = new PriorityQueue<>();",
+    "",
+    "    for (int i = 0; i < heights.length - 1; i++) {",
+    "        int diff = heights[i + 1] - heights[i];",
+    "        if (diff <= 0) {",
+    "            continue;",
+    "        }",
+    "        pq.offer(diff);",
+    "        if (pq.size() > ladders) {",
+    "            bricks -= pq.poll();",
+    "            if (bricks < 0) {",
+    "                return i;",
+    "            }",
+    "        }",
+    "    }",
+    "    return heights.length - 1;",
+    "}"
+  ];
+  const codeEl = document.getElementById('code');
+  codeText.forEach((ln, i) => {
+    const span = document.createElement('span');
+    span.className = 'code-line';
+    span.dataset.line = i + 1;
+    span.textContent = (i + 1).toString().padStart(2, ' ') + '  ' + (ln || ' ');
+    codeEl.appendChild(span);
+  });
+
+  // ---------- SVG CONSTANTS ----------
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const sky = document.getElementById('skyline');
+  const heapSvg = document.getElementById('heap');
+
+  const HEIGHTS = [4, 2, 7, 6, 9, 14, 12];
+  const LADDERS = 1;
+  const INITIAL_BRICKS = 5;
+
+  const N = HEIGHTS.length;
+  const MAX_H = Math.max(...HEIGHTS);  // 14
+
+  // Skyline layout
+  const SKY_W = 700, SKY_H = 260;
+  const SKY_BOTTOM = 220;         // y-coord of the ground line
+  const SKY_TOP_PAD = 50;         // leave space above tallest bar for arcs
+  const H_UNIT = (SKY_BOTTOM - SKY_TOP_PAD) / MAX_H;  // px per unit height
+  const BAR_W = 50;
+  const BAR_GAP = (SKY_W - 2 * 40 - N * BAR_W) / (N - 1);  // 40px side padding
+  function barX(i) { return 40 + i * (BAR_W + BAR_GAP); }
+  function barTopY(h) { return SKY_BOTTOM - h * H_UNIT; }
+
+  // Draw static ground line
+  const ground = document.createElementNS(SVGNS, 'line');
+  ground.setAttribute('x1', 20);
+  ground.setAttribute('x2', SKY_W - 20);
+  ground.setAttribute('y1', SKY_BOTTOM);
+  ground.setAttribute('y2', SKY_BOTTOM);
+  ground.setAttribute('stroke', '#3a3a4a');
+  ground.setAttribute('stroke-width', 1);
+  sky.appendChild(ground);
+
+  // Draw index labels (static)
+  for (let i = 0; i < N; i++) {
+    const idx = document.createElementNS(SVGNS, 'text');
+    idx.setAttribute('class', 'b-idx');
+    idx.setAttribute('x', barX(i) + BAR_W / 2);
+    idx.setAttribute('y', SKY_BOTTOM + 14);
+    idx.textContent = 'i=' + i;
+    sky.appendChild(idx);
+  }
+
+  // Layer for dynamic content
+  const skyLayer = document.createElementNS(SVGNS, 'g');
+  sky.appendChild(skyLayer);
+
+  function drawSkyline(state) {
+    skyLayer.innerHTML = '';
+    // state: { curIdx, reachedIdx, failed, climbArc: {from, to, kind, label} | null }
+    const { curIdx, reachedIdx, failed, climbArc } = state;
+
+    for (let i = 0; i < N; i++) {
+      const h = HEIGHTS[i];
+      let cls = 'b-bar ';
+      if (failed && i === curIdx + 1) {
+        cls += 'failed';
+      } else if (i === curIdx) {
+        cls += 'current';
+      } else if (i <= reachedIdx) {
+        cls += 'visited';
+      } else {
+        cls += 'unreached';
+      }
+
+      const g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('class', cls);
+
+      const rect = document.createElementNS(SVGNS, 'rect');
+      rect.setAttribute('x', barX(i));
+      rect.setAttribute('y', barTopY(h));
+      rect.setAttribute('width', BAR_W);
+      rect.setAttribute('height', h * H_UNIT);
+      rect.setAttribute('rx', 2);
+      g.appendChild(rect);
+
+      const val = document.createElementNS(SVGNS, 'text');
+      val.setAttribute('class', 'val');
+      val.setAttribute('x', barX(i) + BAR_W / 2);
+      val.setAttribute('y', barTopY(h) + 12);
+      val.textContent = h;
+      g.appendChild(val);
+
+      skyLayer.appendChild(g);
+    }
+
+    // Draw "you are here" marker above current
+    if (curIdx != null && curIdx >= 0) {
+      const marker = document.createElementNS(SVGNS, 'text');
+      marker.setAttribute('class', 'b-pos');
+      marker.setAttribute('x', barX(curIdx) + BAR_W / 2);
+      marker.setAttribute('y', barTopY(HEIGHTS[curIdx]) - 8);
+      marker.textContent = '▼ you';
+      skyLayer.appendChild(marker);
+    }
+
+    // Draw climb arc
+    if (climbArc) {
+      const { from, to, kind, label } = climbArc;
+      const x1 = barX(from) + BAR_W / 2;
+      const y1 = barTopY(HEIGHTS[from]);
+      const x2 = barX(to) + BAR_W / 2;
+      const y2 = barTopY(HEIGHTS[to]);
+      const midX = (x1 + x2) / 2;
+      const peak = Math.min(y1, y2) - 30;
+
+      const arc = document.createElementNS(SVGNS, 'path');
+      arc.setAttribute('class', 'climb-arc ' + kind);
+      arc.setAttribute('d', `M ${x1} ${y1 - 4} Q ${midX} ${peak}, ${x2} ${y2 - 4}`);
+      skyLayer.appendChild(arc);
+
+      const lbl = document.createElementNS(SVGNS, 'text');
+      lbl.setAttribute('class', 'climb-label ' + kind);
+      lbl.setAttribute('x', midX);
+      lbl.setAttribute('y', peak - 4);
+      lbl.textContent = label;
+      skyLayer.appendChild(lbl);
+    }
+  }
+
+  // ---------- HEAP ROW ----------
+  const HEAP_Y = 15, HEAP_H = 40;
+  const HEAP_SLOT_W = 60, HEAP_SLOT_GAP = 8;
+  function heapSlotX(i, count) {
+    const totalW = count * HEAP_SLOT_W + (count - 1) * HEAP_SLOT_GAP;
+    const x0 = (700 - totalW) / 2;
+    return x0 + i * (HEAP_SLOT_W + HEAP_SLOT_GAP);
+  }
+
+  function drawHeap(heap, highlight) {
+    // heap passed as sorted ascending (so index 0 is top=min)
+    heapSvg.innerHTML = '';
+    if (heap.length === 0 && (!highlight || highlight.popped === undefined)) {
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('class', 'heap-label');
+      t.setAttribute('x', 350);
+      t.setAttribute('y', 40);
+      t.textContent = '(empty)';
+      heapSvg.appendChild(t);
+      return;
+    }
+
+    // If we have a "popped" highlight, show it in a transient slot that visually disappears
+    const items = heap.map(v => ({v, kind: 'normal'}));
+    if (highlight) {
+      if (highlight.fresh !== undefined) {
+        // mark the freshly offered value
+        const idx = items.findIndex(o => o.v === highlight.fresh && o.kind === 'normal');
+        if (idx >= 0) items[idx].kind = 'fresh';
+      }
+      if (highlight.poppedValue !== undefined) {
+        // append a "popped" ghost slot
+        items.push({v: highlight.poppedValue, kind: 'popped'});
+      }
+    }
+
+    // Mark top (min) — the first element (smallest, since array is sorted ascending)
+    if (items.length > 0 && items[0].kind === 'normal') {
+      items[0].kind = 'top';
+    }
+
+    const count = items.length;
+    items.forEach((it, idx) => {
+      const g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('class', 'heap-slot ' + it.kind);
+
+      const r = document.createElementNS(SVGNS, 'rect');
+      r.setAttribute('x', heapSlotX(idx, count));
+      r.setAttribute('y', HEAP_Y);
+      r.setAttribute('width', HEAP_SLOT_W);
+      r.setAttribute('height', HEAP_H);
+      g.appendChild(r);
+
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', heapSlotX(idx, count) + HEAP_SLOT_W / 2);
+      t.setAttribute('y', HEAP_Y + HEAP_H / 2);
+      t.textContent = it.v;
+      g.appendChild(t);
+
+      // "top (min)" label under the first element
+      if (idx === 0 && it.kind === 'top') {
+        const lb = document.createElementNS(SVGNS, 'text');
+        lb.setAttribute('class', 'heap-label');
+        lb.setAttribute('x', heapSlotX(idx, count) + HEAP_SLOT_W / 2);
+        lb.setAttribute('y', HEAP_Y + HEAP_H + 15);
+        lb.textContent = 'top (min)';
+        g.appendChild(lb);
+      }
+
+      heapSvg.appendChild(g);
+    });
+  }
+
+  // ---------- STEP DATA ----------
+  // heights = [4,2,7,6,9,14,12], bricks=5, ladders=1 → return 4
+  // Climbs: i=0 → -2 free; i=1 → +5; i=2 → -1 free; i=3 → +3; i=4 → +5 STUCK
+
+  const steps = [];
+
+  steps.push({
+    line: [1, 2],
+    kind: 'init',
+    pills: { i: '—', diff: '—', size: 0, bricks: 5, result: null },
+    curIdx: 0, reachedIdx: 0, failed: false, climbArc: null,
+    heap: [], highlight: null,
+    action: "heights=[4,2,7,6,9,14,12], bricks=5, ladders=1. Starting at building 0 (height 4). Empty min-heap."
+  });
+
+  // i=0: free
+  steps.push({
+    line: [5, 6], kind: 'free',
+    pills: { i: 0, diff: -2, size: 0, bricks: 5, result: null },
+    curIdx: 0, reachedIdx: 0, failed: false,
+    climbArc: { from: 0, to: 1, kind: 'free', label: 'diff = −2 (free)' },
+    heap: [], highlight: null,
+    action: "i=0 → i=1: h[1]−h[0] = 2−4 = −2. Going down. No resource spent."
+  });
+  steps.push({
+    line: [7, 8], kind: 'free',
+    pills: { i: 0, diff: -2, size: 0, bricks: 5, result: null },
+    curIdx: 1, reachedIdx: 1, failed: false, climbArc: null,
+    heap: [], highlight: null,
+    action: "continue. Advance to building 1."
+  });
+
+  // i=1: climb +5, offer, no pop
+  steps.push({
+    line: [5, 6], kind: 'offer',
+    pills: { i: 1, diff: 5, size: 0, bricks: 5, result: null },
+    curIdx: 1, reachedIdx: 1, failed: false,
+    climbArc: { from: 1, to: 2, kind: 'pending', label: 'diff = +5 (climb)' },
+    heap: [], highlight: null,
+    action: "i=1 → i=2: diff = 7−2 = +5. A climb. Tentatively assign a ladder."
+  });
+  steps.push({
+    line: [10], kind: 'offer',
+    pills: { i: 1, diff: 5, size: 1, bricks: 5, result: null },
+    curIdx: 1, reachedIdx: 1, failed: false,
+    climbArc: { from: 1, to: 2, kind: 'ladder', label: 'climb = 5 → ladder' },
+    heap: [5], highlight: { fresh: 5 },
+    action: "pq.offer(5). Heap now = [5]. Size 1 ≤ ladders 1 — no demotion needed."
+  });
+  steps.push({
+    line: [11], kind: 'offer',
+    pills: { i: 1, diff: 5, size: 1, bricks: 5, result: null },
+    curIdx: 2, reachedIdx: 2, failed: false, climbArc: null,
+    heap: [5], highlight: null,
+    action: "Advance to building 2. Ladder still allocated to the 5-climb."
+  });
+
+  // i=2: free
+  steps.push({
+    line: [5, 6], kind: 'free',
+    pills: { i: 2, diff: -1, size: 1, bricks: 5, result: null },
+    curIdx: 2, reachedIdx: 2, failed: false,
+    climbArc: { from: 2, to: 3, kind: 'free', label: 'diff = −1 (free)' },
+    heap: [5], highlight: null,
+    action: "i=2 → i=3: diff = 6−7 = −1. Free descent."
+  });
+  steps.push({
+    line: [7, 8], kind: 'free',
+    pills: { i: 2, diff: -1, size: 1, bricks: 5, result: null },
+    curIdx: 3, reachedIdx: 3, failed: false, climbArc: null,
+    heap: [5], highlight: null,
+    action: "Advance to building 3."
+  });
+
+  // i=3: climb +3, offer makes size=2 > 1, pop min=3
+  steps.push({
+    line: [5, 6], kind: 'offer',
+    pills: { i: 3, diff: 3, size: 1, bricks: 5, result: null },
+    curIdx: 3, reachedIdx: 3, failed: false,
+    climbArc: { from: 3, to: 4, kind: 'pending', label: 'diff = +3 (climb)' },
+    heap: [5], highlight: null,
+    action: "i=3 → i=4: diff = 9−6 = +3. Climb. Tentatively assign a ladder."
+  });
+  steps.push({
+    line: [10], kind: 'offer',
+    pills: { i: 3, diff: 3, size: 2, bricks: 5, result: null },
+    curIdx: 3, reachedIdx: 3, failed: false,
+    climbArc: { from: 3, to: 4, kind: 'pending', label: 'climb = 3 (tentative)' },
+    heap: [3, 5], highlight: { fresh: 3 },
+    action: "pq.offer(3). Heap = [3, 5]. Size 2 > ladders 1 — must demote the smallest to bricks."
+  });
+  steps.push({
+    line: [11, 12], kind: 'pop',
+    pills: { i: 3, diff: 3, size: 1, bricks: 2, result: null },
+    curIdx: 3, reachedIdx: 3, failed: false,
+    climbArc: { from: 3, to: 4, kind: 'brick', label: 'climb = 3 → bricks' },
+    heap: [5], highlight: { poppedValue: 3 },
+    action: "pq.poll() = 3 (the min = the current climb itself, since 3 < 5). bricks = 5 − 3 = 2. The ladder stays on the older 5-climb; bricks pay for this one."
+  });
+  steps.push({
+    line: [13, 14, 15, 16], kind: 'pop',
+    pills: { i: 3, diff: 3, size: 1, bricks: 2, result: null },
+    curIdx: 4, reachedIdx: 4, failed: false, climbArc: null,
+    heap: [5], highlight: null,
+    action: "bricks=2 ≥ 0. Advance to building 4. Heap: [5] still has ladder on the first 5-climb."
+  });
+
+  // i=4: climb +5, offer makes size=2 > 1, pop min=5, bricks=-3 STUCK
+  steps.push({
+    line: [5, 6], kind: 'offer',
+    pills: { i: 4, diff: 5, size: 1, bricks: 2, result: null },
+    curIdx: 4, reachedIdx: 4, failed: false,
+    climbArc: { from: 4, to: 5, kind: 'pending', label: 'diff = +5 (climb)' },
+    heap: [5], highlight: null,
+    action: "i=4 → i=5: diff = 14−9 = +5. Another climb. Tentatively assign a ladder."
+  });
+  steps.push({
+    line: [10], kind: 'offer',
+    pills: { i: 4, diff: 5, size: 2, bricks: 2, result: null },
+    curIdx: 4, reachedIdx: 4, failed: false,
+    climbArc: { from: 4, to: 5, kind: 'pending', label: 'climb = 5 (tentative)' },
+    heap: [5, 5], highlight: { fresh: 5 },
+    action: "pq.offer(5). Heap = [5, 5]. Size 2 > ladders 1 — demote the smallest."
+  });
+  steps.push({
+    line: [11, 12], kind: 'pop',
+    pills: { i: 4, diff: 5, size: 1, bricks: -3, result: null },
+    curIdx: 4, reachedIdx: 4, failed: false,
+    climbArc: { from: 4, to: 5, kind: 'brick', label: 'need 5 bricks, have 2 ✗' },
+    heap: [5], highlight: { poppedValue: 5 },
+    action: "pq.poll() = 5. Try bricks = 2 − 5 = −3. Not enough bricks to cover this climb."
+  });
+  steps.push({
+    line: [13, 14], kind: 'fail',
+    pills: { i: 4, diff: 5, size: 1, bricks: -3, result: 4 },
+    curIdx: 4, reachedIdx: 4, failed: true,
+    climbArc: { from: 4, to: 5, kind: 'brick', label: 'cannot afford' },
+    heap: [5], highlight: null,
+    action: "bricks < 0 → return i = 4. Reached building 4, cannot cross to building 5."
+  });
+
+  // Terminate — show failure visually
+  steps.push({
+    line: [13, 14], kind: 'end',
+    pills: { i: 4, diff: 5, size: 1, bricks: -3, result: 4 },
+    curIdx: 4, reachedIdx: 4, failed: true,
+    climbArc: null,
+    heap: [5], highlight: null,
+    action: "Final answer: 4. The red-dashed building 5 is unreachable."
+  });
+
+  // ---------- RENDER ----------
+  function clearActiveLines() {
+    document.querySelectorAll('.code-line.active').forEach(el => el.classList.remove('active'));
+  }
+  function activateLines(lines) {
+    clearActiveLines();
+    for (const ln of lines) {
+      const el = codeEl.querySelector(`.code-line[data-line="${ln}"]`);
+      if (el) el.classList.add('active');
+    }
+  }
+  function setPill(id, value) {
+    const el = document.getElementById(id);
+    el.textContent = value === null || value === undefined ? '—' : value;
+  }
+
+  function render(stepIdx) {
+    const s = steps[stepIdx];
+    activateLines(s.line);
+
+    document.getElementById('stepInfo').textContent = `step ${stepIdx} / ${steps.length - 1}`;
+    document.getElementById('stepLabel').textContent = `step ${stepIdx} / ${steps.length - 1} — ${s.kind}`;
+
+    setPill('iV',      s.pills.i);
+    setPill('diffV',   s.pills.diff);
+    setPill('sizeV',   s.pills.size);
+    setPill('brickV',  s.pills.bricks);
+    setPill('ladderV', LADDERS);
+
+    const resPill = document.getElementById('resultPill');
+    if (s.pills.result !== null && s.pills.result !== undefined) {
+      resPill.style.display = '';
+      document.getElementById('resultV').textContent = s.pills.result;
+    } else {
+      resPill.style.display = 'none';
+    }
+
+    // Action card
+    const ak = document.getElementById('actionKind');
+    ak.className = 'kind kind-' + s.kind;
+    ak.textContent = s.kind;
+    document.getElementById('actionBody').textContent = s.action;
+
+    drawSkyline({
+      curIdx: s.curIdx,
+      reachedIdx: s.reachedIdx,
+      failed: s.failed,
+      climbArc: s.climbArc
+    });
+    drawHeap(s.heap, s.highlight);
+  }
+
+  // ---------- CONTROLS ----------
+  let cur = 0;
+  let playing = false;
+  let timer = null;
+
+  function go(delta) {
+    cur = Math.max(0, Math.min(steps.length - 1, cur + delta));
+    render(cur);
+    updateButtons();
+  }
+  function reset() {
+    stopPlay();
+    cur = 0;
+    render(cur);
+    updateButtons();
+  }
+  function updateButtons() {
+    document.getElementById('prev').disabled = cur === 0;
+    document.getElementById('next').disabled = cur === steps.length - 1;
+  }
+  function startPlay() {
+    if (cur === steps.length - 1) { cur = 0; render(cur); }
+    playing = true;
+    document.getElementById('play').textContent = '❚❚ Pause';
+    timer = setInterval(() => {
+      if (cur >= steps.length - 1) { stopPlay(); return; }
+      go(1);
+    }, 1400);
+  }
+  function stopPlay() {
+    playing = false;
+    document.getElementById('play').textContent = '▶ Play';
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+  document.getElementById('prev').onclick  = () => { stopPlay(); go(-1); };
+  document.getElementById('next').onclick  = () => { stopPlay(); go(1); };
+  document.getElementById('reset').onclick = reset;
+  document.getElementById('play').onclick  = () => playing ? stopPlay() : startPlay();
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft')  { stopPlay(); go(-1); }
+    if (e.key === 'ArrowRight') { stopPlay(); go(1); }
+    if (e.key === ' ')          { e.preventDefault(); playing ? stopPlay() : startPlay(); }
+    if (e.key === 'r' || e.key === 'R') reset();
+  });
+
+  render(0);
+  updateButtons();
+</script>
+</body>
+</html>

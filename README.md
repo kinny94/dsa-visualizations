@@ -92,6 +92,7 @@ Live: **https://kinny94.github.io/dsa-visualizations/**
 | [333](https://kinny94.github.io/dsa-visualizations/lc333-largest-bst-subtree.html) | Largest BST Subtree | BST · Post-order · (isBST, size, min, max) bundle |
 | [729](https://kinny94.github.io/dsa-visualizations/lc729-my-calendar-i.html) | My Calendar I | BST · TreeMap floor/ceiling |
 | [1046](https://kinny94.github.io/dsa-visualizations/lc1046-last-stone-weight.html) | Last Stone Weight | Heap · Max-heap · repeated extremes |
+| [1642](https://kinny94.github.io/dsa-visualizations/lc1642-furthest-building-you-can-reach.html) | Furthest Building You Can Reach | Heap · Min-heap · keep K largest |
 
 ## Adding a new animation
 
